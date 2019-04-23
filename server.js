@@ -24,6 +24,8 @@ app.use((_req, res, next) => {
 app.use('/status', require('./routes/Status'));
 app.use('/mojang', require('./routes/Mojang'));
 
+app.use('/hems', require('./routes/legacy_hems'));
+
 // Prepare 404
 app.use((_req, _res, next) => {
   next(Utils.createError(404, 'The requested resource could not be found.'));
