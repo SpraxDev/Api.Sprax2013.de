@@ -1,0 +1,37 @@
+{
+  "name": "api.sprax2013.de",
+  "version": "0.0.1-DEV",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sprax2013/Api.Sprax2013.de.git"
+  },
+  "author": "Sprax2013",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Sprax2013/Api.Sprax2013.de/issues"
+  },
+  "homepage": "https://github.com/Sprax2013/Api.Sprax2013.de#readme",
+  "dependencies": {
+    "cookie-parser": "^1.4.4",
+    "express": "^4.16.4",
+    "morgan": "^1.9.1",
+    "mysql": "^2.17.1",
+    "node-cache": "^4.2.0",
+    "nodemon": "^1.18.11",
+    "request": "^2.88.0"
+  },
+  "nodemonConfig": {
+    "ignore": [
+      "*",
+      "./storage",
+      "./logs",
+      "nodemon.json"
+    ]
+  }
+}
