@@ -1,6 +1,5 @@
 const express = require('express');
 const morgan = require('morgan');
-const cookieParser = require('cookie-parser');
 
 const Utils = require('./utils');
 
@@ -9,7 +8,8 @@ const app = express();
 app.use(morgan('dev'));
 
 app.use(express.json());
-app.use(cookieParser());
+// app.use(require('cookie-parser')(require('./storage/misc.json').CookieSecret));
+app.use(require('express-bearer-token')());
 // app.use(express.urlencoded({ extended: false }));
 
 // Default response headers
