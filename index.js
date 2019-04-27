@@ -55,4 +55,14 @@ function initStorage() {
 
   //   console.log('./storage/misc.json has been created!');
   // }
+
+  if (!fs.existsSync('./storage/tokens.json')) {
+    fs.writeFileSync('./storage/tokens.json', JSON.stringify(
+      {
+        exampleToken: ['PERMISSION1', 'PERMISSION2']
+      }
+      , null, 4));
+
+    console.log('./storage/tokens.json has been created!');
+  }
 }
