@@ -37,11 +37,17 @@ app.use((err, _req, res, _next) => {
     err = Utils.createError();
   }
 
-  res.status(err.status || 500)
-    .json({
-      status: err.status,
-      msg: err.message
-    });
+  if (!err.status || (err.status >= 500 && err.status < 600)) {
+    console.error(err); // Log to file
+  }
+
+  if (!res.headersSent) {
+    res.status(err.status || 500)
+      .json({
+        status: err.status,
+        msg: err.message
+      });
+  }
 });
 
 module.exports = app;
