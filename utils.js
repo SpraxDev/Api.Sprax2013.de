@@ -40,9 +40,11 @@ module.exports = {
    * @returns {Boolean}
    */
   toBoolean(str) {
-    return (typeof str === 'string')
-      ? str === '1' || str.toLowerCase() === 'true'
-      : false;
+    if (typeof str === 'string') return str === '1' || str.toLowerCase() === 'true';
+    if (typeof str === 'number') return str === 1;
+    if (typeof str === 'boolean') return str;
+
+    return false;
   },
 
   /**
