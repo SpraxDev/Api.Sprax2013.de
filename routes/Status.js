@@ -1,10 +1,9 @@
-const express = require('express');
 const net = require('net');
 const NodeCache = require('node-cache');
 
 const EOL = require('./../utils').EOL;
 
-const router = express.Router();
+const router = require('express').Router();
 
 const pingCache = new NodeCache({
   stdTTL: 90

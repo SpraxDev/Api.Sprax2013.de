@@ -33,8 +33,6 @@ app.use((_req, _res, next) => {
 
 // Send Error
 app.use((err, _req, res, _next) => {
-  // ToDo Log 5xx errors
-
   if (!err || !(err instanceof Error)) {
     err = Utils.createError();
   }
