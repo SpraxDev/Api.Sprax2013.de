@@ -22,6 +22,7 @@ app.use((_req, res, next) => {
 
 // ToDo Set caching headers on routes
 app.use('/status', require('./routes/Status'));
+app.use('/skinDB', require('./routes/SkinDB'));
 app.use('/mojang', require('./routes/Mojang'));
 
 app.use('/hems', require('./routes/legacy_hems'));
