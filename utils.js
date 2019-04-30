@@ -5,7 +5,7 @@ const uuidv4 = require('uuid/v4');
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   UUID_PATTERN_ADD_DASH = new RegExp('(.{8})(.{4})(.{4})(.{4})(.{12})'),
-  URL_PATTERN = new RegExp('^(?!mailto:)(?:(?:http|https|ftp)://)(?:\\S+(?::\\S*)?@)?(?:(?:(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}(?:\\.(?:[0-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))|(?:(?:[a-z\\u00a1-\\uffff0-9]+-?)*[a-z\\u00a1-\\uffff0-9]+)(?:\\.(?:[a-z\\u00a1-\\uffff0-9]+-?)*[a-z\\u00a1-\\uffff0-9]+)*(?:\\.(?:[a-z\\u00a1-\\uffff]{2,})))|localhost)(?::\\d{2,5})?(?:(/|\\?|#)[^\\s]*)?$', 'i');;
+  URL_PATTERN = new RegExp('^(?!mailto:)(?:(?:http|https|ftp)://)(?:\\S+(?::\\S*)?@)?(?:(?:(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}(?:\\.(?:[0-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))|(?:(?:[a-z\\u00a1-\\uffff0-9]+-?)*[a-z\\u00a1-\\uffff0-9]+)(?:\\.(?:[a-z\\u00a1-\\uffff0-9]+-?)*[a-z\\u00a1-\\uffff0-9]+)*(?:\\.(?:[a-z\\u00a1-\\uffff]{2,})))|localhost)(?::\\d{2,5})?(?:(/|\\?|#)[^\\s]*)?$', 'i');
 
 module.exports = {
   TokenSystem: require('./TokenSystem'),
@@ -85,6 +85,19 @@ module.exports = {
   },
 
   /**
+   * Replaces all multiple spaces, tabs, etc. with a single space
+   * 
+   * @param {string} str 
+   * 
+   * @returns {string}
+   */
+  toNeutralString(str) {
+    if (typeof str !== 'string') return null;
+
+    return str.trim().replace(/\s\s+/g, ' ');
+  },
+
+  /**
    * @param {String} dirPath 
    * @param {Function} callback Optional if you want to handle an Error
    * 
@@ -126,22 +139,22 @@ module.exports = {
    * 
    * @returns {String}
    */
-  getClientToken(req, res) {
-    let token = req.signedCookies.uIdent;
+  // getClientToken(req, res) {
+  //   let token = req.signedCookies.uIdent;
 
-    if (!token) {
-      token = crypto.createHash('sha256').update(uuidv4()).update(crypto.randomBytes(256)).digest('hex');
-      req.signedCookies.uIdent = token;
-    }
+  //   if (!token) {
+  //     token = crypto.createHash('sha256').update(uuidv4()).update(crypto.randomBytes(256)).digest('hex');
+  //     req.signedCookies.uIdent = token;
+  //   }
 
-    res.cookie('uIdent', token, {
-      maxAge: 31540000000, // 365 Tage in ms
-      signed: true,
-      httpOnly: true
-    });
+  //   res.cookie('uIdent', token, {
+  //     maxAge: 31540000000, // 365 Tage in ms
+  //     signed: true,
+  //     httpOnly: true
+  //   });
 
-    return token;
-  },
+  //   return token;
+  // },
 
   /**
    * @param {String} str 

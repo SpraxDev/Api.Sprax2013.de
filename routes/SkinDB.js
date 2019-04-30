@@ -118,7 +118,6 @@ router.use('/skin/random', (req, res, next) => {
   });
 });
 
-// ToDo Only allow with Token
 router.post('/skin/:id/meta', (req, res, next) => {
   if (!req.token) {
     res.setHeader('WWW-Authenticate', 'Bearer');
