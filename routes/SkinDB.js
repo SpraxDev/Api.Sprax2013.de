@@ -3,7 +3,7 @@ const NodeCache = require('node-cache');
 const Utils = require('./../utils');
 const db = require('./../db-utils/DB_SkinDB');
 
-const statsCache = new NodeCache({ stdTTL: 600 /* 1h */ });
+const statsCache = new NodeCache({ stdTTL: 3600 /* 1h */ });
 
 const SkinMetaElements = ['CharacterName', 'CharacterURL', 'SkinOriginName', 'SkinOriginURL', 'WearsMask', 'MaskCharacterName', 'MaskCharacterURL', 'WearsHat', 'HatType', 'Job', 'Accessories', 'MiscTags', 'Sex', 'Age', 'HairLength'],
   SkinMetaNumberElements = ['WearsMask', 'WearsHat', 'Sex', 'Age', 'HairLength'];
@@ -11,7 +11,7 @@ const SkinMetaElements = ['CharacterName', 'CharacterURL', 'SkinOriginName', 'Sk
 const router = require('express').Router();
 
 /* Provide Routes */
-router.use('/provide/:id', (req, res, next) => {
+router.use('/provide/:id', (req, res, next) => {  // ToDo when :id is not set still notify instead of an 404
   let id = Utils.toInteger(req.params.id);
 
   // Check for invalid content
