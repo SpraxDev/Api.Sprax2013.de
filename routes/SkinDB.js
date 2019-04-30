@@ -64,7 +64,7 @@ router.use('/provide', (req, res, next) => {
   } else if (Utils.isURL(data)) {
     db.isPendingOrInDB(data, (err, bool) => {
       if (err) return next(Utils.logAndCreateError(err));
-      if (bool) return next(Utils.createError(200, 'The skin belonging to the UUID is already in the database'));
+      if (bool) return next(Utils.createError(200, 'The skin is already in the database'));
 
       db.addPending(data, req.header('User-Agent'), (err, pending) => {
         if (err) return next(Utils.logAndCreateError(err));
