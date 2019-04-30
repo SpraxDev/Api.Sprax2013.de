@@ -9,7 +9,7 @@ const Utils = require('./../utils');
 // Add "Cache-Control: max-age=1000" as a header (replace 1000 with the remaining stdTTL)
 // Use Page Rules on CloudFlare to 'Cache Everything' so cloudflare caches too
 const cache = new NodeCache({ stdTTL: 62 });
-const longCache = new NodeCache({ stdTTL: 1800 });
+const longCache = new NodeCache({ stdTTL: 900 });
 
 const router = require('express').Router();
 
