@@ -1,1 +1,1 @@
-# Api.Sprax2013.de
+# Api.Sprax2013.de [![Language grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/Sprax2013/Api.Sprax2013.de.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Sprax2013/Api.Sprax2013.de/context:javascript) [![Total alerts](https://img.shields.io/lgtm/alerts/g/Sprax2013/Api.Sprax2013.de.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Sprax2013/Api.Sprax2013.de/alerts/)
