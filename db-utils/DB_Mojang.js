@@ -1,8 +1,6 @@
 const mysql = require('./MySQL');
 const escape = require('mysql').escape;
 
-const Utils = require('./../utils');
-
 const db = mysql.cfg['DB_Mojang'];
 
 module.exports = {

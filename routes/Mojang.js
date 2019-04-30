@@ -2,7 +2,7 @@ const request = require('request');
 const net = require('net');
 const NodeCache = require('node-cache');
 
-const db = require('./../db-utils/Mojang');
+const db = require('./../db-utils/DB_Mojang');
 
 const Utils = require('./../utils');
 
