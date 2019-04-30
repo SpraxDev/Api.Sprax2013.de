@@ -165,5 +165,3 @@ router.post('/lifeCO2Sim2k19', (req, res, next) => {
 });
 
 module.exports = router;
-
-function getScoreBoard() { }
