@@ -1,7 +1,7 @@
 const NodeCache = require('node-cache');
 
 const Utils = require('./../utils');
-const db = require('./../db-utils/SkinDB');
+const db = require('./../db-utils/DB_SkinDB');
 
 const statsCache = new NodeCache({ stdTTL: 600 /* 1h */ });
 
