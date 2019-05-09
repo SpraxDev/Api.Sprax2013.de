@@ -199,7 +199,49 @@ router.use('/skin/:id', (req, res, next) => {
 /* Misc. Routes */
 
 router.use('/search', (req, res, next) => {
-  res.json({ TODO: true });
+  let count = Utils.toInteger(req.query.count) || 25,
+    page = Utils.toInteger(req.query.page) || 1,
+    q = req.query.q;
+
+  if (Number.isNaN(count)) return next(Utils.createError(400, 'The query-parameter \'Count\' is invalid'));
+  if (Number.isNaN(page)) return next(Utils.createError(400, 'The query-parameter \'Page\' is invalid'));
+  if (count > 50) return next(Utils.createError(400, 'The query-parameter \'Count\' can not be greater than 50'));
+
+  if (!q) return next(Utils.createError(400, 'The query-parameter \'Q\' is missing'));
+  q = Utils.toNeutralString(q);
+  if (q.length > 128) return next(Utils.createError(400, 'The query-parameter \'Q\' has exceeded the maximum length of 128 characters'));
+  q = q.toLowerCase();
+
+  let sex = null; /* 0=none, 1=female, 2=male */
+  let age = null; /* 0=normal, 1=senior */
+  let hairLength = null; /* 0=normal, 1=long */
+
+  if (q.indexOf('long hair') >= 0) {
+    hairLength = 1;
+  }
+  if (q.indexOf('short hair') >= 0 || q.indexOf('normal hair') >= 0) {
+    hairLength = 0;
+  }
+
+  if (q.indexOf('female') >= 0 || q.indexOf('girl') >= 0) {
+    sex = 1;
+  }
+  if (q.indexOf('male') === 0 || q.indexOf(' male') >= 0 || q.indexOf('boy') >= 0) {
+    sex = 2;
+  }
+
+  if (q.indexOf('normal age') >= 0 || q.indexOf('young') >= 0) {
+    age = 0;
+  }
+  if (q.indexOf('senior') >= 0 || q.indexOf('old') >= 0) {
+    age = 1;
+  }
+
+  db.searchSkin(sex, age, hairLength, q.split(' '), count, page, (err, json) => {
+    if (err) return next(Utils.logAndCreateError(err));
+
+    res.json(json);
+  });
 });
 
 router.use('/stats', (req, res, next) => {

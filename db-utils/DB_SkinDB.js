@@ -154,6 +154,51 @@ module.exports = {
   },
 
   /**
+* @param {Number|Array<Number>} ids 
+* @param {Function} callback Params: err, skins | skins is an array
+*/
+  getSkinListFromID: function (skinIDs, callback) {
+    let sqlQuery = `SELECT * FROM \`${db}\`.\`Skins\``;
+
+    if (typeof skinIDs === 'number') {
+      sqlQuery += ' WHERE `ID`=' + skinIDs;
+    } else {
+      for (const skinID of skinIDs) {
+        if (typeof skinID !== 'number') break;
+
+        if (sqlQuery.indexOf('WHERE') > 0) {
+          sqlQuery += ' OR';
+        } else {
+          sqlQuery += ' WHERE';
+        }
+
+        sqlQuery += ' `ID`=' + skinID;
+      }
+    }
+    sqlQuery += ';';
+
+    mysql.pool.getConnection((err, con) => {
+      if (err) return callback(err);
+
+      con.query(sqlQuery, [], (err, rows, _fields) => {
+        con.release();
+
+        if (err) return callback(err);
+
+        let skins = [];
+
+        for (const row in rows) {
+          if (rows.hasOwnProperty(row)) {
+            skins.push(rowToSkin(rows[row]));
+          }
+        }
+
+        callback(null, skins);
+      });
+    });
+  },
+
+  /**
    * @param {Number} count 
    * @param {Function} callback Params: err, skins | skins is an array
    */
@@ -259,6 +304,90 @@ module.exports = {
   },
 
   /* Misc */
+
+  searchSkin: function (sex, age, hairLength, tags, count, page, callback) {
+    let sqlQuery = `SELECT * FROM \`${db}\`.\`MetaData\``;
+
+    if (sex != null && sex != undefined && Number.isSafeInteger(sex)) {
+      if (sqlQuery.indexOf('WHERE') > 0) {
+        sqlQuery += ' OR';
+      } else {
+        sqlQuery += ' WHERE';
+      }
+
+      sqlQuery += ' `Sex`=' + sex;
+    }
+    if (age != null && age != undefined && Number.isSafeInteger(age)) {
+      if (sqlQuery.indexOf('WHERE') > 0) {
+        sqlQuery += ' OR';
+      } else {
+        sqlQuery += ' WHERE';
+      }
+
+      sqlQuery += ' `Age`=' + age;
+    }
+    if (hairLength != null && hairLength != undefined && Number.isSafeInteger(hairLength)) {
+      if (sqlQuery.indexOf('WHERE') > 0) {
+        sqlQuery += ' OR';
+      } else {
+        sqlQuery += ' WHERE';
+      }
+
+      sqlQuery += ' `HairLength`=' + hairLength;
+    }
+
+    for (const tag of tags) {
+      for (const field of ['CharacterName', 'SkinOriginName', 'MaskCharacterName', 'HatType', 'Job', 'Accessories', 'MiscTags']) {
+        if (sqlQuery.indexOf('WHERE') > 0) {
+          sqlQuery += ' OR';
+        } else {
+          sqlQuery += ' WHERE';
+        }
+
+        sqlQuery += ' `' + field + '`=' + mysql.escape(tag);
+      }
+    }
+    sqlQuery += ' LIMIT ? OFFSET ?;';
+
+    mysql.pool.getConnection((err, con) => {
+      if (err) return callback(err);
+
+      let offset = ((page < 0) ? 0 : page - 1) * count;
+      con.query(sqlQuery, [count, offset], (err, rows, _fields) => {
+        if (err) {
+          con.release();
+          return callback(err);
+        }
+
+        let skinIDs = [];
+
+        for (const row in rows) {
+          if (rows.hasOwnProperty(row)) {
+            skinIDs.push(rows[row]['ID']);
+          }
+        }
+
+        if (skinIDs.length === 0) {
+          con.release();
+
+          return callback(null, { total: 0, results: [] });
+        }
+
+        con.query(`SELECT COUNT(*) AS 'Total' FROM ` + sqlQuery.substring(sqlQuery.indexOf(`\`${db}\`.\`MetaData\``), sqlQuery.lastIndexOf(' LIMIT')) + ';',
+          [], (err, rows2, _fields2) => {
+            con.release();
+
+            if (err) return callback(err);
+
+            module.exports.getSkinListFromID(skinIDs, (err, skins) => {
+              if (err) return callback(err);
+
+              return callback(null, { total: rows2[0]['Total'], results: skins });
+            });
+          });
+      });
+    });
+  },
 
   /**
    * @param {Function} callback Params: err, json
