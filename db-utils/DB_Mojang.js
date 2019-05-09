@@ -20,7 +20,7 @@ module.exports = {
     let sqlQuery = `SELECT * FROM \`${db}\`.\`Domains\``;
 
     if (typeof hashes === 'string') {
-      sqlQuery += ' WHERE `Hash`=' + escape(hashes);
+      sqlQuery += ' WHERE `Hash`=' + mysql.escape(hashes);
     } else {
       for (const hash of hashes) {
         if (sqlQuery.indexOf('WHERE') > 0) {
@@ -29,7 +29,7 @@ module.exports = {
           sqlQuery += ' WHERE';
         }
 
-        sqlQuery += ' `Hash`=' + escape(hash);
+        sqlQuery += ' `Hash`=' + mysql.escape(hash);
       }
     }
     sqlQuery += ' ORDER BY `Host` ASC;';

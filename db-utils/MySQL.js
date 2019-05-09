@@ -3,4 +3,7 @@ const pool = require('mysql').createPool(cfg);
 
 // ToDo create tables
 
-module.exports = { cfg, pool };
+module.exports = {
+  cfg, pool,
+  escape: require('mysql').escape
+};
