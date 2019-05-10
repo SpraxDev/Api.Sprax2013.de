@@ -23,7 +23,8 @@ router.get('/profile/:user', (req, res, next) => {
 
       if (json == null) return next(Utils.createError(204, 'The UUID does not belong to any account'));
 
-      res.json(json);
+      res.set('Cache-Control', 'public, s-maxage=62')
+        .json(json);
     });
   } else if (isValidUsername(user)) {
     getUUIDAt(user, null, (err, json) => {
@@ -36,7 +37,8 @@ router.get('/profile/:user', (req, res, next) => {
 
         if (json == null) return next(Utils.createError(204, 'The UUID does not belong to any account'));
 
-        res.json(json);
+        res.set('Cache-Control', 'public, s-maxage=62')
+          .json(json);
       });
     });
   } else {
@@ -56,7 +58,8 @@ router.get('/uuid/:username/:at?', (req, res, next) => {
 
     if (json == null) return next(Utils.createError(204, 'The username does not belong to any account'));
 
-    res.json(json);
+    res.set('Cache-Control', 'public, s-maxage=62')
+      .json(json);
   });
 });
 
@@ -69,7 +72,8 @@ router.get('/history/:user', (req, res, next) => {
 
       if (json == null) return next(Utils.createError(204, 'The UUID does not belong to any account'));
 
-      res.json(json);
+      res.set('Cache-Control', 'public, s-maxage=62')
+        .json(json);
     });
   } else if (isValidUsername(user)) {
     getUUIDAt(user, null, (err, json) => {
@@ -82,7 +86,8 @@ router.get('/history/:user', (req, res, next) => {
 
         if (json == null) return next(Utils.createError(204, 'The UUID does not belong to any account'));
 
-        res.json(json);
+        res.set('Cache-Control', 'public, s-maxage=62')
+          .json(json);
       });
     });
   } else {
@@ -96,7 +101,8 @@ router.get('/blockedservers', (_req, res, next) => {
   getBlockedServers((err, json) => {
     if (err) return next(Utils.logAndCreateError(err));
 
-    res.json(json);
+    res.set('Cache-Control', 'public, s-maxage=900' /* 15min */)
+      .json(json);
   });
 });
 
@@ -110,7 +116,8 @@ router.get('/blockedservers/known', (req, res, next) => {
       delete json.hosts;
     }
 
-    res.json(json);
+    res.set('Cache-Control', 'public, s-maxage=900' /* 15min */)
+      .json(json);
   });
 });
 
@@ -178,7 +185,8 @@ router.get('/blockedservers/check', (req, res, next) => {
       }
     }
 
-    res.json(json);
+    res.set('Cache-Control', 'public, s-maxage=900' /* 15min */)
+      .json(json);
   });
 });
 

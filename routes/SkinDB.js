@@ -20,7 +20,8 @@ router.use('/provide/:id', (req, res, next) => {  // ToDo when :id is not set st
   db.getPending(id, (err, status) => {
     if (err) next(Utils.logAndCreateError(err));
 
-    res.json(status);
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+    json(status);
   });
 });
 
@@ -95,6 +96,12 @@ router.use('/skin/list', (req, res, next) => {
     if (err) {
       next(Utils.logAndCreateError(err));
     } else {
+      if (skins.length >= count) {
+        res.set('Cache-Control', 'public, s-maxage=43200' /* 24h */);
+      } else {
+        res.set('Cache-Control', 'public, s-maxage=172800' /* 12h */);
+      }
+
       res.json(skins);
     }
   });
@@ -113,7 +120,8 @@ router.use('/skin/random', (req, res, next) => {
     if (err) {
       next(Utils.logAndCreateError(err));
     } else {
-      res.json(skins);
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+        .json(skins);
     }
   });
 });
@@ -176,7 +184,8 @@ router.use('/skin/:id/meta', (req, res, next) => {
     if (err) {
       next(Utils.logAndCreateError(err));
     } else {
-      res.json(meta);
+      res.set('Cache-Control', 'public, s-maxage=3600' /* 48h */)
+        .json(meta);
     }
   });
 });
@@ -191,7 +200,8 @@ router.use('/skin/:id', (req, res, next) => {
     if (err) {
       next(Utils.logAndCreateError(err));
     } else {
-      res.json(skin);
+      res.set('Cache-Control', 'public, s-maxage=172800' /* 48h */)
+        .json(skin);
     }
   });
 });
@@ -237,10 +247,11 @@ router.use('/search', (req, res, next) => {
     age = 1;
   }
 
-  db.searchSkin(sex, age, hairLength, q.split(' '), count, page, (err, json) => {
+  db.searchSkin(sex, age, hairLength, q.split(' '), count, page, (err, result) => {
     if (err) return next(Utils.logAndCreateError(err));
 
-    res.json(json);
+    res.set('Cache-Control', 'public, s-maxage=3600' /* 1h */)
+      .json(result);
   });
 });
 
@@ -250,7 +261,8 @@ router.use('/stats', (req, res, next) => {
   getStats(deep, (err, stats) => {
     if (err) return next(Utils.logAndCreateError(err));
 
-    res.json(stats);
+    res.set('Cache-Control', 'public, s-maxage=900' /* 15min */)
+      .json(stats);
   });
 });
 

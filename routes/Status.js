@@ -11,13 +11,14 @@ const pingCache = new NodeCache({
 
 router.use('/', (_req, res, _next) => {
   getBackendStatusSkinDB((status) => {
-    res.json({
-      api: 'OK',
+    res.set('Cache-Control', 'public, s-maxage=90')
+      .json({
+        api: 'OK',
 
-      backend: {
-        SkinDB: status
-      }
-    });
+        backend: {
+          SkinDB: status
+        }
+      });
   });
 });
 
