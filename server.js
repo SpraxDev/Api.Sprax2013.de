@@ -14,8 +14,10 @@ app.use(require('express-bearer-token')());
 
 // Default response headers
 app.use((_req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'User-Agent,Authorization,If-None-Match,Content-Type,If-Unmodified-Since');
+  res.set({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'User-Agent,Authorization,If-None-Match,Content-Type,If-Unmodified-Since'
+  });
 
   next();
 });

@@ -382,7 +382,10 @@ module.exports = {
             module.exports.getSkinListFromID(skinIDs, (err, skins) => {
               if (err) return callback(err);
 
-              return callback(null, { total: rows2[0]['Total'], results: skins });
+              callback(null, {
+                total: rows2[0]['Total'],
+                results: skins
+              });
             });
           });
       });
