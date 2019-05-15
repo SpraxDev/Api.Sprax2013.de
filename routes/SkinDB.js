@@ -226,24 +226,29 @@ router.use('/search', (req, res, next) => {
   let age = null; /* 0=normal, 1=senior */
   let hairLength = null; /* 0=normal, 1=long */
 
-  if (q.indexOf('long hair') >= 0) {
+  if (q.indexOf('long hair') === 0 || q.indexOf(' long hair') >= 0) {
     hairLength = 1;
   }
-  if (q.indexOf('short hair') >= 0 || q.indexOf('normal hair') >= 0) {
+  if (q.indexOf('short hair') === 0 || q.indexOf(' short hair') >= 0
+    || q.indexOf('normal hair') === 0 || q.indexOf(' normal hair') >= 0) {
     hairLength = 0;
   }
 
-  if (q.indexOf('female') >= 0 || q.indexOf('girl') >= 0) {
+  if (q.indexOf('female') === 0 || q.indexOf(' female') >= 0
+    || q.indexOf('girl') === 0 || q.indexOf(' girl') >= 0) {
     sex = 1;
   }
-  if (q.indexOf('male') === 0 || q.indexOf(' male') >= 0 || q.indexOf('boy') >= 0) {
+  if (q.indexOf('male') === 0 || q.indexOf(' male') >= 0
+    || q.indexOf('boy') === 0 || q.indexOf(' boy') >= 0) {
     sex = 2;
   }
 
-  if (q.indexOf('normal age') >= 0 || q.indexOf('young') >= 0) {
+  if (q.indexOf('normal age') === 0 || q.indexOf(' normal age') >= 0
+    || q.indexOf('young') === 0 || q.indexOf(' young') >= 0) {
     age = 0;
   }
-  if (q.indexOf('senior') >= 0 || q.indexOf('old') >= 0) {
+  if (q.indexOf('senior') === 0 || q.indexOf(' senior') >= 0
+    || q.indexOf('old') === 0 || q.indexOf(' old') >= 0) {
     age = 1;
   }
 
