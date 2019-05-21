@@ -21,7 +21,7 @@ router.use('/provide/:id', (req, res, next) => {  // ToDo when :id is not set st
     if (err) next(Utils.logAndCreateError(err));
 
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
-    json(status);
+    res.json(status);
   });
 });
 
