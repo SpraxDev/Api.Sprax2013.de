@@ -308,7 +308,7 @@ module.exports = {
   searchSkin: function (sex, age, hairLength, tags, count, page, callback) {
     let sqlQuery = `SELECT * FROM \`${db}\`.\`MetaData\``;
 
-    if (sex != null && sex != undefined && Number.isSafeInteger(sex)) {
+    if (sex != null && Number.isSafeInteger(sex)) {
       if (sqlQuery.indexOf('WHERE') > 0) {
         sqlQuery += ' OR';
       } else {
@@ -317,7 +317,7 @@ module.exports = {
 
       sqlQuery += ' `Sex`=' + sex;
     }
-    if (age != null && age != undefined && Number.isSafeInteger(age)) {
+    if (age != null && Number.isSafeInteger(age)) {
       if (sqlQuery.indexOf('WHERE') > 0) {
         sqlQuery += ' OR';
       } else {
@@ -326,7 +326,7 @@ module.exports = {
 
       sqlQuery += ' `Age`=' + age;
     }
-    if (hairLength != null && hairLength != undefined && Number.isSafeInteger(hairLength)) {
+    if (hairLength != null && Number.isSafeInteger(hairLength)) {
       if (sqlQuery.indexOf('WHERE') > 0) {
         sqlQuery += ' OR';
       } else {

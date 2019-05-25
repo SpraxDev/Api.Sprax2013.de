@@ -1,5 +1,4 @@
 const mysql = require('./MySQL');
-const escape = require('mysql').escape;
 
 const db = mysql.cfg['DB_Mojang'];
 
