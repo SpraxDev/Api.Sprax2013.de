@@ -344,7 +344,7 @@ module.exports = {
           sqlQuery += ' WHERE';
         }
 
-        sqlQuery += ' `' + field + '`=' + mysql.escape(tag);
+        sqlQuery += ' `' + field + '` LIKE ' + mysql.escape('%' + tag + '%');
       }
     }
     sqlQuery += ' LIMIT ? OFFSET ?;';
