@@ -19,13 +19,14 @@
   },
   "homepage": "https://github.com/Sprax2013/Api.Sprax2013.de#readme",
   "dependencies": {
-    "express": "^4.16.4",
+    "express": "^4.17.1",
     "express-bearer-token": "^2.4.0",
     "morgan": "^1.9.1",
     "mysql": "^2.17.1",
     "node-cache": "^4.2.0",
-    "nodemon": "^1.18.11",
-    "request": "^2.88.0"
+    "nodemon": "^1.19.1",
+    "request": "^2.88.0",
+    "rotating-file-stream": "^1.4.1"
   },
   "nodemonConfig": {
     "ignore": [
