@@ -66,3 +66,10 @@ function initStorage() {
     console.log('./storage/tokens.json has been created!');
   }
 }
+
+// TODO: Disconnect from db etc.
+// process.on('SIGINT', function () {
+//   db.stop(function (err) {
+//     process.exit(err ? 1 : 0);
+//   });
+// });
