@@ -6,6 +6,9 @@ const db = require('./../db-utils/DB_Mojang');
 
 const Utils = require('./../utils');
 
+const SKIN_STEVE = require('fs').readFileSync('./storage/static/steve.png'),
+  SKIN_ALEX = require('fs').readFileSync('./storage/static/alex.png');
+
 // Add "Cache-Control: max-age=1000" as a header (replace 1000 with the remaining stdTTL)
 // Use Page Rules on CloudFlare to 'Cache Everything' so cloudflare caches too
 const cache = new NodeCache({ stdTTL: 62 });

@@ -27,8 +27,8 @@ async function initStorage(callback) {
   const fs = require('fs'),
     request = require('request');
 
-  if (!fs.existsSync('./storage/')) {
-    require('./utils').mkdirsSync('./storage/');
+  if (!fs.existsSync('./storage/static/')) {
+    fs.mkdirSync('./storage/static/', { recursive: true });
   }
 
   if (!fs.existsSync('./storage/db.json')) {
@@ -65,6 +65,20 @@ async function initStorage(callback) {
       , null, 4));
 
     console.log('./storage/tokens.json has been created!');
+  }
+
+  // Download files that are required later
+  if (!fs.existsSync('./storage/static/steve.png')) {
+    request('https://textures.minecraft.net/texture/66fe51766517f3d01cfdb7242eb5f34aea9628a166e3e40faf4c1321696', { encoding: null })
+      .pipe(fs.createWriteStream('./storage/static/steve.png'));
+  }
+  if (!fs.existsSync('./storage/static/alex.png')) {
+    request('https://textures.minecraft.net/texture/63b098967340daac529293c24e04910509b208e7b94563c3ef31dec7b3750', { encoding: null })
+      .pipe(fs.createWriteStream('./storage/static/alex.png'));
+  }
+
+  if (callback) {
+    callback();
   }
 }
 
