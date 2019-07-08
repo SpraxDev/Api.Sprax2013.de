@@ -1,30 +1,31 @@
-initStorage();
+initStorage(() => {
+  const http = require('http');
 
-const http = require('http');
-
-const server = http.createServer(require('./server'));
-server.on('error', (err) => {
-  if (err.syscall !== 'listen') {
-    throw err;
-  }
-
-  switch (err.code) {
-    case 'EACCES':
-      console.error(`Port ${process.env.PORT || 8091} requires elevated privileges`);
-      process.exit(1);
-      break;
-    case 'EADDRINUSE':
-      console.error(`Port ${process.env.PORT || 8091} is already in use`);
-      process.exit(1);
-      break;
-    default:
+  const server = http.createServer(require('./server'));
+  server.on('error', (err) => {
+    if (err.syscall !== 'listen') {
       throw err;
-  }
-});
-server.listen(process.env.PORT || 8091, process.env.HOST || '127.0.0.1');
+    }
 
-function initStorage() {
-  const fs = require('fs');
+    switch (err.code) {
+      case 'EACCES':
+        console.error(`Port ${process.env.PORT || 8091} requires elevated privileges`);
+        process.exit(1);
+        break;
+      case 'EADDRINUSE':
+        console.error(`Port ${process.env.PORT || 8091} is already in use`);
+        process.exit(1);
+        break;
+      default:
+        throw err;
+    }
+  });
+  server.listen(process.env.PORT || 8091, process.env.HOST || '127.0.0.1');
+});
+
+async function initStorage(callback) {
+  const fs = require('fs'),
+    request = require('request');
 
   if (!fs.existsSync('./storage/')) {
     require('./utils').mkdirsSync('./storage/');
