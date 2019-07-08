@@ -98,6 +98,164 @@ router.get('/history/:user', (req, res, next) => {
   }
 });
 
+/* Skin Routes */
+router.get('/skin/:user', (req, res, next) => {
+  let user = req.params.user.trim();
+
+  if (Utils.isUUID(user)) {
+    getProfile(user, (err, json) => {
+      if (err) return next(Utils.logAndCreateError(err));
+      if (json == null) return next(Utils.createError(204, 'The UUID does not belong to any account'));
+
+      if (json['properties']) {
+        for (const prop in json['properties']) {
+          if (json['properties'].hasOwnProperty(prop)) {
+            const value = json['properties'][prop];
+
+            if (value['name'] == 'textures' && value['value']) {
+              const skin = JSON.parse(Buffer.from(value['value'], 'base64').toString('ascii'));
+
+              if (skin['textures'] && skin['textures']['SKIN']) {
+                return res.set('Cache-Control', 'public, s-maxage=62')
+                  .json({
+                    url: skin['textures']['SKIN']['url'],
+                    slim: (skin['textures']['SKIN']['metadata'] && skin['textures']['SKIN']['metadata']['model'] == 'slim') || false
+                  });
+              }
+            }
+          }
+        }
+      }
+
+      const slim = isAlexDefaultSkin(json['id']);
+      res.status(404).set('Cache-Control', 'public, s-maxage=62')
+        .json({
+          url: slim ?
+            'http://textures.minecraft.net/texture/63b098967340daac529293c24e04910509b208e7b94563c3ef31dec7b3750' :
+            'http://textures.minecraft.net/texture/66fe51766517f3d01cfdb7242eb5f34aea9628a166e3e40faf4c1321696',
+          slim: slim
+        });
+    });
+  } else if (isValidUsername(user)) {
+    getUUIDAt(user, null, (err, json) => {
+      if (err) return next(Utils.logAndCreateError(err));
+      if (json == null) return next(Utils.createError(204, 'The username does not belong to any account'));
+
+      getProfile(json.id, (err, json) => {
+        if (err) return next(Utils.logAndCreateError(err));
+        if (json == null) return next(Utils.createError(204, 'The UUID does not belong to any account'));
+
+        if (json['properties']) {
+          for (const prop in json['properties']) {
+            if (json['properties'].hasOwnProperty(prop)) {
+              const value = json['properties'][prop];
+
+              if (value['name'] == 'textures' && value['value']) {
+                const skin = JSON.parse(Buffer.from(value['value'], 'base64').toString('ascii'));
+
+                if (skin['textures'] && skin['textures']['SKIN']) {
+                  return res.set('Cache-Control', 'public, s-maxage=62')
+                    .json({
+                      url: skin['textures']['SKIN']['url'],
+                      slim: (skin['textures']['SKIN']['metadata'] && skin['textures']['SKIN']['metadata']['model'] == 'slim') || false
+                    });
+                }
+              }
+            }
+          }
+        }
+
+        const slim = isAlexDefaultSkin(json['id']);
+        res.status(404).set('Cache-Control', 'public, s-maxage=62')
+          .json({
+            url: slim ? 'http://textures.minecraft.net/texture/63b098967340daac529293c24e04910509b208e7b94563c3ef31dec7b3750' : 'http://textures.minecraft.net/texture/66fe51766517f3d01cfdb7242eb5f34aea9628a166e3e40faf4c1321696',
+            slim: slim
+          });
+      });
+    });
+  } else {
+    return next(Utils.createError(400, 'The parameter \'User\' is invalid'));
+  }
+});
+
+router.get('/skinfile/:user', (req, res, next) => {
+  let user = req.params.user.trim();
+
+  if (Utils.isUUID(user)) {
+    getProfile(user, (err, json) => {
+      if (err) Utils.logAndCreateError(err);
+
+      if (!err && json && json['properties']) {
+        for (const prop in json['properties']) {
+          if (json['properties'].hasOwnProperty(prop)) {
+            const value = json['properties'][prop];
+
+            if (value['name'] == 'textures' && value['value']) {
+              const skin = JSON.parse(Buffer.from(value['value'], 'base64').toString('ascii'));
+
+              if (skin['textures'] && skin['textures']['SKIN']) {
+                return request(skin['textures']['SKIN']['url'].replace('http://', 'https://'),
+                  { encoding: null }, (err, _httpRes, body) => {
+                    if (err) return next(Utils.logAndCreateError(err));
+
+                    res.set('Cache-Control', 'public, s-maxage=62')
+                      .contentType('png').send(body);
+                  });
+              }
+            }
+          }
+        }
+      }
+
+      res.status(404).set('Cache-Control', 'public, s-maxage=62')
+        .contentType('png').send(
+          (!err && json && !isAlexDefaultSkin(json['id'])) ?
+            SKIN_STEVE :
+            SKIN_ALEX);
+    });
+  } else if (isValidUsername(user)) {
+    getUUIDAt(user, null, (err, json) => {
+      if (err) return next(Utils.logAndCreateError(err));
+      if (json == null) return next(Utils.createError(204, 'The username does not belong to any account'));
+
+      getProfile(json.id, (err, json) => {
+        if (err) Utils.logAndCreateError(err);
+
+        if (!err && json && json['properties']) {
+          for (const prop in json['properties']) {
+            if (json['properties'].hasOwnProperty(prop)) {
+              const value = json['properties'][prop];
+
+              if (value['name'] == 'textures' && value['value']) {
+                const skin = JSON.parse(Buffer.from(value['value'], 'base64').toString('ascii'));
+
+                if (skin['textures'] && skin['textures']['SKIN']) {
+                  return request(skin['textures']['SKIN']['url'].replace('http://', 'https://'),
+                    { encoding: null }, (err, _httpRes, body) => {
+                      if (err) return next(Utils.logAndCreateError(err));
+
+                      res.set('Cache-Control', 'public, s-maxage=62')
+                        .contentType('png').send(body);
+                    });
+                }
+              }
+            }
+          }
+        }
+
+        res.status(404).set('Cache-Control', 'public, s-maxage=62')
+          .contentType('png').send(
+            (!err && json && !isAlexDefaultSkin(json['id'])) ?
+              SKIN_STEVE :
+              SKIN_ALEX);
+      });
+    });
+  } else {
+    return res.status(404).set('Cache-Control', 'public, s-maxage=172800')
+      .contentType('png').send(SKIN_ALEX);
+  }
+});
+
 /* Blocked servers Routes */
 
 router.get('/blockedservers', (_req, res, next) => {
@@ -419,6 +577,18 @@ function getKnownServer(callback) { // ToDo recode
 
 function isValidUsername(username) {
   return username.length <= 16 && !/[^0-9a-zA-Z_]/.test(username);
+}
+
+//TODO: Schmeißt irwie immer alex und nie steve?
+function isAlexDefaultSkin(uuid) {
+  // MC uses `uuid.hashCode() & 1` for alex
+  // that can be compacted to counting the LSBs of every 4th byte in the UUID
+  // an odd sum means alex, an even sum means steve
+  // XOR-ing all the LSBs gives us 1 for alex and 0 for steve
+  return (parseInt(uuid[7], 16) ^
+    parseInt(uuid[15], 16) ^
+    parseInt(uuid[23], 16) ^
+    parseInt(uuid[31], 16)) == 1;
 }
 
 module.exports.getProfile = getProfile;
