@@ -11,7 +11,7 @@ const pingCache = new NodeCache({
 
 router.use('/', (_req, res, _next) => {
   getBackendStatusSkinDB((status) => {
-    res.set('Cache-Control', 'public, s-maxage=90')
+    res.set('Cache-Control', 'public, s-maxage=92, max-age=92')
       .json({
         api: 'OK',
 
