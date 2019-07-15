@@ -35,7 +35,9 @@ app.use(require('express-bearer-token')());
 app.use((_req, res, next) => {
   res.set({
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'User-Agent,Authorization,If-None-Match,Content-Type,If-Unmodified-Since'
+    'Access-Control-Allow-Headers': 'User-Agent,Authorization,If-None-Match,Content-Type,If-Unmodified-Since',
+
+    'Cache-Control': 'public, s-maxage=90, max-age=90'
   });
 
   next();
