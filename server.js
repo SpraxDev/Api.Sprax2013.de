@@ -20,6 +20,7 @@ const accessLogStream = require('rotating-file-stream')('access.log', {
 const app = express();
 
 app.disable('x-powered-by');
+app.set('trust proxy', 'loopback');
 
 // Log to console and file
 app.use(morgan('dev', { skip: function (_req, res) { return res.statusCode < 400; } }));
