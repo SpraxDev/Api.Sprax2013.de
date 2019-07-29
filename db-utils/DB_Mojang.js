@@ -74,9 +74,7 @@ module.exports = {
       });
   },
 
-  updateGameProfile(profile, callback) {
-    const texture = Utils.Mojang.getProfileTextures(profile);
-
+  updateGameProfile(profile, texture, callback) {
     pool.query('INSERT INTO "GameProfiles"("UUID", "Username", "TextureValue", "TextureSignature", "SkinURL") VALUES ($1, $2, $3, $4, $5) ' +
       'ON CONFLICT("UUID") DO UPDATE SET "Username"=$2, "TextureValue"=$3, "TextureSignature"=$4, "SkinURL"=$5, "LastUpdate"=CURRENT_TIMESTAMP;',
       [profile['id'], profile['name'], texture.value, texture.signature, texture.skinURL], (err, _res) => {

@@ -378,9 +378,14 @@ function getProfile(uuid, callback) {
       if (res.statusCode === 200) {
         let json = JSON.parse(body);
 
-        db.updateGameProfile(json, (err) => {
+        const texture = Utils.Mojang.getProfileTextures(json);
+        db.updateGameProfile(json, texture, (err) => {
           if (err) console.error('Fehler beim speichern des GPs in die DB:', err);
         });
+
+        if (texture.skinURL) {
+          require('./SkinDB').queueSkin(null, undefined, texture.skinURL, texture.value, texture.signature, 'Api.Sprax2013.De (Mojang-Route)');
+        }
 
         cache.set(uuid, json);
 
