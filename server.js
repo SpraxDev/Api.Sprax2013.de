@@ -49,7 +49,7 @@ app.use('/status', require('./routes/Status'));
 app.use('/skinDB', require('./routes/SkinDB'));
 app.use('/mojang', require('./routes/Mojang'));
 
-app.use('/hems', require('./routes/legacy_hems'));
+// app.use('/hems', require('./routes/legacy_hems'));
 
 // Prepare 404
 app.use((_req, _res, next) => {
