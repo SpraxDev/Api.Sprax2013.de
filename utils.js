@@ -165,5 +165,35 @@ module.exports = {
     return crypto.createHash('SHA1').update(str).digest('hex');
   },
 
+  Mojang: {
+    getProfileTextures(profile) {
+      let textureValue = null, textureSignature = null, skinURL = null;
+
+      if (profile['properties']) {
+        for (const prop in profile['properties']) {
+          if (profile['properties'].hasOwnProperty(prop)) {
+            const value = profile['properties'][prop];
+
+            if (value['name'] == 'textures' && value['value']) {
+              textureValue = value['value'];
+              textureSignature = value['signature'];
+
+              const skin = JSON.parse(Buffer.from(textureValue, 'base64').toString('ascii'));
+              if (skin['textures'] && skin['textures']['SKIN']) {
+                skinURL = skin['textures']['SKIN']['url'];
+              }
+            }
+          }
+        }
+      }
+
+      return {
+        value: textureValue,
+        signature: textureSignature,
+        skinURL: skinURL
+      };
+    }
+  },
+
   EOL: require('os').EOL
 };
