@@ -1,51 +1,57 @@
-const mysql = require('./MySQL');
+const { Pool } = require('pg');
+const pool = new Pool({
+  host: require('./../storage/db.json')['host'],
+  user: require('./../storage/db.json')['user'],
+  password: require('./../storage/db.json')['password'],
+  database: require('./../storage/db.json')['DB_Mojang'],
+  max: 12,
+  ssl: true
+});
+pool.on('error', (err, _client) => {
+  console.error('Unexpected error on idle client:', err);
+  // process.exit(-1);
+});
+// call `pool.end()` to shutdown the pool (waiting for queries to finish)
 
-const db = mysql.cfg['DB_Mojang'];
+const Utils = require('./../utils');
 
 module.exports = {
   setHost(host, hash, callback) {
-    mysql.pool.getConnection((err, con) => {
-      if (err) return callback(err);
-
-      con.query(`INSERT IGNORE INTO \`${db}\`.\`Domains\`(\`Host\`,\`Hash\`) VALUE (?,?);`, [host, hash], (err, rows, _fields) => {
-        con.release();
-
+    pool.query(`INSERT INTO "Domains"("Host", "Hash") VALUES ($1, $2) ON CONFLICT DO NOTHING;`,
+      [host, hash], (err, _res) => {
         callback(err || null);
       });
-    });
   },
 
   getHost(hashes, callback) {
-    let sqlQuery = `SELECT * FROM \`${db}\`.\`Domains\``;
-
-    if (typeof hashes === 'string') {
-      sqlQuery += ' WHERE `Hash`=' + mysql.escape(hashes);
-    } else {
-      for (const hash of hashes) {
-        if (sqlQuery.indexOf('WHERE') > 0) {
-          sqlQuery += ' OR';
-        } else {
-          sqlQuery += ' WHERE';
-        }
-
-        sqlQuery += ' `Hash`=' + mysql.escape(hash);
-      }
-    }
-    sqlQuery += ' ORDER BY `Host` ASC;';
-
-    mysql.pool.getConnection((err, con) => {
+    pool.connect((err, client, done) => {
       if (err) return callback(err);
 
-      con.query(sqlQuery, [], (err, rows, _fields) => {
-        con.release();
+      let sqlQuery = 'SELECT * FROM "Domains"';
+      if (typeof hashes === 'string') {
+        sqlQuery += ' WHERE "Domains"."Hash"=' + client.escapeLiteral(hashes);
+      } else {
+        for (const hash of hashes) {
+          if (sqlQuery.indexOf('WHERE') > 0) {
+            sqlQuery += ' OR';
+          } else {
+            sqlQuery += ' WHERE';
+          }
 
+          sqlQuery += ' "Domains"."Hash"=' + client.escapeLiteral(hash);
+        }
+      }
+      sqlQuery += ' ORDER BY "Domains"."Host" ASC;';
+
+      client.query(sqlQuery, [], (err, res) => {
+        done();
         if (err) return callback(err);
 
         let json = {};
 
-        for (const row in rows) {
-          if (rows.hasOwnProperty(row)) {
-            let elem = rows[row];
+        for (const row in res.rows) {
+          if (res.rows.hasOwnProperty(row)) {
+            let elem = res.rows[row];
 
             json[elem.Host] = elem.Hash;
           }
@@ -60,16 +66,21 @@ module.exports = {
    * @param {Function} callback 
    */
   getDatabaseSize(callback) {
-    mysql.pool.getConnection((err, con) => {
-      if (err) return callback(err);
-
-      con.query(`SHOW INDEX FROM \`${db}\`.\`Domains\`;`, [], (err, rows, _fields) => {
-        con.release();
-
+    pool.query(`SELECT "reltuples" AS "approximate_row_count" FROM "pg_class" WHERE "relname" = 'Domains';`,
+      [], (err, res) => {
         if (err) return callback(err);
 
-        callback(null, rows[0].Cardinality);
+        callback(null, res.rows[0]['approximate_row_count']);
       });
-    });
+  },
+
+  updateGameProfile(profile, callback) {
+    const texture = Utils.Mojang.getProfileTextures(profile);
+
+    pool.query('INSERT INTO "GameProfiles"("UUID", "Username", "TextureValue", "TextureSignature", "SkinURL") VALUES ($1, $2, $3, $4, $5) ' +
+      'ON CONFLICT("UUID") DO UPDATE SET "Username"=$2, "TextureValue"=$3, "TextureSignature"=$4, "SkinURL"=$5, "LastUpdate"=CURRENT_TIMESTAMP;',
+      [profile['id'], profile['name'], texture.value, texture.signature, texture.skinURL], (err, _res) => {
+        callback(err || null);
+      });
   }
 };
