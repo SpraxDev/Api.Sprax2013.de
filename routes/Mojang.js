@@ -378,6 +378,10 @@ function getProfile(uuid, callback) {
       if (res.statusCode === 200) {
         let json = JSON.parse(body);
 
+        db.updateGameProfile(json, (err) => {
+          if (err) console.error('Fehler beim speichern des GPs in die DB:', err);
+        });
+
         cache.set(uuid, json);
 
         cache.set(json['name'].toLowerCase() + '@', {
@@ -591,4 +595,7 @@ function isAlexDefaultSkin(uuid) {
     parseInt(uuid[31], 16)) == 1;
 }
 
+module.exports.getUUIDAt = getUUIDAt;
 module.exports.getProfile = getProfile;
+
+module.exports.isValidUsername = isValidUsername;
