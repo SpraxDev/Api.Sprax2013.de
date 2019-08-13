@@ -28,7 +28,7 @@ router.get('/profile/:user', (req, res, next) => {
 
       res.set('Cache-Control', 'public, s-maxage=62')
         .json(json);
-    });
+    }, `Api.Sprax2013.De (Mojang-Route) (${req.header('User-Agent')})`);
   } else if (isValidUsername(user)) {
     getUUIDAt(user, null, (err, json) => {
       if (err) return next(Utils.logAndCreateError(err));
@@ -42,7 +42,7 @@ router.get('/profile/:user', (req, res, next) => {
 
         res.set('Cache-Control', 'public, s-maxage=62')
           .json(json);
-      });
+      }, `Api.Sprax2013.De (Mojang-Route) (${req.header('User-Agent')})`);
     });
   } else {
     return next(Utils.createError(400, 'The parameter \'User\' is invalid'));
@@ -135,7 +135,7 @@ router.get('/skin/:user', (req, res, next) => {
             'http://textures.minecraft.net/texture/66fe51766517f3d01cfdb7242eb5f34aea9628a166e3e40faf4c1321696',
           slim: slim
         });
-    });
+    }, `Api.Sprax2013.De (Mojang-Route) (${req.header('User-Agent')})`);
   } else if (isValidUsername(user)) {
     getUUIDAt(user, null, (err, json) => {
       if (err) return next(Utils.logAndCreateError(err));
@@ -171,7 +171,7 @@ router.get('/skin/:user', (req, res, next) => {
             url: slim ? 'http://textures.minecraft.net/texture/63b098967340daac529293c24e04910509b208e7b94563c3ef31dec7b3750' : 'http://textures.minecraft.net/texture/66fe51766517f3d01cfdb7242eb5f34aea9628a166e3e40faf4c1321696',
             slim: slim
           });
-      });
+      }, `Api.Sprax2013.De (Mojang-Route) (${req.header('User-Agent')})`);
     });
   } else {
     return next(Utils.createError(400, 'The parameter \'User\' is invalid'));
@@ -212,7 +212,7 @@ router.get('/skinfile/:user', (req, res, next) => {
           (!err && json && !isAlexDefaultSkin(json['id'])) ?
             SKIN_STEVE :
             SKIN_ALEX);
-    });
+    }, `Api.Sprax2013.De (Mojang-Route) (${req.header('User-Agent')})`);
   } else if (isValidUsername(user)) {
     getUUIDAt(user, null, (err, json) => {
       if (err) return next(Utils.logAndCreateError(err));
@@ -248,7 +248,7 @@ router.get('/skinfile/:user', (req, res, next) => {
             (!err && json && !isAlexDefaultSkin(json['id'])) ?
               SKIN_STEVE :
               SKIN_ALEX);
-      });
+      }, `Api.Sprax2013.De (Mojang-Route) (${req.header('User-Agent')})`);
     });
   } else {
     return res.status(404).set('Cache-Control', 'public, s-maxage=172800')
@@ -357,7 +357,7 @@ module.exports = router;
  * @param {String} uuid 
  * @param {Function} callback 
  */
-function getProfile(uuid, callback) {
+function getProfile(uuid, callback, userAgent = '') {
   uuid = uuid.toLowerCase().replace(/-/g, '');
 
   const cached = cache.get(uuid);
@@ -383,8 +383,8 @@ function getProfile(uuid, callback) {
           if (err) console.error('Fehler beim speichern des GPs in die DB:', err);
         });
 
-        if (texture.skinURL) {
-          require('./SkinDB').queueSkin(null, undefined, texture.skinURL, texture.value, texture.signature, 'Api.Sprax2013.De (Mojang-Route)');
+        if (userAgent && texture.skinURL) {
+          require('./SkinDB').queueSkin(null, undefined, texture.skinURL, texture.value, texture.signature, userAgent);
         }
 
         cache.set(uuid, json);

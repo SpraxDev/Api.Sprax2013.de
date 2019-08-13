@@ -1,262 +1,179 @@
-const NodeCache = require('node-cache');
+const crypto = require('crypto');
 
-const Utils = require('./../utils');
-const db = require('./../db-utils/DB_SkinDB');
+const yggdrasilPublicKey = require('fs').readFileSync(require('path').join(__dirname, '../yggdrasil_session_pubkey.pem'));
 
-const statsCache = new NodeCache({ stdTTL: 3600 /* 1h */ });
+const statsCache = new (require('node-cache'))({ stdTTL: 3600 /* 1h */ });
 
-const SkinMetaElements = ['CharacterName', 'CharacterURL', 'SkinOriginName', 'SkinOriginURL', 'WearsMask', 'MaskCharacterName', 'MaskCharacterURL', 'WearsHat', 'HatType', 'Job', 'Accessories', 'MiscTags', 'Sex', 'Age', 'HairLength'],
-  SkinMetaNumberElements = ['WearsMask', 'WearsHat', 'Sex', 'Age', 'HairLength'];
+const Utils = require('./../utils'),
+  Mojang = require('./Mojang'),
+  db = require('./../db-utils/DB_SkinDB');
 
 const router = require('express').Router();
 
-/* Provide Routes */
-router.use('/provide/:id', (req, res, next) => {  // ToDo when :id is not set still notify instead of an 404
+// TODO: Einheitliche API-Fehlercodes einführen
+// TODO: Im Wiki sagen, dass die Fehlernachrichten sich ändern können aber nicht den Sinn verändern
+// TODO: Auf die passende Wiki-Seite hinweisen um den Fehler vllt. schneller finden zu können
+
+router.use('/provide/:id', (req, res, next) => {
   let id = Utils.toInteger(req.params.id);
 
   // Check for invalid content
-  if (Number.isNaN(id)) return next(Utils.createError(400, 'The parameter \'ID\' is invalid'));
+  if (Number.isNaN(id)) return next(Utils.createError(400, `The parameter 'id' is invalid`));
 
-  db.getPending(id, (err, status) => {
-    if (err) next(Utils.logAndCreateError(err));
+  db.getQueue(id, (err, qObj) => {
+    if (err) return next(Utils.logAndCreateError(err));
 
-    res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
-    res.json(status);
+    if (!qObj) return next(Utils.createError(400, 'Nothing queued with the given ID', true));
+
+    res.set('Cache-Control', 'public, s-maxage=172800' /* 48h */)
+      .json(qObj);
   });
+});
+
+router.post('/provide', (req, res, next) => {
+  res.set({
+    'Cache-Control': 'public, s-maxage=0, max-age=0'
+  });
+
+  if (!req.body) return next(Utils.createError(400, `The query-body is missing`, true));
+  if (!req.body['uuids']
+    || !Array.isArray(req.body['uuids'])
+    || req.body['uuids'].length == 0) return next(Utils.createError(400, `The query-body is missing an 'uuids' array`, true));
+
+  let json = {};
+  let awaiting = 0;
+
+  const decrementAwaiting = () => {
+    awaiting--;
+
+    if (awaiting <= 0) {
+      return res.status(202).json(json);
+    }
+  };
+
+  for (const uuid of req.body['uuids']) {
+    if (typeof uuid === 'string' && Utils.isUUID(uuid)) {
+      awaiting++;
+
+      Mojang.getProfile(uuid, (err, profile) => {
+        if (err) {
+          err = Utils.logAndCreateError(err);
+          json[uuid] = { status: err.status, msg: err.message };
+
+          decrementAwaiting();
+        }
+        else if (!profile) {
+          json[uuid] = { status: 204, msg: 'The UUID does not belong to any account' };
+
+          decrementAwaiting();
+        }
+        else {
+          const profileData = Utils.Mojang.getProfileTextures(profile);
+
+          if (!profileData.skinURL || !profileData.signature) {
+            json[uuid] = { status: 400, msg: 'That user does not have a skin' };
+
+            decrementAwaiting();
+          } else {
+            queueSkin((pending) => {
+              json[profile.id] = pending;
+
+              decrementAwaiting();
+            }, (err) => {
+              json[profile.id] = { status: err.status, msg: err.message };
+
+              decrementAwaiting();
+            }, profileData.skinURL, profileData.value, profileData.signature, req.header('User-Agent'));
+          }
+        }
+      }, null);
+    }
+  }
 });
 
 router.use('/provide', (req, res, next) => {
-  let data = req.query.data;
+  let value = req.query.value,
+    signature = req.query.signature;
 
-  // Check for invalid content
-  if (!data) return next(Utils.createError(400, 'The query-parameter \'Data\' is missing'));
-  data = data.trim();
+  if (!value) value = req.query.data; // Temp. legacy support
 
-  if (Utils.isUUID(data)) {
-    require('./Mojang').getProfile(data, (err, profile) => {
-      if (err) return next(Utils.createError(400, 'The UUID does not belong to an account'));
+  if (!value) return next(Utils.createError(400, `The query-parameter 'value' is missing`, true));
 
-      profile = JSON.parse(profile);
+  if (signature) {
+    if (!isFromYggdrasil(value, signature)) return next(Utils.createError(400, `The provided 'signature' for 'value' is invalid or not signed by Yggdrasil`, true));
 
-      let hasSkin = false;
-      if (profile.properties && profile.properties.length >= 1) {
-        let texturesProp = JSON.parse(Buffer.from(profile.properties.shift().value, 'base64').toString('UTF-8'));
+    const skin = JSON.parse(Buffer.from(value, 'base64').toString('ascii'));
+    if (!skin['textures'] || !skin['textures']['SKIN']) return next(Utils.createError(400, 'That value does not contain a skin', true));
 
-        if (texturesProp && texturesProp.textures && texturesProp.textures.SKIN && texturesProp.textures.SKIN.url) {
-          hasSkin = true;
-
-          let skinURL = texturesProp.textures.SKIN.url;
-
-          db.isPendingOrInDB(skinURL, (err, bool) => {
-            if (err) return next(Utils.logAndCreateError(err));
-            if (bool) return next(Utils.createError(200, 'The skin belonging to the UUID is already in the database'));
-
-            db.addPending(skinURL, req.header('User-Agent'), (err, pending) => {
-              if (err) return next(Utils.logAndCreateError(err));
-
-              res.status(202).json(pending);
-            });
-          });
-        }
-      }
-
-      if (!hasSkin) return next(Utils.createError(200, 'The profile belonging to the UUID has no skin'));
-    });
-  } else if (Utils.isURL(data)) {
-    db.isPendingOrInDB(data, (err, bool) => {
-      if (err) return next(Utils.logAndCreateError(err));
-      if (bool) return next(Utils.createError(200, 'The skin is already in the database'));
-
-      db.addPending(data, req.header('User-Agent'), (err, pending) => {
-        if (err) return next(Utils.logAndCreateError(err));
-
-        res.status(202).json(pending);
-      });
-    });
-  } else {
-    return next(Utils.createError(400, 'The query-parameter \'Data\' is invalid'));
+    return queueSkin(res, next, skin['textures']['SKIN']['url'], value, signature, req.header('User-Agent'));
   }
-});
+  else if (Utils.isUUID(value)) {
+    Mojang.getProfile(value, (err, json) => {
+      if (err) return next(Utils.logAndCreateError(err));
+      if (!json) return next(Utils.createError(204, 'The UUID does not belong to any account', true));
 
+      const profileData = Utils.Mojang.getProfileTextures(json);
 
-/* Skin Routes */
-router.use('/skin/list', (req, res, next) => {
-  let count = Utils.toInteger(req.query.count) || 25,
-    page = Utils.toInteger(req.query.page) || 1,
-    sortDESC = req.query.desc ? Utils.toBoolean(req.query.desc) : true;
+      if (!profileData.skinURL || !profileData.signature) return next(Utils.createError(400, 'That user does not have a skin', true));
 
-  // Check for invalid content
-  if (Number.isNaN(count)) return next(Utils.createError(400, 'The query-parameter \'Count\' is invalid'));
-  if (Number.isNaN(page)) return next(Utils.createError(400, 'The query-parameter \'Page\' is invalid'));
+      return queueSkin(res, next, profileData.skinURL, profileData.value, profileData.signature, req.header('User-Agent'));
+    }, null);
+  }
+  else if (Mojang.isValidUsername(value)) {
+    Mojang.getUUIDAt(value, null, (err, json) => {
+      if (err) return next(Utils.logAndCreateError(err));
+      if (!json) return next(Utils.createError(204, 'The username does not belong to any account', true));
 
-  // Check for invalid value
-  if (count > 50) return next(Utils.createError(400, 'The query-parameter \'Count\' can not be greater than 50'));
+      Mojang.getProfile(json.id, (err, json) => {
+        if (err) return next(Utils.logAndCreateError(err));
+        if (!json) return next(Utils.createError(204, 'The UUID does not belong to any account', true));
 
-  db.getSkinList(count, page, sortDESC, (err, skins) => {
-    if (err) {
-      next(Utils.logAndCreateError(err));
-    } else {
-      if (skins.length >= count) {
-        res.set('Cache-Control', 'public, s-maxage=43200' /* 24h */);
-      } else {
-        res.set('Cache-Control', 'public, s-maxage=172800' /* 12h */);
-      }
+        const profileData = Utils.Mojang.getProfileTextures(json);
 
-      res.json(skins);
-    }
-  });
+        if (!profileData.skinURL || !profileData.signature) return next(Utils.createError(400, 'That user does not have a skin', true));
+
+        return queueSkin(res, next, profileData.skinURL, profileData.value, profileData.signature, req.header('User-Agent'));
+      }, null);
+    });
+  }
+  else if (Utils.isURL(value)) {
+    return queueSkin(res, next, value, null, null, req.header('User-Agent'));
+  }
+
+  else {
+    return next(Utils.createError(400, `The provided 'value' is invalid`, true));
+  }
 });
 
 router.use('/skin/random', (req, res, next) => {
-  let count = Utils.toInteger(req.query.count) || 1;
+  let count = req.query.count ? Utils.toInteger(req.query.count) : 1;
 
   // Check for invalid content
-  if (Number.isNaN(count)) return next(Utils.createError(400, 'The query-parameter \'Count\' is invalid'));
-
-  // Check for invalid value
-  if (count > 50) return next(Utils.createError(400, 'The query-parameter \'Count\' can not be greater than 50'));
+  if (Number.isNaN(count) || count < 1 || count > 50) return next(Utils.createError(400, `The query-parameter 'count' is invalid or too large`, true));
 
   db.getRandomSkinList(count, (err, skins) => {
-    if (err) {
-      next(Utils.logAndCreateError(err));
-    } else {
-      res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
-        .json(skins);
-    }
-  });
-});
-
-router.post('/skin/:id/meta', (req, res, next) => {
-  if (!req.token) {
-    res.setHeader('WWW-Authenticate', 'Bearer');
-    return next(Utils.createError(401, 'Unauthorized'));
-  }
-
-  if (!Utils.TokenSystem.getPermissions(req.token).includes(Utils.TokenSystem.PERMISSION.SKINDB_ADMIN)) return next(Utils.createError(403, 'Forbidden'));
-
-
-  let id = Utils.toInteger(req.params.id);
-
-  // Check for invalid content
-  if (Number.isNaN(id)) return next(Utils.createError(400, 'The parameter \'ID\' is invalid'));
-  if (!req.body || typeof req.body !== 'object') return next(Utils.createError(400, 'The body is invalid'));
-
-  let cleanJSON = {}, cleanJSONKeyCount = 0;
-
-  for (const key of SkinMetaElements) {
-    let value = req.body[key];
-
-    if (value !== undefined) {
-
-      //ToDo Besser schreiben!
-      if (SkinMetaNumberElements.includes(key)) {
-        if (value == null || typeof value === 'number' || typeof value === 'boolean') {
-          cleanJSON[key] = typeof value === 'string' ? value.trim() : value;
-          cleanJSONKeyCount++;
-        } else if (!Number.isNaN(Utils.toInteger(value))) {
-          cleanJSON[key] = Utils.toInteger(value);
-          cleanJSONKeyCount++;
-        }
-      } else {
-        cleanJSON[key] = typeof value === 'string' ? value.trim() : value;
-        cleanJSONKeyCount++;
-      }
-    }
-  }
-
-  if (cleanJSONKeyCount != SkinMetaElements.length) return next(Utils.createError(400, 'The body is invalid'));
-
-  // ToDo Check if Skin with 'id' exists
-  db.setSkinMeta(id, cleanJSON, (err) => {
     if (err) return next(Utils.logAndCreateError(err));
 
-    res.json({ success: true });
+    if (skins.length == 0) return next(Utils.createError(400, 'No Skins were found', true));
+
+    res.set('Cache-Control', 'public, s-maxage=0')
+      .json(skins);
   });
 });
 
-router.use('/skin/:id/meta', (req, res, next) => {
+router.use('/skin/:id?', (req, res, next) => {
   let id = Utils.toInteger(req.params.id);
 
   // Check for invalid content
-  if (Number.isNaN(id)) return next(Utils.createError(400, 'The parameter \'ID\' is invalid'));
-
-  db.getSkinMeta(id, (err, meta) => {
-    if (err) {
-      next(Utils.logAndCreateError(err));
-    } else {
-      res.set('Cache-Control', 'public, s-maxage=3600' /* 48h */)
-        .json(meta);
-    }
-  });
-});
-
-router.use('/skin/:id', (req, res, next) => {
-  let id = Utils.toInteger(req.params.id);
-
-  // Check for invalid content
-  if (Number.isNaN(id)) return next(Utils.createError(400, 'The parameter \'ID\' is invalid'));
+  if (Number.isNaN(id)) return next(Utils.createError(400, `The parameter 'id' is invalid or missing`));
 
   db.getSkin(id, (err, skin) => {
-    if (err) {
-      next(Utils.logAndCreateError(err));
-    } else {
-      res.set('Cache-Control', 'public, s-maxage=172800' /* 48h */)
-        .json(skin);
-    }
-  });
-});
-
-/* Misc. Routes */
-
-router.use('/search', (req, res, next) => {
-  let count = Utils.toInteger(req.query.count) || 25,
-    page = Utils.toInteger(req.query.page) || 1,
-    q = req.query.q;
-
-  if (Number.isNaN(count)) return next(Utils.createError(400, 'The query-parameter \'Count\' is invalid'));
-  if (Number.isNaN(page)) return next(Utils.createError(400, 'The query-parameter \'Page\' is invalid'));
-  if (count > 50) return next(Utils.createError(400, 'The query-parameter \'Count\' can not be greater than 50'));
-
-  if (!q) return next(Utils.createError(400, 'The query-parameter \'Q\' is missing'));
-  q = Utils.toNeutralString(q);
-  if (q.length > 128) return next(Utils.createError(400, 'The query-parameter \'Q\' has exceeded the maximum length of 128 characters'));
-  q = q.toLowerCase();
-
-  let sex = null; /* 0=none, 1=female, 2=male */
-  let age = null; /* 0=normal, 1=senior */
-  let hairLength = null; /* 0=normal, 1=long */
-
-  if (q.indexOf('long hair') === 0 || q.indexOf(' long hair') >= 0) {
-    hairLength = 1;
-  }
-  if (q.indexOf('short hair') === 0 || q.indexOf(' short hair') >= 0
-    || q.indexOf('normal hair') === 0 || q.indexOf(' normal hair') >= 0) {
-    hairLength = 0;
-  }
-
-  if (q.indexOf('female') === 0 || q.indexOf(' female') >= 0
-    || q.indexOf('girl') === 0 || q.indexOf(' girl') >= 0) {
-    sex = 1;
-  }
-  if (q.indexOf('male') === 0 || q.indexOf(' male') >= 0
-    || q.indexOf('boy') === 0 || q.indexOf(' boy') >= 0) {
-    sex = 2;
-  }
-
-  if (q.indexOf('normal age') === 0 || q.indexOf(' normal age') >= 0
-    || q.indexOf('young') === 0 || q.indexOf(' young') >= 0) {
-    age = 0;
-  }
-  if (q.indexOf('senior') === 0 || q.indexOf(' senior') >= 0
-    || q.indexOf('old') === 0 || q.indexOf(' old') >= 0) {
-    age = 1;
-  }
-
-  db.searchSkin(sex, age, hairLength, q.split(' '), count, page, (err, result) => {
     if (err) return next(Utils.logAndCreateError(err));
 
-    res.set('Cache-Control', 'public, s-maxage=3600' /* 1h */)
-      .json(result);
+    if (!skin) return next(Utils.createError(400, 'No Skin with the given ID', true));
+
+    res.set('Cache-Control', 'public, s-maxage=172800' /* 48h */)
+      .json(skin);
   });
 });
 
@@ -273,8 +190,41 @@ router.use('/stats', (req, res, next) => {
 
 module.exports = router;
 
-// ToDo Dafür sorgen, dass ein 2. Thread wartet, bis der 1. in den cache geschrieben hat. Ein Art event-System nutzen in Verbindung mit nem Boolean
-// ToDo Cache non-deep version?
+/* Helper */
+
+function queueSkin(res, next = () => { }, skinURL, value, signature, userAgent) {
+  db.isQueued(skinURL, (err, isQueued) => {
+    if (err) return next(Utils.logAndCreateError(err));
+    if (isQueued) return next(Utils.createError(400, 'The skin is already in the database', true));
+
+    db.addQueue(skinURL, value, signature, userAgent, (err, queueID) => {
+      if (err) return next(Utils.logAndCreateError(err));
+
+      if (res) {
+        const json = {
+          ID: queueID,
+          status: `https://api.skindb.net/provide/${queueID}`
+        };
+
+        if (typeof res === 'function') {
+          res(json);
+        } else {
+          res.status(202).json(json);
+        }
+      }
+    });
+  });
+}
+
+function isFromYggdrasil(value, signature) {
+  const ver = crypto.createVerify('sha1WithRSAEncryption');
+  ver.update(value);
+
+  return ver.verify(yggdrasilPublicKey, Buffer.from(signature, 'base64'));
+}
+
+/* Cached Res. */
+
 function getStats(deep, callback) {
   let data = statsCache.get('stats');
 
@@ -304,3 +254,5 @@ function getStats(deep, callback) {
     callback(null, data);
   }
 }
+
+module.exports.queueSkin = queueSkin;

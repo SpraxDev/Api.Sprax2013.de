@@ -23,7 +23,7 @@ app.disable('x-powered-by');
 app.set('trust proxy', 'loopback');
 
 // Log to console and file
-app.use(morgan('dev', { skip: function (_req, res) { return res.statusCode < 400; } }));
+app.use(morgan('dev', { skip: function (req, res) { return res.statusCode < 400 || res.hideFromConsole || req.originalUrl.startsWith('/.well-known/acme-challenge/'); } }));
 app.use(morgan(logFormat, { stream: accessLogStream }));
 app.use(morgan(logFormat, { skip: function (_req, res) { return res.statusCode < 400; }, stream: errorLogStream }));
 
@@ -59,12 +59,16 @@ app.use((_req, _res, next) => {
 // Send Error
 app.use((err, _req, res, _next) => {
   if (!err || !(err instanceof Error)) {
+    if (err) console.error('Invalid Error provided:', err); // TODO: https://api.skindb.net/provide?value=bd7b761e00a0477cbf701f09a24ceb45 causes an unknown error
+
     err = Utils.createError();
   }
 
   if (!err.status || (err.status >= 500 && err.status < 600)) {
     console.error(err); // Log to file
   }
+
+  if (err.hideFromConsole) res.hideFromConsole = true;
 
   if (!res.headersSent) {
     res.status(err.status || 500)

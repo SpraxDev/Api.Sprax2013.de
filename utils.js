@@ -16,9 +16,10 @@ module.exports = {
    * 
    * @returns {Error}
    */
-  createError(HTTPStatusCode = 500, message = 'An unknown error has occurred') {
+  createError(HTTPStatusCode = 500, message = 'An unknown error has occurred', hideFromConsole = false) {
     let err = new Error(message);
     err.status = HTTPStatusCode;
+    err.hideFromConsole = hideFromConsole;
 
     return err;
   },
@@ -167,7 +168,7 @@ module.exports = {
 
   Mojang: {
     getProfileTextures(profile) {
-      let textureValue = null, textureSignature = null, skinURL = null;
+      let textureValue = null, textureSignature = null, skinURL = null, capeURL = null;
 
       if (profile['properties']) {
         for (const prop in profile['properties']) {
@@ -179,8 +180,14 @@ module.exports = {
               textureSignature = value['signature'];
 
               const skin = JSON.parse(Buffer.from(textureValue, 'base64').toString('ascii'));
-              if (skin['textures'] && skin['textures']['SKIN']) {
-                skinURL = skin['textures']['SKIN']['url'];
+              if (skin['textures']) {
+                if (skin['textures']['SKIN']) {
+                  skinURL = skin['textures']['SKIN']['url'];
+                }
+
+                if (skin['textures']['CAPE']) {
+                  capeURL = skin['textures']['CAPE']['url'];
+                }
               }
             }
           }
@@ -190,7 +197,9 @@ module.exports = {
       return {
         value: textureValue,
         signature: textureSignature,
-        skinURL: skinURL
+
+        skinURL: skinURL,
+        capeURL: capeURL
       };
     }
   },

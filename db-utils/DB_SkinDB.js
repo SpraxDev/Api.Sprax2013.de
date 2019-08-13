@@ -1,439 +1,163 @@
-const mysql = require('./MySQL');
-const net = require('net');
-
-const Utils = require('./../utils');
-
-const db = mysql.cfg['DB_SkinDB'];
+const { Pool } = require('pg');
+const pool = new Pool({
+  host: require('./../storage/db.json')['host'],
+  user: require('./../storage/db.json')['user'],
+  password: require('./../storage/db.json')['password'],
+  database: require('./../storage/db.json')['DB_SkinDB'],
+  max: 8,
+  ssl: true
+});
+pool.on('error', (err, _client) => {
+  console.error('Unexpected error on idle client:', err);
+  // process.exit(-1);
+});
+// call `pool.end()` to shutdown the pool (waiting for queries to finish)
 
 module.exports = {
-  /* Provide */
-
-  /**
-   * @param {Number} pendingID 
-   * @param {Function} callback Params: err, status | status is {} if success but no status for ID
-   */
-  getPending(pendingID, callback) {
-    mysql.pool.getConnection((err, con) => {
-      if (err) return callback(err);
-
-      con.query(`SELECT * FROM \`${db}\`.\`Pending\` WHERE \`ID\`=?;`, [pendingID], (err, rows, _fields) => {
-        con.release();
-
-        if (err) return callback(err);
-
-        callback(null, (rows.length > 0) ? JSON.parse(JSON.stringify(rows[0])) : {});
-      });
-    });
-  },
-  getPendingByData(skinData, callback) {
-    mysql.pool.getConnection((err, con) => {
-      if (err) return callback(err);
-
-      con.query(`SELECT * FROM \`${db}\`.\`Pending\` WHERE \`SkinData\`=?;`, [skinData], (err, rows, _fields) => {
-        con.release();
-
-        if (err) return callback(err);
-
-        callback(null, (rows.length > 0) ? JSON.parse(JSON.stringify(rows[0])) : {});
-      });
-    });
-  },
-
-  addPending(skinURL, userAgent, callback) {
-    if (userAgent.length > 255) {
-      userAgent = userAgent.substring(1, 253) + '...';
+  /* Queue */
+  addQueue(skinURL, value, signature, userAgent, callback) {
+    if (userAgent && userAgent.length > 255) {
+      userAgent = userAgent.substring(0, 252) + '...';
     }
 
-    mysql.pool.getConnection((err, con) => {
-      if (err) return callback(err);
-
-      con.query(`INSERT INTO \`${db}\`.\`Pending\`(\`SkinData\`,\`UserAgent\`) VALUE (?,?);`, [skinURL, userAgent], (err, _rows, _fields) => {
-        con.release();
-
+    pool.query(`INSERT INTO "Queue"("SkinURL", "Value", "Signature", "UserAgent") VALUES ($1, $2, $3, $4) RETURNING "ID";`,
+      [skinURL, value, signature, userAgent], (err, res) => {
         if (err) return callback(err);
 
-        module.exports.getPendingByData(skinURL, (err, pending) => {
-          callback(err, pending);
-        });
-
-        // Notify backend
-        let client = new net.Socket();
-        client.on('data', () => {
-          client.destroy();
-        });
-        client.on('error', (err) => {
-          if (err.code !== 'ECONNREFUSED') {
-            console.error(err);
-          }
-        });
-        client.connect(7999, '127.0.0.1', () => {
-          client.write('newPending' + Utils.EOL);
-        });
+        callback(null, res.rows[0]['ID']);
       });
-    });
   },
 
-  /**
-   * @param {String} skinURL 
-   * @param {Function} callback 
-   */
-  isPendingOrInDB(skinURL, callback) {
-    mysql.pool.getConnection((err, con) => {
-      if (err) return callback(err);
-
-      con.query(`SELECT \`ID\` FROM \`${db}\`.\`Skins\` WHERE \`MojangURL\`=?;`, [skinURL], (err, rows, _fields) => {
-        if (err) {
-          con.release();
-          return callback(err);
-        }
-
-        if (rows.length > 0) {
-          con.release();
-          return callback(null, true);
-        }
-
-        con.query(`SELECT \`ID\` FROM \`${db}\`.\`Pending\` WHERE \`SkinData\`=?;`, [skinURL], (err, rows, _fields) => {
-          con.release();
-
-          if (err) return callback(err);
-
-          callback(null, rows.length > 0);
-        });
-      });
-    });
-  },
-
-  /* Skin */
-
-  /**
-   * @param {Number} skinID 
-   * @param {Function} callback Params: err, skin | skin is {} if success but no skin for ID
-   */
-  getSkin: function (skinID, callback) {
-    mysql.pool.getConnection((err, con) => {
-      if (err) return callback(err);
-
-      con.query(`SELECT * FROM \`${db}\`.\`Skins\` WHERE \`ID\`=?;`, [skinID], (err, rows, _fields) => {
-        con.release();
-
+  isQueued(skinURL, callback) {
+    pool.query(`SELECT EXISTS(SELECT from "Queue" WHERE "SkinURL"=$1) AS "exists";`,
+      [skinURL], (err, res) => {
         if (err) return callback(err);
 
-        callback(null, (rows.length > 0) ? rowToSkin(rows[0]) : {});
+        callback(null, res.rows[0]['exists']);
       });
-    });
   },
 
-  /**
-  * @param {Number} count 
-  * @param {Number} page
-  * @param {Boolean} sortDESC
-  * @param {Function} callback Params: err, skins | skins is an array
-  */
-  getSkinList: function (count, page, sortDESC, callback) {
-    mysql.pool.getConnection((err, con) => {
-      if (err) return callback(err);
+  getQueue(id, callback) {
+    pool.query(`SELECT * FROM "Queue" WHERE "ID"=$1;`,
+      [id], (err, res) => {
+        if (err) return callback(err);
 
-      let offset = ((page < 0) ? 0 : page - 1) * count;
-      con.query(`SELECT * FROM \`${db}\`.\`Skins\` WHERE \`DuplicateOf\` IS NULL ORDER BY \`ID\` ${sortDESC ? 'DESC' : 'ASC'} LIMIT ? OFFSET ?;`,
-        [count, offset], (err, rows, _fields) => {
-          con.release();
-
-          if (err) return callback(err);
-
-          let skins = [];
-
-          for (const row in rows) {
-            if (rows.hasOwnProperty(row)) {
-              skins.push(rowToSkin(rows[row]));
-            }
+        for (const key in res.rows) {
+          if (res.rows.hasOwnProperty(key)) {
+            // Use #rowToQueuedObject and turn Added-Row into new Date() and UTC-String
+            return callback(null, res.rows[key]);
           }
-
-          return callback(null, skins);
-        });
-    });
-  },
-
-  /**
-* @param {Number|Array<Number>} ids 
-* @param {Function} callback Params: err, skins | skins is an array
-*/
-  getSkinListFromID: function (skinIDs, callback) {
-    let sqlQuery = `SELECT * FROM \`${db}\`.\`Skins\``;
-
-    if (typeof skinIDs === 'number') {
-      sqlQuery += ' WHERE `ID`=' + skinIDs;
-    } else {
-      for (const skinID of skinIDs) {
-        if (typeof skinID !== 'number') break;
-
-        if (sqlQuery.indexOf('WHERE') > 0) {
-          sqlQuery += ' OR';
-        } else {
-          sqlQuery += ' WHERE';
         }
 
-        sqlQuery += ' `ID`=' + skinID;
-      }
-    }
-    sqlQuery += ';';
+        return callback(null, null);
+      });
+  },
 
-    mysql.pool.getConnection((err, con) => {
-      if (err) return callback(err);
+  /* Skins */
 
-      con.query(sqlQuery, [], (err, rows, _fields) => {
-        con.release();
+  getSkin(id, callback) {
+    pool.query(`SELECT * FROM "Skins" WHERE "ID"=$1;`,
+      [id], (err, res) => {
+        if (err) return callback(err);
 
+        for (const key in res.rows) {
+          if (res.rows.hasOwnProperty(key)) {
+            // Use #rowToSkin and turn Added-Row into new Date() and UTC-String
+            let skin = res.rows[key];
+            skin.urls = {
+              mojang: skin['SkinURL'],
+              clean: `https://cdn.skindb.net/skins/${skin['ID']}/skin.png`,
+              original: `https://cdn.skindb.net/skins/${skin['ID']}/original.png`,
+              render: `https://api.mineskin.org/render/skin?url=${encodeURIComponent(`https://cdn.skindb.net/skins/${skin['ID']}/skin.png`)}`
+            };
+
+            return callback(null, skin);
+          }
+        }
+
+        return callback(null, null);
+      });
+  },
+
+  getRandomSkinList(count, callback) {
+    pool.query(`SELECT * FROM "Skins" WHERE "DuplicateOf" IS NULL ORDER BY RANDOM() LIMIT $1;`,
+      [count], (err, res) => {
         if (err) return callback(err);
 
         let skins = [];
 
-        for (const row in rows) {
-          if (rows.hasOwnProperty(row)) {
-            skins.push(rowToSkin(rows[row]));
+        for (const key in res.rows) {
+          if (res.rows.hasOwnProperty(key)) {
+            // Use #rowToSkin and turn Added-Row into new Date() and UTC-String
+            let skin = res.rows[key];
+            skin.urls = {
+              mojang: skin['SkinURL'],
+              clean: `https://cdn.skindb.net/skins/${skin['ID']}/skin.png`,
+              original: `https://cdn.skindb.net/skins/${skin['ID']}/original.png`,
+              render: `https://api.mineskin.org/render/skin?url=${encodeURIComponent(`https://cdn.skindb.net/skins/${skin['ID']}/skin.png`)}`
+            };
+
+            skins.push(skin);
           }
         }
 
-        callback(null, skins);
+        return callback(null, skins);
       });
-    });
   },
 
-  /**
-   * @param {Number} count 
-   * @param {Function} callback Params: err, skins | skins is an array
-   */
-  getRandomSkinList: function (count, callback) {
-    mysql.pool.getConnection((err, con) => {
-      if (err) return callback(err);
+  // setSkin(mojangURL, cleanHash, hasOverlay, isAlex, duplicateOf, callback) {
+  //   pool.query(`INSERT INTO public."Skins"("MojangURL", "CleanHash", "HasOverlay", "IsAlex", "DuplicateOf") VALUES ($1, $2, $3, $4, $5) RETURNING *;`,
+  //     [mojangURL, cleanHash, hasOverlay, isAlex, duplicateOf], (err, _res) => {
+  //       if (err) return callback(err);
 
-      con.query(`SELECT * FROM \`${db}\`.\`Skins\` WHERE \`DuplicateOf\` IS NULL ORDER BY RAND() LIMIT ?;`,
-        [count], (err, rows, _fields) => {
-          con.release();
+  //       callback(null, res.rows[0]);
+  //     });
+  // }
 
-          if (err) return callback(err);
-
-          let skins = [];
-
-          for (const row in rows) {
-            if (rows.hasOwnProperty(row)) {
-              skins.push(rowToSkin(rows[row]));
-            }
-          }
-
-          return callback(null, skins);
-        });
-    });
-  },
-
-  /* Skin-Meta */
+  /* Misc. */
 
   /**
    * @param {Function} callback Params: err, json
    */
-  getSkinMeta: function (skinID, callback) {
-    mysql.pool.getConnection((err, con) => {
+  getStats(callback) {
+    pool.connect((err, con, done) => {
       if (err) return callback(err);
 
-      con.query(`SELECT * FROM \`${db}\`.\`MetaData\` WHERE \`ID\` = ?;`, [skinID], (err, rows, fields) => {
-        con.release();
-
-        if (err) return callback(err);
-
-        let meta = {};
-
-        for (const field of fields) {
-          let rowVal;
-
-          if (rows.length > 0) {
-            rowVal = rows[0][field.name];
-
-            if (!rowVal && field.name === 'ID') {
-              rowVal = skinID;
-            } else if (field.name === 'WearsHat' || field.name === 'WearsMask') {
-              rowVal = Utils.toBoolean(rowVal);
-            }
-          }
-
-          meta[field.name] = rowVal === undefined ? null : rowVal;
-        }
-
-        return callback(null, meta);
-      });
-    });
-  },
-
-  /**
-   * @param {object} meta 
-   * @param {string} meta.CharacterName 
-   * @param {string} meta.CharacterURL 
-   * @param {string} meta.SkinOriginName 
-   * @param {string} meta.SkinOriginURL 
-   * @param {boolean} meta.WearsMask 
-   * @param {string} meta.MaskCharacterName 
-   * @param {string} meta.MaskCharacterURL 
-   * @param {string} meta.CharacterName 
-   * @param {boolean} meta.WearsHat
-   * @param {string} meta.HatType
-   * @param {string} meta.Job
-   * @param {string} meta.Accessories
-   * @param {string} meta.MiscTags
-   * @param {number} meta.Sex
-   * @param {number} meta.Age
-   * @param {number} meta.HairLength
-   * @param {Function} callback Params: err
-   */
-  setSkinMeta: function (skinID, meta, callback) {
-    mysql.pool.getConnection((err, con) => {
-      if (err) return callback(err);
-
-      // ToDo Use REPLACE instead
-      con.query('INSERT INTO `' + db + '`.`MetaData`(`ID`,`CharacterName`,`CharacterURL`,`SkinOriginName`,`SkinOriginURL`,' +
-        '`Sex`,`Age`,`WearsMask`,`MaskCharacterName`,`MaskCharacterURL`,`WearsHat`,`HatType`,`HairLength`,`Job`,`Accessories`,`MiscTags`)' +
-        'VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE `CharacterName`=?,`CharacterURL`=?,`SkinOriginName`=?,`SkinOriginURL`=?,' +
-        '`Sex`=?,`Age`=?,`WearsMask`=?,`MaskCharacterName`=?,`MaskCharacterURL`=?,`WearsHat`=?,`HatType`=?,`HairLength`=?,`Job`=?,`Accessories`=?,`MiscTags`=?;',
-        [skinID, meta.CharacterName, meta.CharacterURL, meta.SkinOriginName, meta.SkinOriginURL, meta.Sex, meta.Age, meta.WearsMask, meta.MaskCharacterName,
-          meta.MaskCharacterURL, meta.WearsHat, meta.HatType, meta.HairLength, meta.Job, meta.Accessories, meta.MiscTags,
-          meta.CharacterName, meta.CharacterURL, meta.SkinOriginName, meta.SkinOriginURL, meta.Sex, meta.Age, meta.WearsMask, meta.MaskCharacterName,
-          meta.MaskCharacterURL, meta.WearsHat, meta.HatType, meta.HairLength, meta.Job, meta.Accessories, meta.MiscTags],
-        (err, _rows, _fields) => {
-          con.release();
-
-          callback(err || null);
-        });
-    });
-  },
-
-  /* Misc */
-
-  searchSkin: function (sex, age, hairLength, tags, count, page, callback) {
-    let sqlQuery = `SELECT * FROM \`${db}\`.\`MetaData\``;
-
-    if (sex != null && Number.isSafeInteger(sex)) {
-      if (sqlQuery.indexOf('WHERE') > 0) {
-        sqlQuery += ' OR';
-      } else {
-        sqlQuery += ' WHERE';
-      }
-
-      sqlQuery += ' `Sex`=' + sex;
-    }
-    if (age != null && Number.isSafeInteger(age)) {
-      if (sqlQuery.indexOf('WHERE') > 0) {
-        sqlQuery += ' OR';
-      } else {
-        sqlQuery += ' WHERE';
-      }
-
-      sqlQuery += ' `Age`=' + age;
-    }
-    if (hairLength != null && Number.isSafeInteger(hairLength)) {
-      if (sqlQuery.indexOf('WHERE') > 0) {
-        sqlQuery += ' OR';
-      } else {
-        sqlQuery += ' WHERE';
-      }
-
-      sqlQuery += ' `HairLength`=' + hairLength;
-    }
-
-    for (const tag of tags) {
-      for (const field of ['CharacterName', 'SkinOriginName', 'MaskCharacterName', 'HatType', 'Job', 'Accessories', 'MiscTags']) {
-        if (sqlQuery.indexOf('WHERE') > 0) {
-          sqlQuery += ' OR';
-        } else {
-          sqlQuery += ' WHERE';
-        }
-
-        sqlQuery += ' `' + field + '` LIKE ' + mysql.escape('%' + tag + '%');
-      }
-    }
-    sqlQuery += ' LIMIT ? OFFSET ?;';
-
-    mysql.pool.getConnection((err, con) => {
-      if (err) return callback(err);
-
-      let offset = ((page < 0) ? 0 : page - 1) * count;
-      con.query(sqlQuery, [count, offset], (err, rows, _fields) => {
+      con.query(`SELECT reltuples AS approximate_row_count FROM pg_class WHERE relname = 'Skins';`, [], (err, res) => {
         if (err) {
-          con.release();
+          done();
           return callback(err);
         }
 
-        let skinIDs = [];
-
-        for (const row in rows) {
-          if (rows.hasOwnProperty(row)) {
-            skinIDs.push(rows[row]['ID']);
-          }
-        }
-
-        if (skinIDs.length === 0) {
-          con.release();
-
-          return callback(null, { total: 0, results: [] });
-        }
-
-        con.query(`SELECT COUNT(*) AS 'Total' FROM ` + sqlQuery.substring(sqlQuery.indexOf(`\`${db}\`.\`MetaData\``), sqlQuery.lastIndexOf(' LIMIT')) + ';',
-          [], (err, rows2, _fields2) => {
-            con.release();
-
-            if (err) return callback(err);
-
-            module.exports.getSkinListFromID(skinIDs, (err, skins) => {
-              if (err) return callback(err);
-
-              callback(null, {
-                total: rows2[0]['Total'],
-                results: skins
-              });
-            });
-          });
-      });
-    });
-  },
-
-  /**
-   * @param {Function} callback Params: err, json
-   */
-  getStats: function (callback) {
-    mysql.pool.getConnection((err, con) => {
-      if (err) return callback(err);
-
-      con.query(`SHOW INDEX FROM \`${db}\`.\`Skins\`;`, [], (err, rows, _fields) => {
-        if (err) {
-          con.release();
-          return callback(err);
-        }
-
-        let estSkinCount = rows[0]['Cardinality'],
+        let estSkinCount = res.rows[0]['approximate_row_count'],
           duplicateSkinCount, pendingCount;
 
-        con.query(`SELECT COUNT(*) AS "RowCount" FROM \`${db}\`.\`Skins\` WHERE \`DuplicateOf\` IS NOT NULL;`, [], (err, rows, _fields) => {
+        con.query(`SELECT COUNT(*) AS "RowCount" FROM "Skins" WHERE "DuplicateOf" IS NOT NULL;`, [], (err, res) => {
           if (err) {
-            con.release();
+            done();
             return callback(err);
           }
 
-          duplicateSkinCount = rows[0]['RowCount'];
+          duplicateSkinCount = res.rows[0]['RowCount'];
 
-          con.query(`SELECT COUNT(*) AS "RowCount" FROM \`${db}\`.\`Pending\` WHERE \`Status\` IS NULL;`, [], (err, rows, _fields) => {
+          con.query(`SELECT COUNT(*) AS "RowCount" FROM "Queue" WHERE "Status" = 'QUEUED';`, [], (err, res) => {
             if (err) {
-              con.release()
+              done();
               return callback(err);
             }
 
-            pendingCount = rows[0]['RowCount'];
+            pendingCount = res.rows[0]['RowCount'];
 
-            con.query(`SELECT \`UserAgent\`, COUNT(*) AS "Count" FROM \`${db}\`.\`Pending\` GROUP BY \`UserAgent\`;`, [], (err, rows, _fields) => {
-              con.release();
+            con.query(`SELECT "UserAgent", COUNT(*) AS "Count" FROM "Queue" GROUP BY "UserAgent";`, [], (err, res) => {
+              done();
 
               if (err) return callback(err);
 
               let providedBy = {};
 
-              for (const row in rows) {
-                if (rows.hasOwnProperty(row)) {
-                  const elem = rows[row];
+              for (const row in res.rows) {
+                if (res.rows.hasOwnProperty(row)) {
+                  const elem = res.rows[row];
 
                   providedBy[elem.UserAgent] = elem.Count;
                 }
@@ -445,7 +169,7 @@ module.exports = {
                 pendingCount: pendingCount,
                 providedBy: providedBy,
 
-                lastUpdate: Date.now()
+                lastUpdate: new Date().toUTCString()
               });
             });
           });
@@ -454,26 +178,3 @@ module.exports = {
     });
   }
 };
-
-function rowToSkin(row) {
-  let skin = {
-    id: row['ID'],
-    Skin: {
-      cleanHash: row['CleanHash'],
-      overlay: Utils.toBoolean(row['HasOverlay']),
-      steveArms: Utils.toBoolean(row['HasSteveArms'])
-    },
-    urls: {
-      mojang: row['MojangURL'],
-      clean: `https://assets.skindb.net/skins/${row['ID']}/skin.png`,
-      original: `https://assets.skindb.net/skins/${row['ID']}/original.png`
-    }
-  };
-  skin.urls.render = 'https://api.mineskin.org/render/skin?url=' + encodeURI(skin.urls.clean);
-
-  if (row['DuplicateOf']) {
-    skin.duplicateOf = row['DuplicateOf'];
-  }
-
-  return skin;
-}
