@@ -178,9 +178,9 @@ router.use('/skin/:id?', (req, res, next) => {
 });
 
 router.use('/stats', (req, res, next) => {
-  let deep = req.query.deep ? Utils.toBoolean(req.query.deep) : false;
+  // let deep = req.query.deep ? Utils.toBoolean(req.query.deep) : false;
 
-  getStats(deep, (err, stats) => {
+  getStats(/* deep */ true, (err, stats) => {
     if (err) return next(Utils.logAndCreateError(err));
 
     res.set('Cache-Control', 'public, s-maxage=900' /* 15min */)
