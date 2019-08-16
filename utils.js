@@ -36,14 +36,16 @@ module.exports = {
   },
 
   /**
-   * @param {String} str 
+   * @param {String} input 
    * 
    * @returns {Boolean}
    */
-  toBoolean(str) {
-    if (typeof str === 'string') return str === '1' || str.toLowerCase() === 'true';
-    if (typeof str === 'number') return str === 1;
-    if (typeof str === 'boolean') return str;
+  toBoolean(input) {
+    if (input) {
+      if (typeof input === 'string') return input === '1' || input.toLowerCase() === 'true' || input.toLowerCase() === 't';
+      if (typeof input === 'number') return input === 1;
+      if (typeof input === 'boolean') return input;
+    }
 
     return false;
   },
