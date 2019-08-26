@@ -59,7 +59,7 @@ app.use((_req, _res, next) => {
 // Send Error
 app.use((err, _req, res, _next) => {
   if (!err || !(err instanceof Error)) {
-    if (err) console.error('Invalid Error provided:', err); // TODO: https://api.skindb.net/provide?value=bd7b761e00a0477cbf701f09a24ceb45 causes an unknown error
+    if (err) console.error('Invalid Error provided:', err);
 
     err = Utils.createError();
   }
