@@ -257,7 +257,7 @@ module.exports = {
 
             pendingCount = res.rows[0]['RowCount'];
 
-            con.query(`SELECT "UserAgent", COUNT(*) AS "Count" FROM "Queue" GROUP BY "UserAgent";`, [], (err, res) => {
+            con.query(`SELECT "UserAgent", COUNT(*) AS "Count" FROM "Queue" GROUP BY "UserAgent" ORDER BY "Count" DESC;`, [], (err, res) => {
               done();
 
               if (err) return callback(err);
