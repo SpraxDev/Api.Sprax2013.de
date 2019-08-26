@@ -25,7 +25,7 @@ app.set('trust proxy', 'loopback');
 // Log to console and file
 app.use(morgan('dev', { skip: function (req, res) { return res.statusCode < 400 || res.hideFromConsole || req.originalUrl.startsWith('/.well-known/acme-challenge/'); } }));
 app.use(morgan(logFormat, { stream: accessLogStream }));
-app.use(morgan(logFormat, { skip: function (_req, res) { return res.statusCode < 400; }, stream: errorLogStream }));
+app.use(morgan(logFormat, { skip: function (req, res) { return res.statusCode < 400 || res.hideFromConsole || req.originalUrl.startsWith('/.well-known/acme-challenge/'); }, stream: errorLogStream }));
 
 app.use(express.json());
 // app.use(require('cookie-parser')(require('./storage/misc.json').CookieSecret));
