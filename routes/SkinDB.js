@@ -25,14 +25,16 @@ router.use('/provide/:id', (req, res, next) => {
 
     if (!qObj) return next(Utils.createError(400, 'Nothing queued with the given ID', true));
 
-    res.set('Cache-Control', 'public, s-maxage=172800' /* 48h */)
+    let cacheTime = qObj['Status'] == 'QUEUED' ? 60 : 172800 /* 48h */;
+
+    res.set('Cache-Control', `public, s-maxage=${cacheTime}, max-age=${cacheTime}`)
       .json(qObj);
   });
 });
 
 router.post('/provide', (req, res, next) => {
   res.set({
-    'Cache-Control': 'public, s-maxage=0, max-age=0'
+    'Cache-Control': 'public, s-maxage=15, max-age=15'
   });
 
   if (!req.body) return next(Utils.createError(400, `The query-body is missing`, true));
@@ -92,6 +94,10 @@ router.post('/provide', (req, res, next) => {
 });
 
 router.use('/provide', (req, res, next) => {
+  res.set({
+    'Cache-Control': 'public, s-maxage=0, max-age=15'
+  });
+
   let value = req.query.value,
     signature = req.query.signature;
 
