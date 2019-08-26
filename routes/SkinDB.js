@@ -95,8 +95,6 @@ router.use('/provide', (req, res, next) => {
   let value = req.query.value,
     signature = req.query.signature;
 
-  if (!value) value = req.query.data; // Temp. legacy support
-
   if (!value) return next(Utils.createError(400, `The query-parameter 'value' is missing`, true));
 
   if (signature) {
