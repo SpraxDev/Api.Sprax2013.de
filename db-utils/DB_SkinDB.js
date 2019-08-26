@@ -44,8 +44,11 @@ module.exports = {
 
         for (const key in res.rows) {
           if (res.rows.hasOwnProperty(key)) {
-            // Use #rowToQueuedObject and turn Added-Row into new Date() and UTC-String
-            return callback(null, res.rows[key]);
+            // Use #rowToQueuedObject
+            let result = res.rows[key];
+            result['Added'] = new Date(result['Added']).toUTCString();
+
+            return callback(null, result);
           }
         }
 
@@ -62,7 +65,7 @@ module.exports = {
 
         for (const key in res.rows) {
           if (res.rows.hasOwnProperty(key)) {
-            // Use #rowToSkin and turn Added-Row into new Date() and UTC-String
+            // Use #rowToSkin
             let skin = res.rows[key];
             skin.urls = {
               mojang: skin['SkinURL'],
@@ -70,6 +73,8 @@ module.exports = {
               original: `https://cdn.skindb.net/skins/${skin['ID']}/original.png`,
               render: `https://api.mineskin.org/render/skin?url=${encodeURIComponent(`https://cdn.skindb.net/skins/${skin['ID']}/skin.png`)}`
             };
+
+            skin['Added'] = new Date(skin['Added']).toUTCString();
 
             return callback(null, skin);
           }
@@ -88,7 +93,7 @@ module.exports = {
 
         for (const key in res.rows) {
           if (res.rows.hasOwnProperty(key)) {
-            // Use #rowToSkin and turn Added-Row into new Date() and UTC-String
+            // Use #rowToSkin
             let skin = res.rows[key];
             skin.urls = {
               mojang: skin['SkinURL'],
@@ -96,6 +101,8 @@ module.exports = {
               original: `https://cdn.skindb.net/skins/${skin['ID']}/original.png`,
               render: `https://api.mineskin.org/render/skin?url=${encodeURIComponent(`https://cdn.skindb.net/skins/${skin['ID']}/skin.png`)}`
             };
+
+            skin['Added'] = new Date(skin['Added']).toUTCString();
 
             skins.push(skin);
           }
