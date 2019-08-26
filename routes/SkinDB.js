@@ -213,23 +213,27 @@ module.exports = router;
 function queueSkin(res, next = () => { }, skinURL, value, signature, userAgent) {
   db.isQueued(skinURL, (err, isQueued) => {
     if (err) return next(Utils.logAndCreateError(err));
-    if (isQueued) return next(Utils.createError(400, 'The skin is already in the database', true));
+    if (isQueued) return next(Utils.createError(200, 'The skin is already in the database', true));
 
-    db.addQueue(skinURL, value, signature, userAgent, (err, queueID) => {
+    db.getAgentID(userAgent, (err, agentID) => {
       if (err) return next(Utils.logAndCreateError(err));
 
-      if (res) {
-        const json = {
-          ID: queueID,
-          status: `https://api.skindb.net/provide/${queueID}`
-        };
+      db.addQueue(skinURL, value, signature, agentID, (err, queueID) => {
+        if (err) return next(Utils.logAndCreateError(err));
 
-        if (typeof res === 'function') {
-          res(json);
-        } else {
-          res.status(202).json(json);
+        if (res) {
+          const json = {
+            ID: queueID,
+            status: `https://api.skindb.net/provide/${queueID}`
+          };
+
+          if (typeof res === 'function') {
+            res(json);
+          } else {
+            res.status(202).json(json);
+          }
         }
-      }
+      });
     });
   });
 }
