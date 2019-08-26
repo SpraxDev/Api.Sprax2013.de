@@ -165,6 +165,22 @@ router.use('/skin/random', (req, res, next) => {
   });
 });
 
+router.use('/skin/:id/provider', (req, res, next) => {
+  let id = Utils.toInteger(req.params.id);
+
+  // Check for invalid content
+  if (Number.isNaN(id)) return next(Utils.createError(400, `The parameter 'id' is invalid or missing`));
+
+  db.getQueueBySkin(id, (err, queued) => {
+    if (err) return next(Utils.logAndCreateError(err));
+
+    if (!queued) return next(Utils.createError(400, 'No Skin was found', true));
+
+    res.set('Cache-Control', 'public, s-maxage=0')
+      .json(queued);
+  });
+});
+
 router.use('/skin/:id?', (req, res, next) => {
   let id = Utils.toInteger(req.params.id);
 
