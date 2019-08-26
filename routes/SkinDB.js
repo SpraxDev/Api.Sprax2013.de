@@ -181,7 +181,7 @@ router.use('/skin/:id/provider', (req, res, next) => {
   });
 });
 
-router.use('/skin/:id?', (req, res, next) => {
+router.use('/skin/:id', (req, res, next) => {
   let id = Utils.toInteger(req.params.id);
 
   // Check for invalid content
