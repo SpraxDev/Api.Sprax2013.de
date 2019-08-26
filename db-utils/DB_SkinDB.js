@@ -169,6 +169,60 @@ module.exports = {
   //     });
   // }
 
+  /* Tags */
+  getTagSuggestion(name, limit, callback) {
+    pool.connect((err, con, done) => {
+      if (err) return callback(err);
+
+      const searchTerm = name.toLowerCase() + '%';
+
+      con.query('SELECT "Name" FROM "Tags" WHERE "Name" LIKE $1 ORDER BY "ID" ASC' + (limit > 0 ? ` LIMIT ${limit}` : '') + ';',
+        [searchTerm], (err, res) => {
+          if (err) {
+            done();
+            return callback(err);
+          }
+
+          let suggestion = [];
+
+          for (const row of res.rows) {
+            if (limit > 0 && suggestion.length >= limit) break;
+
+            suggestion.push(row['Name']);
+          }
+
+          con.query('SELECT * FROM (SELECT "ID", UNNEST ( "Aliases" ) "Tag" FROM "Tags" ORDER BY "ID" ASC)x WHERE "Tag" LIKE $1' + (limit > 0 ? ` LIMIT ${limit}` : '') + ';',
+            [searchTerm], (err, res) => {
+              done();
+              if (err) return callback(err);
+
+              for (const row of res.rows) {
+                if (limit > 0 && suggestion.length >= limit) break;
+
+                suggestion.push(row['Tag']);
+              }
+
+              return callback(null, suggestion);
+            });
+        });
+    });
+  },
+
+  getMatchingTags(name, callback) {
+    pool.query(`SELECT "ID" FROM "Tags" WHERE "Name" =$1 OR $1= ANY ("Aliases");`,
+      [name.toLowerCase()], (err, res) => {
+        if (err) return callback(err);
+
+        let tagIDs = [];
+
+        for (const row of res.rows) {
+          tagIDs.push(row['ID']);
+        }
+
+        return callback(null, tagIDs);
+      });
+  },
+
   /* Misc. */
 
   /**
