@@ -56,6 +56,54 @@ module.exports = {
       });
   },
 
+  getQueueBySkin(skinID, callback) {
+    pool.query(`SELECT * FROM "Queue" WHERE "SkinID" =$1 AND "Status" ='SUCCESS'::"QueueStatus";`,
+      [skinID], (err, res) => {
+        if (err) return callback(err);
+
+        for (const key in res.rows) {
+          if (res.rows.hasOwnProperty(key)) {
+            // Use #rowToQueuedObject
+            let result = res.rows[key];
+            result['Added'] = new Date(result['Added']).toUTCString();
+
+            return callback(null, result);
+          }
+        }
+
+        return callback(null, null);
+      });
+  },
+
+  /* Queue: UserAgent */
+  getAgentID(userAgent, callback) {
+    pool.connect((err, con, done) => {
+      if (err) return callback(err);
+
+      con.query(`SELECT "ID" FROM "QueuingAgents" WHERE "Agent"=$1;`,
+        [userAgent], (err, res) => {
+          if (err) {
+            done();
+            return callback(err);
+          }
+
+          if (res.rowCount <= 0) {
+            return con.query(`INSERT INTO "QueuingAgents" ("Agent") VALUES ($1) RETURNING "ID";`,
+              [userAgent], (err, res) => {
+                done();
+
+                if (err) return callback(err);
+
+                callback(null, res.rows[0]['ID']);
+              });
+          }
+          done();
+
+          return callback(null, res.rows[0]['ID']);
+        });
+    });
+  },
+
   /* Skins */
 
   getSkin(id, callback) {
