@@ -14,24 +14,6 @@ const router = require('express').Router();
 // TODO: Im Wiki sagen, dass die Fehlernachrichten sich ändern können aber nicht den Sinn verändern
 // TODO: Auf die passende Wiki-Seite hinweisen um den Fehler vllt. schneller finden zu können
 
-router.use('/provide/:id', (req, res, next) => {
-  let id = Utils.toInteger(req.params.id);
-
-  // Check for invalid content
-  if (Number.isNaN(id)) return next(Utils.createError(400, `The parameter 'id' is invalid`));
-
-  db.getQueue(id, (err, qObj) => {
-    if (err) return next(Utils.logAndCreateError(err));
-
-    if (!qObj) return next(Utils.createError(400, 'Nothing queued with the given ID', true));
-
-    let cacheTime = qObj['Status'] == 'QUEUED' ? 60 : 172800 /* 48h */;
-
-    res.set('Cache-Control', `public, s-maxage=${cacheTime}, max-age=${cacheTime}`)
-      .json(qObj);
-  });
-});
-
 router.post('/provide', (req, res, next) => {
   res.set({
     'Cache-Control': 'public, s-maxage=15, max-age=15'
@@ -149,6 +131,24 @@ router.use('/provide', (req, res, next) => {
   }
 });
 
+router.use('/provide/:id?', (req, res, next) => {
+  let id = Utils.toInteger(req.params.id);
+
+  // Check for invalid content
+  if (Number.isNaN(id)) return next(Utils.createError(400, `The parameter 'id' is invalid`));
+
+  db.getQueue(id, (err, qObj) => {
+    if (err) return next(Utils.logAndCreateError(err));
+
+    if (!qObj) return next(Utils.createError(400, 'Nothing queued with the given ID', true));
+
+    let cacheTime = qObj['Status'] == 'QUEUED' ? 60 : 172800 /* 48h */;
+
+    res.set('Cache-Control', `public, s-maxage=${cacheTime}, max-age=${cacheTime}`)
+      .json(qObj);
+  });
+});
+
 router.use('/skin/random', (req, res, next) => {
   let count = req.query.count ? Utils.toInteger(req.query.count) : 1;
 
@@ -181,11 +181,12 @@ router.use('/skin/:id/provider', (req, res, next) => {
   });
 });
 
-router.use('/skin/:id', (req, res, next) => {
+// :id is optional to prevent 404 on missing :id
+router.use('/skin/:id?', (req, res, next) => {
   let id = Utils.toInteger(req.params.id);
 
   // Check for invalid content
-  if (Number.isNaN(id)) return next(Utils.createError(400, `The parameter 'id' is invalid or missing`));
+  if (Number.isNaN(id)) return next(Utils.createError(400, `The parameter 'id' is invalid or missing`, !!id /* false when NaN */));
 
   db.getSkin(id, (err, skin) => {
     if (err) return next(Utils.logAndCreateError(err));
