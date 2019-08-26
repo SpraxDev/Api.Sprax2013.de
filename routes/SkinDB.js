@@ -181,10 +181,8 @@ router.use('/skin/:id?', (req, res, next) => {
   });
 });
 
-router.use('/stats', (req, res, next) => {
-  // let deep = req.query.deep ? Utils.toBoolean(req.query.deep) : false;
-
-  getStats(/* deep */ true, (err, stats) => {
+router.use('/stats', (_req, res, next) => {
+  getStats((err, stats) => {
     if (err) return next(Utils.logAndCreateError(err));
 
     res.set('Cache-Control', 'public, s-maxage=900' /* 15min */)
@@ -229,7 +227,7 @@ function isFromYggdrasil(value, signature) {
 
 /* Cached Res. */
 
-function getStats(deep, callback) {
+function getStats(callback) {
   let data = statsCache.get('stats');
 
   if (!data) {
@@ -240,13 +238,6 @@ function getStats(deep, callback) {
       }
 
       statsCache.set('stats', stats);
-
-      if (!deep) {
-        let json = JSON.parse(JSON.stringify(stats));
-        delete json['providedBy'];
-
-        return callback(null, json);
-      }
 
       callback(null, stats);
     });
