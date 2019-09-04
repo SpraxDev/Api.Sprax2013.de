@@ -9,9 +9,7 @@ const pool = new Pool({
 });
 pool.on('error', (err, _client) => {
   console.error('Unexpected error on idle client:', err);
-  // process.exit(-1);
 });
-// call `pool.end()` to shutdown the pool (waiting for queries to finish)
 
 module.exports = {
   pool,
