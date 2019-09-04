@@ -14,6 +14,8 @@ pool.on('error', (err, _client) => {
 // call `pool.end()` to shutdown the pool (waiting for queries to finish)
 
 module.exports = {
+  pool,
+
   /* Queue */
   addQueue(skinURL, value, signature, userAgent, callback) {
     if (userAgent && userAgent.length > 255) {

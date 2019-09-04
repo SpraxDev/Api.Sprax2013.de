@@ -1,7 +1,35 @@
-initStorage(() => {
-  const http = require('http');
+let cfg;
+let server;
 
-  const server = http.createServer(require('./server'));
+function shutdownHook() {
+  console.log('Shutting down...');
+
+  const ready = async () => {
+    try {
+      await require('./db-utils/DB_SkinDB').pool.end();
+      await require('./db-utils/DB_Mojang').pool.end();
+    } catch (ex) { }
+
+    process.exit();
+  };
+
+  server.close((err) => {
+    if (err) console.error(err);
+
+    ready();
+  });
+}
+
+process.on('SIGTERM', shutdownHook);
+process.on('SIGINT', shutdownHook);
+process.on('SIGQUIT', shutdownHook);
+process.on('SIGHUP', shutdownHook);
+process.on('SIGUSR2', shutdownHook);  // The package 'nodemon' is using this signal
+
+initStorage(() => {
+  cfg = require('./storage/config.json');
+
+  server = require('http').createServer(require('./server'));
   server.on('error', (err) => {
     if (err.syscall !== 'listen') {
       throw err;
@@ -9,18 +37,59 @@ initStorage(() => {
 
     switch (err.code) {
       case 'EACCES':
-        console.error(`Port ${process.env.PORT || 8091} requires elevated privileges`);
+        console.error(
+          ((cfg.listen.usePath || process.env.UNIX_PATH) ? `path ${process.env.UNIX_PATH || cfg.listen.path}` : `port ${process.env.PORT || cfg.listen.port}`) +
+          ' requires elevated privileges'
+        );
         process.exit(1);
         break;
       case 'EADDRINUSE':
-        console.error(`Port ${process.env.PORT || 8091} is already in use`);
+        console.error(
+          ((cfg.listen.usePath || process.env.UNIX_PATH) ? `path ${process.env.UNIX_PATH || cfg.listen.path}` : `port ${process.env.PORT || cfg.listen.port}`) +
+          ' is already in use'
+        );
         process.exit(1);
         break;
       default:
         throw err;
     }
   });
-  server.listen(process.env.PORT || 8091, process.env.HOST || '127.0.0.1');
+
+  server.on('listening', () => {
+    console.log('Listening on ' +
+      ((cfg.listen.usePath || process.env.UNIX_PATH) ? `path ${process.env.UNIX_PATH || cfg.listen.path}` : `port ${process.env.PORT || cfg.listen.port}`)
+    );
+  });
+
+  if (cfg.listen.usePath || process.env.UNIX_PATH) {
+    const fs = require('fs');
+
+    const unixSocketPath = process.env.UNIX_PATH || cfg.listen.path,
+      unixSocketPIDPath = (process.env.UNIX_PATH || cfg.listen.path) + '.pid',
+      parentDir = require('path').dirname(unixSocketPath);
+
+    if (!fs.existsSync(parentDir)) {
+      fs.mkdirSync(parentDir, { recursive: true });
+    }
+
+    if (fs.existsSync(unixSocketPath)) {
+      let isRunning = false;
+      if (!fs.existsSync(unixSocketPIDPath) || !(isRunning = isProcessRunning(parseInt(fs.readFileSync(unixSocketPIDPath, 'utf-8'))))) {
+        fs.unlinkSync(unixSocketPath);
+      }
+
+      if (isRunning) {
+        console.error(`It looks like the process that created '${unixSocketPath}' is still running!`);
+        process.exit(1);
+      }
+    }
+
+    fs.writeFileSync(unixSocketPIDPath, process.pid);
+    server.listen(unixSocketPath);
+    fs.chmodSync(unixSocketPath, 0777);
+  } else {
+    server.listen(process.env.PORT || cfg.listen.port, process.env.HOST || cfg.listen.host);
+  }
 });
 
 async function initStorage(callback) {
@@ -29,6 +98,22 @@ async function initStorage(callback) {
 
   if (!fs.existsSync('./storage/static/')) {
     fs.mkdirSync('./storage/static/', { recursive: true });
+  }
+
+  if (!fs.existsSync('./storage/config.json')) {
+    fs.writeFileSync('./storage/config.json', JSON.stringify(
+      {
+        listen: {
+          usePath: false,
+          path: './SpraxAPI.unixSocket',
+
+          host: '127.0.0.1',
+          port: 8091
+        }
+      }
+      , null, 4));
+
+    console.log('./storage/db.json has been created!');
   }
 
   if (!fs.existsSync('./storage/db.json')) {
@@ -82,9 +167,10 @@ async function initStorage(callback) {
   }
 }
 
-// TODO: Disconnect from db etc.
-// process.on('SIGINT', function () {
-//   db.stop(function (err) {
-//     process.exit(err ? 1 : 0);
-//   });
-// });
+function isProcessRunning(pid) {
+  try {
+    return process.kill(pid, 0);
+  } catch (ex) {
+    return ex.code === 'EPERM';
+  }
+}

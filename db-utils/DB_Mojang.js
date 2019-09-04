@@ -16,6 +16,8 @@ pool.on('error', (err, _client) => {
 const Utils = require('./../utils');
 
 module.exports = {
+  pool,
+
   setHost(host, hash, callback) {
     pool.query(`INSERT INTO "Domains"("Host", "Hash") VALUES ($1, $2) ON CONFLICT DO NOTHING;`,
       [host, hash], (err, _res) => {
