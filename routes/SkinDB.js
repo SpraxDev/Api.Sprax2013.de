@@ -14,6 +14,24 @@ const router = require('express').Router();
 // TODO: Im Wiki sagen, dass die Fehlernachrichten sich ändern können aber nicht den Sinn verändern
 // TODO: Auf die passende Wiki-Seite hinweisen um den Fehler vllt. schneller finden zu können
 
+router.use('/provide/:id', (req, res, next) => {
+  let id = Utils.toInteger(req.params.id);
+
+  // Check for invalid content
+  if (Number.isNaN(id)) return next(Utils.createError(400, `The parameter 'id' is invalid`));
+
+  db.getQueue(id, (err, qObj) => {
+    if (err) return next(Utils.logAndCreateError(err));
+
+    if (!qObj) return next(Utils.createError(400, 'Nothing queued with the given ID', true));
+
+    let cacheTime = qObj['Status'] == 'QUEUED' ? 60 : 172800 /* 48h */;
+
+    res.set('Cache-Control', `public, s-maxage=${cacheTime}, max-age=${cacheTime}`)
+      .json(qObj);
+  });
+});
+
 router.post('/provide', (req, res, next) => {
   res.set({
     'Cache-Control': 'public, s-maxage=15, max-age=15'
@@ -129,24 +147,6 @@ router.use('/provide', (req, res, next) => {
   else {
     return next(Utils.createError(400, `The provided 'value' is invalid`, true));
   }
-});
-
-router.use('/provide/:id?', (req, res, next) => {
-  let id = Utils.toInteger(req.params.id);
-
-  // Check for invalid content
-  if (Number.isNaN(id)) return next(Utils.createError(400, `The parameter 'id' is invalid`));
-
-  db.getQueue(id, (err, qObj) => {
-    if (err) return next(Utils.logAndCreateError(err));
-
-    if (!qObj) return next(Utils.createError(400, 'Nothing queued with the given ID', true));
-
-    let cacheTime = qObj['Status'] == 'QUEUED' ? 60 : 172800 /* 48h */;
-
-    res.set('Cache-Control', `public, s-maxage=${cacheTime}, max-age=${cacheTime}`)
-      .json(qObj);
-  });
 });
 
 router.use('/skin/random', (req, res, next) => {
