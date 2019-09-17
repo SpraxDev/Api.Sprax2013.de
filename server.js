@@ -7,15 +7,22 @@ const logFormat = '[:date[web]] :remote-addr by :remote-user | :method :url :sta
 const accessLogStream = require('rotating-file-stream')('access.log', {
   interval: '1d',
   maxFiles: 7,
-  path: require('path').join(__dirname, 'logs', 'access'),
-  compress: true
+  path: require('path').join(__dirname, 'logs', 'access')
 }),
   errorLogStream = require('rotating-file-stream')('error.log', {
     interval: '1d',
     maxFiles: 90,
-    path: require('path').join(__dirname, 'logs', 'error'),
-    compress: true
+    path: require('path').join(__dirname, 'logs', 'error')
   });
+
+accessLogStream.on('error', (err) => {
+  console.error(err); // Don't crash whole application, just print
+  // once this event is emitted, the stream will be closed as well
+});
+errorLogStream.on('error', (err) => {
+  console.error(err); // Don't crash whole application, just print
+  // once this event is emitted, the stream will be closed as well
+});
 
 const app = express();
 
