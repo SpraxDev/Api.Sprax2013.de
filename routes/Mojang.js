@@ -584,8 +584,11 @@ function getKnownServer(callback) { // ToDo recode
   }
 }
 
+/**
+ * @param {String} username
+ */
 function isValidUsername(username) {
-  return username.length <= 16 && !/[^0-9a-zA-Z_]/.test(username);
+  return typeof username === 'string' && username.length <= 16 && !/[^0-9a-zA-Z_]/.test(username);
 }
 
 //TODO: Schmeißt irwie immer alex und nie steve?

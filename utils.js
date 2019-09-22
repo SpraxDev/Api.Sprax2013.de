@@ -69,7 +69,7 @@ module.exports = {
    * @returns {Boolean}
    */
   isURL(str) {
-    return str.length < 2083 && URL_PATTERN.test(str);
+    return typeof str === 'string' && str.length < 2083 && URL_PATTERN.test(str);
   },
 
   /**
