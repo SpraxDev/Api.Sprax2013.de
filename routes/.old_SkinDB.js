@@ -1,5 +1,3 @@
-const net = require('net');
-
 const Utils = require('./../utils');
 const db = require('./../db-utils/DB_SkinDB');
 
