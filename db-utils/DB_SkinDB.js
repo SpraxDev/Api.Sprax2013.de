@@ -170,7 +170,7 @@ module.exports = {
   // }
 
   /* Tags */
-  getTagSuggestion(name, limit, callback) {
+  getTagSuggestion(name, limit = -1, callback) {
     pool.connect((err, con, done) => {
       if (err) return callback(err);
 
