@@ -160,14 +160,22 @@ module.exports = {
       });
   },
 
-  // setSkin(mojangURL, cleanHash, hasOverlay, isAlex, duplicateOf, callback) {
-  //   pool.query(`INSERT INTO public."Skins"("MojangURL", "CleanHash", "HasOverlay", "IsAlex", "DuplicateOf") VALUES ($1, $2, $3, $4, $5) RETURNING *;`,
-  //     [mojangURL, cleanHash, hasOverlay, isAlex, duplicateOf], (err, _res) => {
-  //       if (err) return callback(err);
+  /**
+   * 
+   * @param {Number} id 
+   * @param {'original'|'clean'} type
+   * @param {Function} callback 
+   */
+  getSkinImage(id, type, callback) {
+    if (typeof type !== 'string' && type != 'original' && type != 'clean') throw new Error(`Invalid value for type (=${type})`);
 
-  //       callback(null, res.rows[0]);
-  //     });
-  // }
+    pool.query(`SELECT ${type} FROM "Images" WHERE "SkinID"=$1;`,
+      [id], (err, res) => {
+        if (err) return callback(err);
+
+        return callback(null, res.rowCount > 0 ? res.rows[0][type] : null);
+      });
+  },
 
   /* Tags */
   getTagSuggestion(name, limit = -1, callback) {

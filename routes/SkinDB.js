@@ -207,6 +207,30 @@ router.use('/stats', (_req, res, next) => {
   });
 });
 
+router.use('/cdn/:id?/:type?', (req, res, next) => {
+  let id = Utils.toInteger(req.params.id),
+    type = (req.params.type || '').toLowerCase();
+
+  // Check for invalid content
+  if (Number.isNaN(id) ||
+    Utils.toNeutralString(type).length == 0 ||
+    (type != 'original.png' &&
+      type != 'skin.png')) return next(Utils.createError(404, 'Not Found'));
+
+  if (type == 'original.png') {
+    type = 'original';
+  } else {
+    type = 'clean';
+  }
+
+  db.getSkinImage(id, type, (err, img) => {
+    if (err) return next(Utils.logAndCreateError(err));
+    if (!img) return next(Utils.createError(404, 'Not Found'));
+
+    res.type('png').set('Cache-Control', 'public, s-maxage=7884000, max-age=7884000' /* 3months */).send(img);
+  });
+});
+
 module.exports = router;
 
 /* Helper */
