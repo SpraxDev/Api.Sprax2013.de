@@ -223,12 +223,19 @@ router.use('/cdn/:id?/:type?', (req, res, next) => {
     type = 'clean';
   }
 
-  db.getSkinImage(id, type, (err, img) => {
+  db.getSkin(id, (err, skin) => {
     if (err) return next(Utils.logAndCreateError(err));
-    if (!img) return next(Utils.createError(404, 'Not Found'));
+    if (!skin) return next(Utils.createError(404, 'Not Found'));
 
-    res.type('png').set('Cache-Control', 'public, s-maxage=7884000, max-age=7884000' /* 3months */).send(img);
+    db.getSkinImage(skin['DuplicateOf'] ? skin['DuplicateOf'] : skin['ID'], type, (err, img) => {
+      if (err) return next(Utils.logAndCreateError(err));
+      if (!img) return next(Utils.createError(404, 'Not Found'));
+
+      res.type('png').set('Cache-Control', 'public, s-maxage=7884000, max-age=7884000' /* 3months */).send(img);
+    });
   });
+
+
 });
 
 module.exports = router;
