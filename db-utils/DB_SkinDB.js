@@ -167,7 +167,7 @@ module.exports = {
    * @param {Function} callback 
    */
   getSkinImage(id, type, callback) {
-    if (typeof type !== 'string' && type != 'original' && type != 'clean') throw new Error(`Invalid value for type (=${type})`);
+    if (typeof type !== 'string' || (type != 'original' && type != 'clean')) throw new Error(`Invalid value for type (=${type})`);
 
     pool.query(`SELECT ${type} FROM "Images" WHERE "SkinID"=$1;`,
       [id], (err, res) => {
