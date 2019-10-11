@@ -2,7 +2,7 @@ const crypto = require('crypto');
 
 const yggdrasilPublicKey = require('fs').readFileSync(require('path').join(__dirname, '../storage/static/yggdrasil_session_pubkey.pem'));
 
-const statsCache = new (require('node-cache'))({ stdTTL: 3600 /* 1h */ });
+const statsCache = new (require('node-cache'))({ stdTTL: 1800 /* 30min */ });
 
 const Utils = require('./../utils'),
   Mojang = require('./Mojang'),
@@ -198,12 +198,23 @@ router.use('/skin/:id?', (req, res, next) => {
   });
 });
 
-router.use('/stats', (_req, res, next) => {
+router.use('/stats', (req, res, next) => {
   getStats((err, stats) => {
     if (err) return next(Utils.logAndCreateError(err));
 
-    res.set('Cache-Control', 'public, s-maxage=900' /* 15min */)
-      .json(stats);
+    res.set('Cache-Control', 'public, s-maxage=900' /* 15min */);
+
+    if (req.token && Utils.TokenSystem.getPermissions(req.token).includes(Utils.TokenSystem.PERMISSION.SKINDB_ADVANCED_STATISTICS)) {
+      return getAdvancedStats((err, advStats) => {
+        if (err) return next(Utils.logAndCreateError(err));
+
+        stats['advanced'] = advStats;
+
+        res.json(stats);
+      });
+    }
+
+    res.json(stats);
   });
 });
 
@@ -290,6 +301,29 @@ function getStats(callback) {
       }
 
       statsCache.set('stats', stats);
+
+      callback(null, stats);
+    });
+  } else {
+    if (data instanceof Error) {
+      return callback(data);
+    }
+
+    callback(null, data);
+  }
+}
+
+function getAdvancedStats(callback) {
+  let data = statsCache.get('advStats');
+
+  if (!data) {
+    db.getAdvancedStats((err, stats) => {
+      if (err) {
+        statsCache.set('advStats', err);
+        return callback(err);
+      }
+
+      statsCache.set('advStats', stats);
 
       callback(null, stats);
     });

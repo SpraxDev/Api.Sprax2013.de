@@ -265,29 +265,79 @@ module.exports = {
 
             pendingCount = res.rows[0]['RowCount'];
 
-            con.query(`SELECT "UserAgent", COUNT(*) AS "Count" FROM "Queue" GROUP BY "UserAgent" ORDER BY "Count" DESC;`, [], (err, res) => {
-              done();
+            con.query(`SELECT "QueuingAgents"."Agent", COUNT(*) FROM "Queue" INNER JOIN` +
+              `"QueuingAgents" ON "Queue"."UserAgent" ="QueuingAgents"."ID" GROUP BY "QueuingAgents"."Agent" ORDER BY "count" DESC;`, [], (err, res) => {
+                done();
 
-              if (err) return callback(err);
+                if (err) return callback(err);
 
-              let providedBy = {};
+                let providedBy = {};
 
-              for (const row in res.rows) {
-                if (res.rows.hasOwnProperty(row)) {
-                  const elem = res.rows[row];
+                for (const row in res.rows) {
+                  if (res.rows.hasOwnProperty(row)) {
+                    const elem = res.rows[row];
 
-                  providedBy[elem.UserAgent] = elem.Count;
+                    providedBy[elem.Agent] = parseInt(elem['count']);
+                  }
                 }
-              }
 
-              callback(null, {
-                estSkinCount: estSkinCount,
-                duplicateSkinCount: duplicateSkinCount,
-                pendingCount: pendingCount,
-                providedBy: providedBy,
+                callback(null, {
+                  estSkinCount: estSkinCount,
+                  duplicateSkinCount: parseInt(duplicateSkinCount),
+                  pendingCount: parseInt(pendingCount),
+                  providedBy: providedBy,
 
-                lastUpdate: new Date().toUTCString()
+                  lastUpdate: new Date().toUTCString()
+                });
               });
+          });
+        });
+      });
+    });
+  },
+
+  /**
+   * @param {Function} callback Params: err, json
+   */
+  getAdvancedStats(callback) {
+    pool.connect((err, con, done) => {
+      if (err) return callback(err);
+
+      con.query(`SELECT COUNT(*) FROM "Skins" WHERE "Added" >= CURRENT_DATE;`, [], (err, res) => {
+        if (err) {
+          done();
+          return callback(err);
+        }
+
+        let last24h = res.rows[0]['count'],
+          base, amountOverDays = [];
+
+        con.query(`SELECT COUNT(*) FROM "Skins" WHERE "Added" < CURRENT_DATE - 14;`, [], (err, res) => {
+          if (err) {
+            done();
+            return callback(err);
+          }
+
+          base = parseInt(res.rows[0]['count']);
+
+          con.query(`SELECT DATE_TRUNC('day', "Added") AS "date", COUNT(*) AS "count" FROM "Skins" GROUP BY 1 ORDER BY 1 DESC LIMIT 14;`, [], (err, res) => {
+            done();
+            if (err) return callback(err);
+
+            for (const row of res.rows.reverse()) {
+              base += parseInt(row['count']);
+
+              amountOverDays.push({
+                date: new Date(row['date']).toUTCString(),
+                count: base
+              });
+            }
+
+            callback(null, {
+              last24h: last24h,
+              changeOverDays: amountOverDays,
+
+              lastUpdate: new Date().toUTCString()
             });
           });
         });

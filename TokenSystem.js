@@ -1,5 +1,6 @@
 const PERMISSION = {
-  SKINDB_ADMIN: 'SKINDB_ADMIN'
+  SKINDB_ADMIN: 'SKINDB_ADMIN',
+  SKINDB_ADVANCED_STATISTICS: 'SKINDB_ADVANCED_STATISTICS'
 };
 
 const tokens = require('./storage/tokens.json');
