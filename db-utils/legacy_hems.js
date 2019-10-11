@@ -41,7 +41,7 @@ con.query('CREATE TABLE IF NOT EXISTS `LifeCO2Sim2k19_ScoreBoard`(`ID` INT NOT N
 module.exports = {
     con,
     getAll: function (callback) {
-        con.query('SELECT * FROM `LifeCO2Sim2k19_ScoreBoard` ORDER BY `Score` ASC;', (err, rows, fields) => {
+        con.query('SELECT * FROM `LifeCO2Sim2k19_ScoreBoard` ORDER BY `Score` ASC;', (err, rows, _fields) => {
             if (err) {
                 callback(err);
             } else {
