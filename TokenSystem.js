@@ -8,7 +8,7 @@ module.exports = {
   PERMISSION,
 
   /**
-   * @param {Express.Request} req 
+   * @param {String} token 
    * 
    * @returns {Array<PERMISSION>}
    */

@@ -113,7 +113,7 @@ async function initStorage(callback) {
       }
       , null, 4));
 
-    console.log('./storage/db.json has been created!');
+    console.log('./storage/config.json has been created!');
   }
 
   if (!fs.existsSync('./storage/db.json')) {
@@ -124,8 +124,8 @@ async function initStorage(callback) {
         user: 'skinDB',
         password: 's3cr3t!',
 
-        DB_SkinDB: 'SkinDB_new',
-        DB_Mojang: 'Mojang'
+        DB_SkinDB: 'SkinDB',
+        DB_Mojang: 'SpraxAPI'
       }
       , null, 4));
 
