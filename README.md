@@ -2,9 +2,11 @@
 
 # Setting up / Update
 ## [SkinDB-Route] yggdrasil_session_pubkey.der
-In case Mojang does ever change their public key, you'll need to update the local copy of the public key
+You have to download the public key used by [Yggdrasil](https://minecraft.gamepedia.com/Yggdrasil)
 
 Download the latest [authlib](https://libraries.minecraft.net/com/mojang/authlib/1.5.25/authlib-1.5.25.jar) from Mojang and extract the public key from it. Then run `openssl rsa -pubin -in yggdrasil_session_pubkey.der -inform DER -outform PEM -out yggdrasil_session_pubkey.pem` to get an `.pem` file.
+
+Save this `.pem` file as `./storage/static/yggdrasil_session_pubkey.pem`
 
 ## Special Thanks To
 **[@NudelErde](https://github.com/NudelErde)** for providing a 3D-SkinRender functionality
