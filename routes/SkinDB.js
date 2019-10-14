@@ -2,7 +2,7 @@ const crypto = require('crypto');
 
 const yggdrasilPublicKey = require('fs').readFileSync(require('path').join(__dirname, '../storage/static/yggdrasil_session_pubkey.pem'));
 
-const statsCache = new (require('node-cache'))({ stdTTL: 1800 /* 30min */ });
+const statsCache = new (require('node-cache'))({ stdTTL: 900 /* 15min */ });
 
 const Utils = require('./../utils'),
   Mojang = require('./Mojang'),
