@@ -312,7 +312,7 @@ module.exports = {
         let last24h = parseInt(res.rows[0]['count']),
           base, amountOverDays = [];
 
-        con.query(`SELECT COUNT(*) FROM "Skins" WHERE "Added" < CURRENT_DATE - 14;`, [], (err, res) => {
+        con.query(`SELECT COUNT(*) FROM "Skins" WHERE "Added" <= CURRENT_DATE - 13;`, [], (err, res) => {
           if (err) {
             done();
             return callback(err);
