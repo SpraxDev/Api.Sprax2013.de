@@ -123,6 +123,7 @@ async function initStorage(callback) {
         port: 3306,
         user: 'skinDB',
         password: 's3cr3t!',
+        ssl: false,
 
         DB_SkinDB: 'SkinDB',
         DB_Mojang: 'SpraxAPI'

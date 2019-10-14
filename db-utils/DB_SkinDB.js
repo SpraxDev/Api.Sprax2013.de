@@ -4,8 +4,8 @@ const pool = new Pool({
   user: require('./../storage/db.json')['user'],
   password: require('./../storage/db.json')['password'],
   database: require('./../storage/db.json')['DB_SkinDB'],
-  max: 8,
-  ssl: true
+  ssl: require('./../storage/db.json')['ssl'],
+  max: 8
 });
 pool.on('error', (err, _client) => {
   console.error('Unexpected error on idle client:', err);
