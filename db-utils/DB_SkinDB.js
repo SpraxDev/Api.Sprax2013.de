@@ -240,30 +240,30 @@ module.exports = {
     pool.connect((err, con, done) => {
       if (err) return callback(err);
 
-      con.query(`SELECT reltuples AS approximate_row_count FROM pg_class WHERE relname = 'Skins';`, [], (err, res) => {
+      con.query(`SELECT COUNT(*) FROM "Skins";`, [], (err, res) => {
         if (err) {
           done();
           return callback(err);
         }
 
-        let estSkinCount = res.rows[0]['approximate_row_count'],
+        let estSkinCount = parseInt(res.rows[0]['count']),
           duplicateSkinCount, pendingCount;
 
-        con.query(`SELECT COUNT(*) AS "RowCount" FROM "Skins" WHERE "DuplicateOf" IS NOT NULL;`, [], (err, res) => {
+        con.query(`SELECT COUNT(*) FROM "Skins" WHERE "DuplicateOf" IS NOT NULL;`, [], (err, res) => {
           if (err) {
             done();
             return callback(err);
           }
 
-          duplicateSkinCount = res.rows[0]['RowCount'];
+          duplicateSkinCount = res.rows[0]['count'];
 
-          con.query(`SELECT COUNT(*) AS "RowCount" FROM "Queue" WHERE "Status" = 'QUEUED';`, [], (err, res) => {
+          con.query(`SELECT COUNT(*) FROM "Queue" WHERE "Status" = 'QUEUED';`, [], (err, res) => {
             if (err) {
               done();
               return callback(err);
             }
 
-            pendingCount = res.rows[0]['RowCount'];
+            pendingCount = res.rows[0]['count'];
 
             con.query(`SELECT "QueuingAgents"."Agent", COUNT(*) FROM "Queue" INNER JOIN` +
               `"QueuingAgents" ON "Queue"."UserAgent" ="QueuingAgents"."ID" GROUP BY "QueuingAgents"."Agent" ORDER BY "count" DESC;`, [], (err, res) => {
@@ -309,7 +309,7 @@ module.exports = {
           return callback(err);
         }
 
-        let last24h = res.rows[0]['count'],
+        let last24h = parseInt(res.rows[0]['count']),
           base, amountOverDays = [];
 
         con.query(`SELECT COUNT(*) FROM "Skins" WHERE "Added" < CURRENT_DATE - 14;`, [], (err, res) => {

@@ -290,10 +290,10 @@ function isFromYggdrasil(value, signature) {
 
 /* Cached Res. */
 
-function getStats(callback) {
+function getStats(callback, forceUpdate = false) {
   let data = statsCache.get('stats');
 
-  if (!data) {
+  if (!data || forceUpdate) {
     db.getStats((err, stats) => {
       if (err) {
         statsCache.set('stats', err);
@@ -313,10 +313,10 @@ function getStats(callback) {
   }
 }
 
-function getAdvancedStats(callback) {
+function getAdvancedStats(callback, forceUpdate = false) {
   let data = statsCache.get('advStats');
 
-  if (!data) {
+  if (!data || forceUpdate) {
     db.getAdvancedStats((err, stats) => {
       if (err) {
         statsCache.set('advStats', err);
@@ -335,5 +335,12 @@ function getAdvancedStats(callback) {
     callback(null, data);
   }
 }
+
+function updateCachedStats() {
+  getStats(() => { }, true);
+  getAdvancedStats(() => { }, true);
+}
+updateCachedStats();
+setInterval(updateCachedStats, 14 * 60 * 1000); // 10min
 
 module.exports.queueSkin = queueSkin;
