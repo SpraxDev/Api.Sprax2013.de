@@ -202,7 +202,7 @@ router.use('/stats', (req, res, next) => {
   getStats((err, stats) => {
     if (err) return next(Utils.logAndCreateError(err));
 
-    res.set('Cache-Control', 'public, s-maxage=900' /* 15min */);
+    res.set('Cache-Control', 'private, no-cache, no-store, must-revalidate, max-age=600, s-maxage=0');
 
     if (req.token && Utils.TokenSystem.getPermissions(req.token).includes(Utils.TokenSystem.PERMISSION.SKINDB_ADVANCED_STATISTICS)) {
       return getAdvancedStats((err, advStats) => {
