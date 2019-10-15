@@ -15,6 +15,13 @@ module.exports = {
   pool,
 
   /* Queue */
+  /**
+   * @param {String} skinURL 
+   * @param {String} value 
+   * @param {String} signature 
+   * @param {Number} userAgent 
+   * @param {Function} callback 
+   */
   addQueue(skinURL, value, signature, userAgent, callback) {
     if (userAgent && userAgent.length > 255) {
       userAgent = userAgent.substring(0, 252) + '...';
@@ -28,6 +35,10 @@ module.exports = {
       });
   },
 
+  /**
+   * @param {String} skinURL 
+   * @param {function} callback 
+   */
   isQueued(skinURL, callback) {
     pool.query(`SELECT EXISTS(SELECT from "Queue" WHERE "SkinURL"=$1) AS "exists";`,
       [skinURL], (err, res) => {
@@ -37,6 +48,10 @@ module.exports = {
       });
   },
 
+  /**
+   * @param {Number} id 
+   * @param {Function} callback 
+   */
   getQueue(id, callback) {
     pool.query(`SELECT * FROM "Queue" WHERE "ID"=$1;`,
       [id], (err, res) => {
@@ -56,6 +71,10 @@ module.exports = {
       });
   },
 
+  /**
+   * @param {Number} skinID 
+   * @param {Function} callback 
+   */
   getQueueBySkin(skinID, callback) {
     pool.query(`SELECT * FROM "Queue" WHERE "SkinID" =$1 AND "Status" ='SUCCESS'::"QueueStatus";`,
       [skinID], (err, res) => {
@@ -106,6 +125,11 @@ module.exports = {
 
   /* Skins */
 
+  /**
+   * 
+   * @param {Number} id 
+   * @param {Function} callback 
+   */
   getSkin(id, callback) {
     pool.query(`SELECT * FROM "Skins" WHERE "ID"=$1;`,
       [id], (err, res) => {
@@ -132,6 +156,10 @@ module.exports = {
       });
   },
 
+  /**
+   * @param {Number} count 
+   * @param {Function} callback 
+   */
   getRandomSkinList(count, callback) {
     pool.query(`SELECT * FROM "Skins" WHERE "DuplicateOf" IS NULL ORDER BY RANDOM() LIMIT $1;`,
       [count], (err, res) => {
@@ -161,7 +189,6 @@ module.exports = {
   },
 
   /**
-   * 
    * @param {Number} id 
    * @param {'original'|'clean'} type
    * @param {Function} callback 
