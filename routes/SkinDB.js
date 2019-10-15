@@ -53,6 +53,7 @@ router.post('/provide', (req, res, next) => {
     }
   };
 
+  const internalUserAgent = req.token && Utils.TokenSystem.getPermissions(req.token).includes(Utils.TokenSystem.PERMISSION.INTERNAL_USER_AGENT);
   for (const uuid of req.body['uuids']) {
     if (typeof uuid === 'string' && Utils.isUUID(uuid)) {
       awaiting++;
@@ -85,7 +86,7 @@ router.post('/provide', (req, res, next) => {
               json[profile.id] = { status: err.status, msg: err.message };
 
               decrementAwaiting();
-            }, profileData.skinURL, profileData.value, profileData.signature, req.header('User-Agent'));
+            }, profileData.skinURL, profileData.value, profileData.signature, req.header('User-Agent'), internalUserAgent);
           }
         }
       }, null);
@@ -103,13 +104,15 @@ router.use('/provide', (req, res, next) => {
 
   if (!value) return next(Utils.createError(400, `The query-parameter 'value' is missing`, true));
 
+  const internalUserAgent = req.token && Utils.TokenSystem.getPermissions(req.token).includes(Utils.TokenSystem.PERMISSION.INTERNAL_USER_AGENT);
+
   if (signature) {
     if (!isFromYggdrasil(value, signature)) return next(Utils.createError(400, `The provided 'signature' for 'value' is invalid or not signed by Yggdrasil`, true));
 
     const skin = JSON.parse(Buffer.from(value, 'base64').toString('ascii'));
     if (!skin['textures'] || !skin['textures']['SKIN']) return next(Utils.createError(400, 'That value does not contain a skin', true));
 
-    return queueSkin(res, next, skin['textures']['SKIN']['url'], value, signature, req.header('User-Agent'));
+    return queueSkin(res, next, skin['textures']['SKIN']['url'], value, signature, req.header('User-Agent'), internalUserAgent);
   }
   else if (Utils.isUUID(value)) {
     Mojang.getProfile(value, (err, json) => {
@@ -120,7 +123,7 @@ router.use('/provide', (req, res, next) => {
 
       if (!profileData.skinURL || !profileData.signature) return next(Utils.createError(400, 'That user does not have a skin', true));
 
-      return queueSkin(res, next, profileData.skinURL, profileData.value, profileData.signature, req.header('User-Agent'));
+      return queueSkin(res, next, profileData.skinURL, profileData.value, profileData.signature, req.header('User-Agent'), internalUserAgent);
     }, null);
   }
   else if (Mojang.isValidUsername(value)) {
@@ -136,12 +139,12 @@ router.use('/provide', (req, res, next) => {
 
         if (!profileData.skinURL || !profileData.signature) return next(Utils.createError(400, 'That user does not have a skin', true));
 
-        return queueSkin(res, next, profileData.skinURL, profileData.value, profileData.signature, req.header('User-Agent'));
+        return queueSkin(res, next, profileData.skinURL, profileData.value, profileData.signature, req.header('User-Agent'), internalUserAgent);
       }, null);
     });
   }
   else if (Utils.isURL(value)) {
-    return queueSkin(res, next, value, null, null, req.header('User-Agent'));
+    return queueSkin(res, next, value, null, null, req.header('User-Agent'), internalUserAgent);
   }
 
   else {
@@ -253,12 +256,21 @@ module.exports = router;
 
 /* Helper */
 
-function queueSkin(res, next = () => { }, skinURL, value, signature, userAgent) {
+/**
+ * @param {Function|Express.Response} res 
+ * @param {Function} next 
+ * @param {String} skinURL 
+ * @param {String} value 
+ * @param {String} signature 
+ * @param {String} userAgent 
+ * @param {Boolean} internalUserAgent 
+ */
+function queueSkin(res, next = () => { }, skinURL, value, signature, userAgent, internalUserAgent = false) {
   db.isQueued(skinURL, (err, isQueued) => {
     if (err) return next(Utils.logAndCreateError(err));
     if (isQueued) return next(Utils.createError(200, 'The skin is already in the database', true));
 
-    db.getAgentID(userAgent, (err, agentID) => {
+    db.getAgentID(userAgent, internalUserAgent, (err, agentID) => {
       if (err) return next(Utils.logAndCreateError(err));
 
       db.addQueue(skinURL, value, signature, agentID, (err, queueID) => {

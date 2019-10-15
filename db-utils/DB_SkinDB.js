@@ -23,10 +23,6 @@ module.exports = {
    * @param {Function} callback 
    */
   addQueue(skinURL, value, signature, userAgent, callback) {
-    if (userAgent && userAgent.length > 255) {
-      userAgent = userAgent.substring(0, 252) + '...';
-    }
-
     pool.query(`INSERT INTO "Queue"("SkinURL", "Value", "Signature", "UserAgent") VALUES ($1, $2, $3, $4) RETURNING "ID";`,
       [skinURL, value, signature, userAgent], (err, res) => {
         if (err) return callback(err);
@@ -95,20 +91,29 @@ module.exports = {
   },
 
   /* Queue: UserAgent */
-  getAgentID(userAgent, callback) {
+  /**
+   * @param {String} userAgent 
+   * @param {Boolean} internal 
+   * @param {Function} callback 
+   */
+  getAgentID(userAgent, internal, callback) {
+    if (userAgent && userAgent.length > 255) {
+      userAgent = userAgent.substring(0, 252) + '...';
+    }
+
     pool.connect((err, con, done) => {
       if (err) return callback(err);
 
-      con.query(`SELECT "ID" FROM "QueuingAgents" WHERE "Agent"=$1;`,
-        [userAgent], (err, res) => {
+      con.query(`SELECT "ID" FROM "QueuingAgents" WHERE "Agent"=$1 AND "Internal"=$2;`,
+        [userAgent, internal], (err, res) => {
           if (err) {
             done();
             return callback(err);
           }
 
           if (res.rowCount <= 0) {
-            return con.query(`INSERT INTO "QueuingAgents" ("Agent") VALUES ($1) RETURNING "ID";`,
-              [userAgent], (err, res) => {
+            return con.query(`INSERT INTO "QueuingAgents" ("Agent","Internal") VALUES ($1,$2) RETURNING "ID";`,
+              [userAgent, internal], (err, res) => {
                 done();
 
                 if (err) return callback(err);
