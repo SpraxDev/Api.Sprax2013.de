@@ -28,7 +28,7 @@ router.use('/provide/:id', (req, res, next) => {
     let cacheTime = qObj['Status'] == 'QUEUED' ? 60 : 172800 /* 48h */;
 
     res.set('Cache-Control', `public, s-maxage=${cacheTime}, max-age=${cacheTime}`)
-      .json(qObj);
+      .send(qObj);
   });
 });
 
@@ -49,7 +49,7 @@ router.post('/provide', (req, res, next) => {
     awaiting--;
 
     if (awaiting <= 0) {
-      return res.status(202).json(json);
+      return res.status(202).send(json);
     }
   };
 
@@ -164,7 +164,7 @@ router.use('/skin/random', (req, res, next) => {
     if (skins.length == 0) return next(Utils.createError(400, 'No Skins were found', true));
 
     res.set('Cache-Control', 'public, s-maxage=0')
-      .json(skins);
+      .send(skins);
   });
 });
 
@@ -180,7 +180,7 @@ router.use('/skin/:id/provider', (req, res, next) => {
     if (!queued) return next(Utils.createError(400, 'No Skin was found', true));
 
     res.set('Cache-Control', 'public, s-maxage=0')
-      .json(queued);
+      .send(queued);
   });
 });
 
@@ -197,7 +197,7 @@ router.use('/skin/:id?', (req, res, next) => {
     if (!skin) return next(Utils.createError(400, 'No Skin with the given ID', true));
 
     res.set('Cache-Control', 'public, s-maxage=172800' /* 48h */)
-      .json(skin);
+      .send(skin);
   });
 });
 
@@ -213,11 +213,11 @@ router.use('/stats', (req, res, next) => {
 
         stats['advanced'] = advStats;
 
-        res.json(stats);
+        res.send(stats);
       });
     }
 
-    res.json(stats);
+    res.send(stats);
   });
 });
 
@@ -285,7 +285,7 @@ function queueSkin(res, next = () => { }, skinURL, value, signature, userAgent, 
           if (typeof res === 'function') {
             res(json);
           } else {
-            res.status(202).json(json);
+            res.status(202).send(json);
           }
         }
       });

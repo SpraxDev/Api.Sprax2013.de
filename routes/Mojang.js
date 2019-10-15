@@ -28,7 +28,7 @@ router.get('/profile/:user', (req, res, next) => {
       if (json == null) return next(Utils.createError(204, 'The UUID does not belong to any account'));
 
       res.set('Cache-Control', 'public, s-maxage=62')
-        .json(json);
+        .send(json);
     }, `Api.Sprax2013.De (Mojang-Route) (${req.header('User-Agent')})`, internalUserAgent);
   } else if (isValidUsername(user)) {
     getUUIDAt(user, null, (err, json) => {
@@ -42,7 +42,7 @@ router.get('/profile/:user', (req, res, next) => {
         if (json == null) return next(Utils.createError(204, 'The UUID does not belong to any account'));
 
         res.set('Cache-Control', 'public, s-maxage=62')
-          .json(json);
+          .send(json);
       }, `Api.Sprax2013.De (Mojang-Route) (${req.header('User-Agent')})`, internalUserAgent);
     });
   } else {
@@ -63,7 +63,7 @@ router.get('/uuid/:username/:at?', (req, res, next) => {
     if (json == null) return next(Utils.createError(204, 'The username does not belong to any account'));
 
     res.set('Cache-Control', 'public, s-maxage=62')
-      .json(json);
+      .send(json);
   });
 });
 
@@ -77,7 +77,7 @@ router.get('/history/:user', (req, res, next) => {
       if (json == null) return next(Utils.createError(204, 'The UUID does not belong to any account'));
 
       res.set('Cache-Control', 'public, s-maxage=62')
-        .json(json);
+        .send(json);
     });
   } else if (isValidUsername(user)) {
     getUUIDAt(user, null, (err, json) => {
@@ -91,7 +91,7 @@ router.get('/history/:user', (req, res, next) => {
         if (json == null) return next(Utils.createError(204, 'The UUID does not belong to any account'));
 
         res.set('Cache-Control', 'public, s-maxage=62')
-          .json(json);
+          .send(json);
       });
     });
   } else {
@@ -120,7 +120,7 @@ router.get('/skin/:user', (req, res, next) => {
 
               if (skin['textures'] && skin['textures']['SKIN']) {
                 return res.set('Cache-Control', 'public, s-maxage=62')
-                  .json({
+                  .send({
                     url: skin['textures']['SKIN']['url'],
                     slim: (skin['textures']['SKIN']['metadata'] && skin['textures']['SKIN']['metadata']['model'] == 'slim') || false
                   });
@@ -132,7 +132,7 @@ router.get('/skin/:user', (req, res, next) => {
 
       const slim = isAlexDefaultSkin(json['id']);
       res.status(404).set('Cache-Control', 'public, s-maxage=62')
-        .json({
+        .send({
           url: slim ?
             'http://textures.minecraft.net/texture/63b098967340daac529293c24e04910509b208e7b94563c3ef31dec7b3750' :
             'http://textures.minecraft.net/texture/66fe51766517f3d01cfdb7242eb5f34aea9628a166e3e40faf4c1321696',
@@ -158,7 +158,7 @@ router.get('/skin/:user', (req, res, next) => {
 
                 if (skin['textures'] && skin['textures']['SKIN']) {
                   return res.set('Cache-Control', 'public, s-maxage=62')
-                    .json({
+                    .send({
                       url: skin['textures']['SKIN']['url'],
                       slim: (skin['textures']['SKIN']['metadata'] && skin['textures']['SKIN']['metadata']['model'] == 'slim') || false
                     });
@@ -170,7 +170,7 @@ router.get('/skin/:user', (req, res, next) => {
 
         const slim = isAlexDefaultSkin(json['id']);
         res.status(404).set('Cache-Control', 'public, s-maxage=62')
-          .json({
+          .send({
             url: slim ? 'http://textures.minecraft.net/texture/63b098967340daac529293c24e04910509b208e7b94563c3ef31dec7b3750' : 'http://textures.minecraft.net/texture/66fe51766517f3d01cfdb7242eb5f34aea9628a166e3e40faf4c1321696',
             slim: slim
           });
@@ -267,7 +267,7 @@ router.get('/blockedservers', (_req, res, next) => {
     if (err) return next(Utils.logAndCreateError(err));
 
     res.set('Cache-Control', 'public, s-maxage=900' /* 15min */)
-      .json(json);
+      .send(json);
   });
 });
 
@@ -282,7 +282,7 @@ router.get('/blockedservers/known', (req, res, next) => {
     }
 
     res.set('Cache-Control', 'public, s-maxage=900' /* 15min */)
-      .json(json);
+      .send(json);
   });
 });
 
@@ -351,7 +351,7 @@ router.get('/blockedservers/check', (req, res, next) => {
     }
 
     res.set('Cache-Control', 'public, s-maxage=900' /* 15min */)
-      .json(json);
+      .send(json);
   });
 });
 
