@@ -71,7 +71,7 @@ app.use((err, _req, res, _next) => {
     err = Utils.createError();
   }
 
-  if (!err.status || (err.status >= 500 && err.status < 600)) {
+  if (!err.hideFromConsole && (!err.status || (err.status >= 500 && err.status < 600))) {
     console.error(err); // Log to file
   }
 
