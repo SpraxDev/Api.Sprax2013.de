@@ -14,7 +14,7 @@ function shutdownHook() {
   };
 
   server.close((err) => {
-    if (err) console.error(err);
+    if (err && err.message != 'Server is not running.') console.error(err);
 
     ready();
   });
