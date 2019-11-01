@@ -9,6 +9,8 @@ const Utils = require('./../utils');
 const SKIN_STEVE = require('fs').readFileSync('./storage/static/steve.png'),
   SKIN_ALEX = require('fs').readFileSync('./storage/static/alex.png');
 
+//FIXME: UUID '3126ba4c6uud424c877d1347fa974d23' belongs to user '_' but is not a valid UUID - API throws 500 because it detects it as invalid UUID (But should return the profile)
+
 // Add "Cache-Control: max-age=1000" as a header (replace 1000 with the remaining stdTTL)
 // Use Page Rules on CloudFlare to 'Cache Everything' so cloudflare caches too
 const cache = new NodeCache({ stdTTL: 62, checkperiod: 120 });
@@ -622,15 +624,17 @@ function isValidUsername(username) {
 }
 
 //TODO: Schmeißt irwie immer alex und nie steve?
+/**
+ * 
+ * @param {*} uuid 
+ * @author https://github.com/crafatar/crafatar/blob/1816b18b1292fca7ae123212b2b516a7532a332a/lib/skins.js#L137-L141
+ */
 function isAlexDefaultSkin(uuid) {
-  // MC uses `uuid.hashCode() & 1` for alex
-  // that can be compacted to counting the LSBs of every 4th byte in the UUID
-  // an odd sum means alex, an even sum means steve
-  // XOR-ing all the LSBs gives us 1 for alex and 0 for steve
-  return (parseInt(uuid[7], 16) ^
+  var lsbs_even = parseInt(uuid[7], 16) ^
     parseInt(uuid[15], 16) ^
     parseInt(uuid[23], 16) ^
-    parseInt(uuid[31], 16)) == 1;
+    parseInt(uuid[31], 16);
+  return lsbs_even ? true : false;
 }
 
 module.exports.getUUIDAt = getUUIDAt;
