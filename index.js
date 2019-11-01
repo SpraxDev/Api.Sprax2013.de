@@ -120,7 +120,7 @@ async function initStorage(callback) {
     fs.writeFileSync('./storage/db.json', JSON.stringify(
       {
         host: '127.0.0.1',
-        port: 3306,
+        port: 5432,
         user: 'skinDB',
         password: 's3cr3t!',
         ssl: false,

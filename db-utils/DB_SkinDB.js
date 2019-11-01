@@ -1,6 +1,7 @@
 const { Pool } = require('pg');
 const pool = new Pool({
   host: require('./../storage/db.json')['host'],
+  port: require('./../storage/db.json')['port'],
   user: require('./../storage/db.json')['user'],
   password: require('./../storage/db.json')['password'],
   database: require('./../storage/db.json')['DB_SkinDB'],
