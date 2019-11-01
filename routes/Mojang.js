@@ -314,6 +314,74 @@ router.get('/blockedservers/known', (req, res, next) => {
   });
 });
 
+// FIXME: Causes a lot of memory usage over time (when constantly requested)
+// router.get('/blockedservers/check', (req, res, next) => {
+//   let host = req.query.host;
+
+//   if (!host) return next(Utils.createError(400, 'The query-parameter \'Host\' is missing'));
+
+//   host = host.trim().toLowerCase();
+
+//   let hosts = {};
+
+//   if (net.isIPv4(host)) {
+//     for (const s of host.split('.')) {
+//       let s2 = host.substring(0, host.lastIndexOf(s));
+
+//       if (s2) {
+//         hosts[s2 + '*'] = Utils.getSHA1(s2 + '*');
+//       }
+//     }
+//   } else if (host.indexOf('.') >= 0) {
+//     for (const s of host.split('.')) {
+//       let s2 = host.substring(host.indexOf(s));
+
+//       while (s2.indexOf('*.') === 0) {
+//         s2 = s2.substring(2);
+//       }
+//       while (s2.indexOf('.') === 0) {
+//         s2 = s2.substring(1);
+//       }
+
+//       hosts['*.' + s2] = Utils.getSHA1('*.' + s2);
+
+//       if (s2.indexOf('.') > 0) {
+//         hosts[s2] = Utils.getSHA1(s2);
+//       }
+//     }
+//     // } else if (host.length === 40 && /^[a-z0-9]+$/i.test(host)) {  // Looks like SHA1
+//   } else {
+//     return next(Utils.createError(400, 'The query-parameter \'Host\' is invalid'));
+//   }
+
+//   getBlockedServers((err, blocked) => {
+//     if (err) return next(Utils.logAndCreateError(err));
+
+//     let json = {};
+
+//     for (const host in hosts) {
+//       if (hosts.hasOwnProperty(host)) {
+//         let hash = hosts[host];
+
+//         db.setHost(host, hash, (err) => {
+//           if (err) return Utils.logAndCreateError(err);
+//         });
+
+//         let isBlocked = blocked.includes(hash);
+
+//         if (isBlocked) {
+//           longCache.del('KnownBlockedServers');
+//         }
+
+//         json[host] = isBlocked;
+//       }
+//     }
+
+//     res.set('Cache-Control', 'public, s-maxage=900' /* 15min */)
+//       .send(json);
+//   });
+// });
+
 router.get('/blockedservers/check', (req, res, next) => {
   let host = req.query.host;
 
@@ -353,34 +421,29 @@ router.get('/blockedservers/check', (req, res, next) => {
     return next(Utils.createError(400, 'The query-parameter \'Host\' is invalid'));
   }
 
-  getBlockedServers((err, blocked) => {
-    if (err) return next(Utils.logAndCreateError(err));
+  let waiting = Object.keys(hosts).length;
 
-    let json = {};
+  for (const host in hosts) {
+    if (hosts.hasOwnProperty(host)) {
+      let hash = hosts[host];
 
-    for (const host in hosts) {
-      if (hosts.hasOwnProperty(host)) {
-        let hash = hosts[host];
+      db.setHost(host, hash, (err) => {
+        waiting--;
 
-        db.setHost(host, hash, (err) => {
-          if (err) {
-            console.error(err);
-          }
-        });
-
-        let isBlocked = blocked.includes(hash);
-
-        if (isBlocked) {
-          longCache.del('KnownBlockedServers');
+        if (waiting <= 0) {
+          return res.set('Cache-Control', 'public, s-maxage=900' /* 15min */)
+            .send({
+              success: true,
+              wtf: 'This route has been changed drastically because it caused some trouble...\n' +
+                'It currently stores the provided host into the database but is not able to responde if it is blocked or not\n' +
+                'I am very sorry!'
+            });
         }
 
-        json[host] = isBlocked;
-      }
+        if (err) return Utils.logAndCreateError(err);
+      });
     }
-
-    res.set('Cache-Control', 'public, s-maxage=900' /* 15min */)
-      .send(json);
-  });
+  }
 });
 
 module.exports = router;
