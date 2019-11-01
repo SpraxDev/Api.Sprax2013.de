@@ -81,5 +81,23 @@ module.exports = {
       [profile['id'], profile['name'], texture.value, texture.signature, texture.skinURL, texture.capeURL], (err, _res) => {
         callback(err || null);
       });
+  },
+
+  isUsernameKnown(username, callback) {
+    pool.query(`SELECT EXISTS(SELECT FROM "GameProfiles" WHERE LOWER("Username") =$1) AS "exists";`,
+      [username.toLowerCase()], (err, res) => {
+        if (err) return callback(err);
+
+        callback(null, res.rows[0]['exists']);
+      });
+  },
+
+  isUUIDKnown(uuid, callback) {
+    pool.query(`SELECT EXISTS(SELECT FROM "GameProfiles" WHERE "UUID" =$1) AS "exists";`,
+      [uuid], (err, res) => {
+        if (err) return callback(err);
+
+        callback(null, res.rows[0]['exists']);
+      });
   }
 };

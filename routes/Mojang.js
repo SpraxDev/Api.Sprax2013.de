@@ -99,6 +99,32 @@ router.get('/history/:user', (req, res, next) => {
   }
 });
 
+router.get('/known/:user', (req, res, next) => {
+  let user = req.params.user.trim();
+
+  if (Utils.isUUID(user)) {
+    db.isUUIDKnown(user, (err, isKnown) => {
+      if (err) return next(Utils.logAndCreateError(err));
+
+      res.set('Cache-Control', 'public, s-maxage=7884000, max-age=7884000' /* 3months */)
+        .send({
+          known: isKnown
+        });
+    });
+  } else if (isValidUsername(user)) {
+    db.isUsernameKnown(user, (err, isKnown) => {
+      if (err) return next(Utils.logAndCreateError(err));
+
+      res.set('Cache-Control', 'public, s-maxage=7884000, max-age=7884000' /* 3months */)
+        .send({
+          known: isKnown
+        });
+    });
+  } else {
+    return next(Utils.createError(400, 'The parameter \'User\' is invalid'));
+  }
+});
+
 /* Skin Routes */
 router.get('/skin/:user', (req, res, next) => {
   let user = req.params.user.trim();
