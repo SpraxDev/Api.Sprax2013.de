@@ -27,7 +27,7 @@ errorLogStream.on('error', (err) => {
 const app = express();
 
 app.disable('x-powered-by');
-app.set('trust proxy', 'loopback');
+app.set('trust proxy', require('./storage/config.json')['trustProxy']);
 
 // Log to console and file
 app.use(morgan('dev', { skip: function (req, res) { return res.statusCode < 400 || res.hideFromConsole || req.originalUrl.startsWith('/.well-known/acme-challenge/'); } }));
