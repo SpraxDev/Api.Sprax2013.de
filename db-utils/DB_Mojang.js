@@ -99,5 +99,41 @@ module.exports = {
 
         callback(null, res.rows[0]['exists']);
       });
+  },
+
+  /* Misc. */
+
+  /**
+   * @param {Function} callback Params: err, json
+   */
+  getStats(callback) {
+    pool.connect((err, con, done) => {
+      if (err) return callback(err);
+
+      con.query(`SELECT reltuples FROM pg_class WHERE relname = 'GameProfiles';`, [], (err, res) => {
+        if (err) {
+          done();
+          return callback(err);
+        }
+
+        let uuidCount = parseInt(res.rows[0]['reltuples']),
+          hostCount;
+
+        con.query(`SELECT reltuples FROM pg_class WHERE relname = 'Domains';`, [], (err, res) => {
+          done();
+
+          if (err) return callback(err);
+
+          hostCount = res.rows[0]['reltuples'];
+
+          callback(null, {
+            uuidCount: uuidCount,
+            hostCount: hostCount,
+
+            lastUpdate: new Date().toUTCString()
+          });
+        });
+      });
+    });
   }
 };

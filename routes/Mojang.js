@@ -15,6 +15,7 @@ const SKIN_STEVE = require('fs').readFileSync('./storage/static/steve.png'),
 // Use Page Rules on CloudFlare to 'Cache Everything' so cloudflare caches too
 const cache = new NodeCache({ stdTTL: 62, checkperiod: 120 });
 const longCache = new NodeCache({ stdTTL: 900, checkperiod: 1800 });
+const statsCache = new NodeCache({ stdTTL: 900 /* 15min */ });
 
 const router = require('express').Router();
 
@@ -311,6 +312,27 @@ router.get('/blockedservers/known', (req, res, next) => {
 
     res.set('Cache-Control', 'public, s-maxage=900' /* 15min */)
       .send(json);
+  });
+});
+
+/* Stats */
+router.use('/stats', (req, res, next) => {
+  getStats((err, stats) => {
+    if (err) return next(Utils.logAndCreateError(err));
+
+    res.set('Cache-Control', 'private, no-cache, no-store, must-revalidate, max-age=600, s-maxage=0');
+
+    // if (req.token && Utils.TokenSystem.getPermissions(req.token).includes(Utils.TokenSystem.PERMISSION.SKINDB_ADVANCED_STATISTICS)) {
+    //   return getAdvancedStats((err, advStats) => {
+    //     if (err) return next(Utils.logAndCreateError(err));
+
+    //     stats['advanced'] = advStats;
+
+    //     res.send(stats);
+    //   });
+    // }
+
+    res.send(stats);
   });
 });
 
@@ -699,6 +721,37 @@ function isAlexDefaultSkin(uuid) {
     parseInt(uuid[31], 16);
   return lsbs_even ? true : false;
 }
+
+/* Cached Res. */
+
+function getStats(callback, forceUpdate = false) {
+  let data = statsCache.get('stats');
+
+  if (!data || forceUpdate) {
+    db.getStats((err, stats) => {
+      if (err) {
+        statsCache.set('stats', err);
+        return callback(err);
+      }
+
+      statsCache.set('stats', stats);
+
+      callback(null, stats);
+    });
+  } else {
+    if (data instanceof Error) {
+      return callback(data);
+    }
+
+    callback(null, data);
+  }
+}
+
+function updateCachedStats() {
+  getStats(() => { }, true);
+}
+updateCachedStats();
+setInterval(updateCachedStats, 14 * 60 * 1000); // 10min
 
 module.exports.getUUIDAt = getUUIDAt;
 module.exports.getProfile = getProfile;
