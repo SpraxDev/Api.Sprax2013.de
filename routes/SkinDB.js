@@ -352,6 +352,7 @@ function updateCachedStats() {
   getStats(() => { }, true);
   getAdvancedStats(() => { }, true);
 }
+
 updateCachedStats();
 setInterval(updateCachedStats, 14 * 60 * 1000); // 10min
 

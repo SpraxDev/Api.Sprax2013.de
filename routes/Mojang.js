@@ -358,10 +358,10 @@ router.use('/stats', (req, res, next) => {
 //     for (const s of host.split('.')) {
 //       let s2 = host.substring(host.indexOf(s));
 
-//       while (s2.indexOf('*.') === 0) {
+//       while (s2.indexOf('*.') == 0) {
 //         s2 = s2.substring(2);
 //       }
-//       while (s2.indexOf('.') === 0) {
+//       while (s2.indexOf('.') == 0) {
 //         s2 = s2.substring(1);
 //       }
 
@@ -371,7 +371,7 @@ router.use('/stats', (req, res, next) => {
 //         hosts[s2] = Utils.getSHA1(s2);
 //       }
 //     }
-//     // } else if (host.length === 40 && /^[a-z0-9]+$/i.test(host)) {  // Looks like SHA1
+//     // } else if (host.length == 40 && /^[a-z0-9]+$/i.test(host)) {  // Looks like SHA1
 //   } else {
 //     return next(Utils.createError(400, 'The query-parameter \'Host\' is invalid'));
 //   }
@@ -425,10 +425,10 @@ router.get('/blockedservers/check', (req, res, next) => {
     for (const s of host.split('.')) {
       let s2 = host.substring(host.indexOf(s));
 
-      while (s2.indexOf('*.') === 0) {
+      while (s2.indexOf('*.') == 0) {
         s2 = s2.substring(2);
       }
-      while (s2.indexOf('.') === 0) {
+      while (s2.indexOf('.') == 0) {
         s2 = s2.substring(1);
       }
 
@@ -438,7 +438,7 @@ router.get('/blockedservers/check', (req, res, next) => {
         hosts[s2] = Utils.getSHA1(s2);
       }
     }
-    // } else if (host.length === 40 && /^[a-z0-9]+$/i.test(host)) {  // Looks like SHA1
+    // } else if (host.length == 40 && /^[a-z0-9]+$/i.test(host)) {  // Looks like SHA1
   } else {
     return next(Utils.createError(400, 'The query-parameter \'Host\' is invalid'));
   }
@@ -473,6 +473,8 @@ module.exports = router;
 /**
  * @param {String} uuid 
  * @param {Function} callback 
+ * @param {String} userAgent
+ * @param {Boolean} internalUserAgent
  */
 function getProfile(uuid, callback, userAgent = '', internalUserAgent = false) {
   uuid = uuid.toLowerCase().replace(/-/g, '');
@@ -492,7 +494,7 @@ function getProfile(uuid, callback, userAgent = '', internalUserAgent = false) {
         return callback(err);
       }
 
-      if (res.statusCode === 200) {
+      if (res.statusCode == 200) {
         let json = JSON.parse(body);
 
         const texture = Utils.Mojang.getProfileTextures(json);
@@ -512,7 +514,7 @@ function getProfile(uuid, callback, userAgent = '', internalUserAgent = false) {
         });
 
         return callback(null, json);
-      } else if (res.statusCode === 204) {
+      } else if (res.statusCode == 204) {
         cache.set(uuid, null);
 
         return callback(null, null);
@@ -556,16 +558,16 @@ function getUUIDAt(username, at, callback) {  // ToDo recode
         return callback(err);
       }
 
-      if (res.statusCode === 200) {
+      if (res.statusCode == 200) {
         let json = JSON.parse(body);
 
         cache.set(cacheKey, json);
         return callback(null, json);
-      } else if (res.statusCode === 204) {
+      } else if (res.statusCode == 204) {
         cache.set(cacheKey, null);
         return callback(null, null);
       } else {
-        let error = Utils.createError(500, `Mojang responded with HTTP-StatusCode ${res.statusCode}`);
+        const error = Utils.createError(500, `Mojang responded with HTTP-StatusCode ${res.statusCode}`);
 
         cache.set(cacheKey, error);
         return callback(error);
@@ -593,16 +595,16 @@ function getNameHistory(uuid, callback) { // ToDo recode
         return;
       }
 
-      if (res.statusCode === 200) {
-        let json = JSON.parse(body);
+      if (res.statusCode == 200) {
+        const json = JSON.parse(body);
 
         cache.set('nh_' + uuid, json);
         return callback(null, json);
-      } else if (res.statusCode === 204) {
+      } else if (res.statusCode == 204) {
         cache.set('nh_' + uuid, null);
         return callback(null, null);
       } else {
-        let error = Utils.createError(500, `Mojang responded with HTTP-StatusCode ${res.statusCode}`);
+        const error = Utils.createError(500, `Mojang responded with HTTP-StatusCode ${res.statusCode}`);
 
         cache.set('nh_' + uuid, error);
         return callback(error);
@@ -627,14 +629,14 @@ function getBlockedServers(callback) {  // ToDo recode
         return callback(err);
       }
 
-      if (res.statusCode === 200) {
+      if (res.statusCode == 200) {
         let hashes = [];
 
         for (const hash of body.split('\n')) {
           hashes.push(hash);
         }
 
-        if (hashes[hashes.length - 1].trim() === '') {
+        if (hashes[hashes.length - 1].trim() == '') {
           hashes.pop();
         }
 
@@ -705,7 +707,7 @@ function getKnownServer(callback) { // ToDo recode
  * @param {String} username
  */
 function isValidUsername(username) {
-  return typeof username === 'string' && username.length <= 16 && !/[^0-9a-zA-Z_]/.test(username);
+  return typeof username == 'string' && username.length <= 16 && !/[^0-9a-zA-Z_]/.test(username);
 }
 
 //TODO: Schmeißt irwie immer alex und nie steve?
