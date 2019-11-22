@@ -202,7 +202,7 @@ module.exports = {
   getSkinImage(id, type, callback) {
     if (typeof type !== 'string' || (type != 'original' && type != 'clean')) throw new Error(`Invalid value for type (=${type})`);
 
-    pool.query(`SELECT ${type} FROM "Images" WHERE "SkinID"=$1;`,
+    pool.query(`SELECT ${type} FROM "Images" WHERE "SkinID" =$1;`,
       [id], (err, res) => {
         if (err) return callback(err);
 
@@ -273,13 +273,13 @@ module.exports = {
     pool.connect((err, con, done) => {
       if (err) return callback(err);
 
-      con.query(`SELECT COUNT(*) FROM "Skins";`, [], (err, res) => {
+      con.query(`SELECT reltuples FROM pg_class WHERE relname = 'Skins';`, [], (err, res) => {
         if (err) {
           done();
           return callback(err);
         }
 
-        let estSkinCount = parseInt(res.rows[0]['count']),
+        let estSkinCount = parseInt(res.rows[0]['reltuples']),
           duplicateSkinCount, pendingCount;
 
         con.query(`SELECT COUNT(*) FROM "Skins" WHERE "DuplicateOf" IS NOT NULL;`, [], (err, res) => {
