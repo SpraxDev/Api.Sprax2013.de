@@ -16,6 +16,7 @@ const SKIN_STEVE = require('fs').readFileSync('./storage/static/steve.png'),
 const cache = new NodeCache({ stdTTL: 62, checkperiod: 120 });
 const longCache = new NodeCache({ stdTTL: 900, checkperiod: 1800 });
 const statsCache = new NodeCache({ stdTTL: 900 /* 15min */ });
+let avoidMojangAPI_Profile = false, avoidMojangAPI_Name = false, avoidMojangAPI_History = false;
 
 const router = require('express').Router();
 
@@ -487,6 +488,8 @@ function getProfile(uuid, callback, userAgent = '', internalUserAgent = false) {
     } else {
       callback(null, cached);
     }
+  } else if (avoidMojangAPI_Profile) {
+    return getProfileFromFallback(uuid, callback, userAgent, internalUserAgent);
   } else {
     request('https://sessionserver.mojang.com/session/minecraft/profile/' + uuid + '?unsigned=false', (err, res, body) => {
       if (err) {
@@ -518,6 +521,10 @@ function getProfile(uuid, callback, userAgent = '', internalUserAgent = false) {
         cache.set(uuid, null);
 
         return callback(null, null);
+      } else if (res.statusCode == 429) {
+        avoidMojangAPI_Profile = true;
+        setTimeout(() => avoidMojangAPI_Profile = false, 60000); // Use Timeout instead of checking 2 numbers on every request during this period
+        return getProfileFromFallback(uuid, callback, userAgent, internalUserAgent);
       } else {
         let error = Utils.createError(500, `Mojang responded with HTTP-StatusCode ${res.statusCode}`);
 
@@ -528,17 +535,79 @@ function getProfile(uuid, callback, userAgent = '', internalUserAgent = false) {
   }
 }
 
-function getUUIDAt(username, at, callback) {  // ToDo recode
-  username = username.toLowerCase();
+/**
+ * @param {String} uuid 
+ * @param {Function} callback 
+ * @param {String} userAgent
+ * @param {Boolean} internalUserAgent
+ */
+function getProfileFromFallback(uuid, callback, userAgent = '', internalUserAgent = false) {
+  uuid = uuid.toLowerCase().replace(/-/g, '');
 
-  if (at) {
-    at = at.toLowerCase();
-  } else {
+  request('https://api.ashcon.app/mojang/v2/user/' + uuid, (err, res, body) => {
+    if (err) {
+      cache.set(uuid, err);
+      return callback(err);
+    }
+
+    if (res.statusCode == 200) {
+      let rawJSON = JSON.parse(body);
+      let json = {};
+
+      json.id = rawJSON['uuid'].replace('-', '');
+      json.name = rawJSON['username'];
+      json.properties = [];
+
+      json.properties.push({
+        name: 'textures',
+        value: rawJSON['textures']['raw']['value'],
+        signature: rawJSON['textures']['raw']['signature']
+      });
+
+      // json.legacy = 'unknown';  // This API does not report if an account is legacy
+
+      const texture = Utils.Mojang.getProfileTextures(json);
+      db.updateGameProfile(json, texture, (err) => {
+        if (err) console.error('Fehler beim speichern des GPs in die DB:', err);
+      });
+
+      if (userAgent && texture.skinURL) {
+        require('./SkinDB').queueSkin(null, undefined, texture.skinURL, texture.value, texture.signature, userAgent, internalUserAgent);
+      }
+
+      cache.set(uuid, json);
+
+      cache.set(json['name'].toLowerCase() + '@', {
+        id: json['id'],
+        name: json['name']
+      });
+
+      return callback(null, json);
+    } else if (res.statusCode == 404) {
+      cache.set(uuid, null);
+
+      return callback(null, null);
+    } else {
+      let error = Utils.createError(500, `api.ashcon.app responded with HTTP-StatusCode ${res.statusCode}`);
+
+      cache.set(uuid, error);
+      return callback(error);
+    }
+  });
+}
+
+function getUUIDAt(username, at, callback) {  // ToDo recode
+  if (!at) {
     at = '';
   }
 
-  var cacheKey = username + '@' + at;
+  const cacheKey = username.toLowerCase() + '@' + at.toLowerCase();
   const cached = cache.get(cacheKey);
+
+  let suffix = '';
+  if (at) {
+    suffix = '?at=' + at;
+  }
 
   if (cached !== undefined) {
     if (cached instanceof Error) {
@@ -546,12 +615,9 @@ function getUUIDAt(username, at, callback) {  // ToDo recode
     } else {
       callback(null, cached);
     }
+  } else if (avoidMojangAPI_Name && suffix.length == 0) {
+    return getUUIDAtFromFallback(username, callback);
   } else {
-    let suffix = '';
-    if (at) {
-      suffix = '?at=' + at;
-    }
-
     request('https://api.mojang.com/users/profiles/minecraft/' + username + suffix, (err, res, body) => {
       if (err) {
         cache.set(cacheKey, err);
@@ -566,6 +632,10 @@ function getUUIDAt(username, at, callback) {  // ToDo recode
       } else if (res.statusCode == 204) {
         cache.set(cacheKey, null);
         return callback(null, null);
+      } else if (res.statusCode == 429 && suffix.length == 0) {
+        avoidMojangAPI_Name = true;
+        setTimeout(() => avoidMojangAPI_Name = false, 60000); // Use Timeout instead of checking 2 numbers on every request during this period
+        return getUUIDAtFromFallback(username, callback);
       } else {
         const error = Utils.createError(500, `Mojang responded with HTTP-StatusCode ${res.statusCode}`);
 
@@ -574,6 +644,36 @@ function getUUIDAt(username, at, callback) {  // ToDo recode
       }
     });
   }
+}
+
+function getUUIDAtFromFallback(username, callback) {  // ToDo recode
+  const cacheKey = username.toLowerCase() + '@';
+
+  request('https://api.ashcon.app/mojang/v1/user/' + username, (err, res, body) => {
+    if (err) {
+      cache.set(cacheKey, err);
+      return callback(err);
+    }
+
+    if (res.statusCode == 200) {
+      let rawJSON = JSON.parse(body);
+      const json = {
+        id: rawJSON['uuid'].replace('-', ''),
+        name: rawJSON['username']
+      };
+
+      cache.set(cacheKey, json);
+      return callback(null, json);
+    } else if (res.statusCode == 404) {
+      cache.set(cacheKey, null);
+      return callback(null, null);
+    } else {
+      const error = Utils.createError(500, `api.ashcon.app responded with HTTP-StatusCode ${res.statusCode}`);
+
+      cache.set(cacheKey, error);
+      return callback(error);
+    }
+  });
 }
 
 function getNameHistory(uuid, callback) { // ToDo recode
@@ -587,6 +687,8 @@ function getNameHistory(uuid, callback) { // ToDo recode
     } else {
       callback(null, cached);
     }
+  } else if (avoidMojangAPI_History) {
+    return getNameHistoryFromFallback(uuid, callback);
   } else {
     request('https://api.mojang.com/user/profiles/' + uuid + '/names', (err, res, body) => {
       if (err) {
@@ -603,6 +705,10 @@ function getNameHistory(uuid, callback) { // ToDo recode
       } else if (res.statusCode == 204) {
         cache.set('nh_' + uuid, null);
         return callback(null, null);
+      } else if (res.statusCode == 429) {
+        avoidMojangAPI_History = true;
+        setTimeout(() => avoidMojangAPI_History = false, 60000); // Use Timeout instead of checking 2 numbers on every request during this period
+        return getNameHistoryFromFallback(uuid, callback);
       } else {
         const error = Utils.createError(500, `Mojang responded with HTTP-StatusCode ${res.statusCode}`);
 
@@ -611,6 +717,40 @@ function getNameHistory(uuid, callback) { // ToDo recode
       }
     });
   }
+}
+
+function getNameHistoryFromFallback(uuid, callback) { // ToDo recode
+  uuid = uuid.toLowerCase().replace(/-/g, '');
+
+  request('https://api.ashcon.app/mojang/v2/user/' + uuid, (err, res, body) => {
+    if (err) {
+      cache.set('nh_' + uuid, err);
+      callback(err);
+      return;
+    }
+
+    if (res.statusCode == 200) {
+      const rawJSON = JSON.parse(body);
+      let json = rawJSON['username_history'];
+
+      for (const entry of json) {
+        if (entry['changed_at']) {
+          entry['changed_at'] = Date.parse(entry['changed_at']);
+        }
+      }
+
+      cache.set('nh_' + uuid, json);
+      return callback(null, json);
+    } else if (res.statusCode == 404) {
+      cache.set('nh_' + uuid, null);
+      return callback(null, null);
+    } else {
+      const error = Utils.createError(500, `api.ashcon.app responded with HTTP-StatusCode ${res.statusCode}`);
+
+      cache.set('nh_' + uuid, error);
+      return callback(error);
+    }
+  });
 }
 
 function getBlockedServers(callback) {  // ToDo recode
