@@ -37,6 +37,7 @@ app.use(morgan(logFormat, { skip: function (req, res) { return res.statusCode < 
 app.use(express.json());
 // app.use(require('cookie-parser')(require('./storage/misc.json').CookieSecret));
 app.use(require('express-bearer-token')());
+app.use(require('body-parser').raw({ type: 'image/png', limit: '3MB' }));
 // app.use(express.urlencoded({ extended: false }));
 
 // Default response headers

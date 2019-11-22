@@ -245,12 +245,61 @@ router.use('/cdn/:id?/:type?', (req, res, next) => {
       if (err) return next(Utils.logAndCreateError(err));
       if (!img) return next(Utils.createError(404, 'Not Found'));
 
-      res.type('png').set('Cache-Control', 'public, s-maxage=7884000, max-age=7884000' /* 3months */).send(img);
+      res.set('Cache-Control', 'public, s-maxage=7884000, max-age=7884000' /* 3mo */).type('png').send(img);
     });
   });
-
-
 });
+
+/* AI */
+const JSDOM = require('jsdom').JSDOM, // Using jsdom because @teachablemachine/image expects a web browser
+  canvas = require('canvas'),
+  sharp = require('sharp');
+require('@tensorflow/tfjs-node'); // Load before @teachablemachine/image
+const tmImage = require('@teachablemachine/image');
+
+global.document = new JSDOM(`<body><script>document.body.appendChild(document.createElement('hr'));</script></body>`).window.document;
+global.fetch = require('node-fetch');
+
+let AI_MODELS = {
+  GENDER: null
+};
+(async () => {
+  AI_MODELS.GENDER = await tmImage.load('https://sprax2013.de/ai/model.json', 'https://sprax2013.de/ai/metadata.json');
+})();
+
+router.post('/ai/:type?', (req, res, next) => {
+  if (!req.params['type'] || !AI_MODELS.hasOwnProperty(req.params['type'].toUpperCase())) return next(Utils.createError(400, 'Missing or invalid type provided'));
+  if (!req.body || !(req.body instanceof Buffer) || req.body.length == 0) return next(Utils.createError(400, 'Missing or invalid image'));
+
+  const model = AI_MODELS[req.params['type'].toUpperCase()];
+
+  if (!model) return next(Utils.createError(503, 'This model is still being initialized - please try again in a few seconds'));
+
+  sharp(req.body).png().toBuffer((err, buffer, info) => {
+    if (err) return next(Utils.createError(400, 'Invalid image', true));
+    if (info.width != 64 || info.height != 64) return next(Utils.createError(400, 'Invalid image dimensions', true));
+
+    getPrediction(model, buffer, (result) => {
+      return res.send(result);
+    });
+  });
+});
+
+async function getPrediction(model, data, callback) {
+  const can = canvas.createCanvas(64, 64);
+  const ctx = can.getContext('2d');
+
+  const img = new canvas.Image();
+  img.onload = async () => {
+    ctx.drawImage(img, 0, 0, 64, 64);
+
+    const prediction = await model.predict(can);
+
+    callback(prediction);
+  }
+  img.onerror = err => { throw err; }
+  img.src = data;
+}
 
 module.exports = router;
 
