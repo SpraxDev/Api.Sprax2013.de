@@ -4,12 +4,12 @@ const express = require('express'),
   morgan = require('morgan');
 
 const logFormat = '[:date[web]] :remote-addr by :remote-user | :method :url :status with :res[content-length] bytes | ":user-agent" referred from ":referrer" | :response-time[3] ms';
-const accessLogStream = require('rotating-file-stream')('access.log', {
+const accessLogStream = require('rotating-file-stream').createStream('access.log', {
   interval: '1d',
   maxFiles: 7,
   path: require('path').join(__dirname, 'logs', 'access')
 }),
-  errorLogStream = require('rotating-file-stream')('error.log', {
+  errorLogStream = require('rotating-file-stream').createStream('error.log', {
     interval: '1d',
     maxFiles: 90,
     path: require('path').join(__dirname, 'logs', 'error')
