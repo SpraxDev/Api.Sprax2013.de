@@ -37,7 +37,7 @@
     "pngjs": "^3.4.0",
     "request": "^2.88.0",
     "rotating-file-stream": "^2.0.0",
-    "sharp": "^0.23.3"
+    "sharp": "^0.23.4"
   },
   "nodemonConfig": {
     "ignore": [
