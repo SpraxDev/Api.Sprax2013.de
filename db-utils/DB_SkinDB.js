@@ -113,7 +113,7 @@ module.exports = {
           }
 
           if (res.rowCount <= 0) {
-            return con.query(`INSERT INTO "QueuingAgents" ("Agent","Internal") VALUES ($1,$2) RETURNING "ID";`,
+            return con.query(`INSERT INTO "QueuingAgents" ("Agent","Internal") VALUES ($1,$2) ON CONFLICT ("Agent") DO NOTHING RETURNING "ID";`,
               [userAgent, internal], (err, res) => {
                 done();
 
