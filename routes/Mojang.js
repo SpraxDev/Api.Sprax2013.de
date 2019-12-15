@@ -554,7 +554,7 @@ function getProfileFromFallback(uuid, callback, userAgent = '', internalUserAgen
       let rawJSON = JSON.parse(body);
       let json = {};
 
-      json.id = rawJSON['uuid'].replace('-', '');
+      json.id = rawJSON['uuid'].split('-').join('');
       json.name = rawJSON['username'];
       json.properties = [];
 
@@ -658,7 +658,7 @@ function getUUIDAtFromFallback(username, callback) {  // ToDo recode
     if (res.statusCode == 200) {
       let rawJSON = JSON.parse(body);
       const json = {
-        id: rawJSON['uuid'].replace('-', ''),
+        id: rawJSON['uuid'].split('-').join(''),
         name: rawJSON['username']
       };
 
