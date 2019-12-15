@@ -7,6 +7,16 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9
   UUID_PATTERN_ADD_DASH = new RegExp('(.{8})(.{4})(.{4})(.{4})(.{12})'),
   URL_PATTERN = new RegExp('^(?!mailto:)(?:(?:http|https|ftp)://)(?:\\S+(?::\\S*)?@)?(?:(?:(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}(?:\\.(?:[0-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))|(?:(?:[a-z\\u00a1-\\uffff0-9]+-?)*[a-z\\u00a1-\\uffff0-9]+)(?:\\.(?:[a-z\\u00a1-\\uffff0-9]+-?)*[a-z\\u00a1-\\uffff0-9]+)*(?:\\.(?:[a-z\\u00a1-\\uffff]{2,})))|localhost)(?::\\d{2,5})?(?:(/|\\?|#)[^\\s]*)?$', 'i');
 
+const errLogStream = require('rotating-file-stream').createStream('error.log', {
+  interval: '1d',
+  maxFiles: 90,
+  path: require('path').join(__dirname, 'logs', 'runtime-error')
+});
+errLogStream.on('error', (err) => {
+  console.error(err); // Don't crash whole application, just print
+  // once this event is emitted, the stream will be closed as well
+});
+
 module.exports = {
   TokenSystem: require('./TokenSystem'),
 
@@ -31,6 +41,11 @@ module.exports = {
    */
   logAndCreateError(error) {
     console.error(error);
+
+    errLogStream.write(JSON.stringify({
+      time: new Date().toUTCString(),
+      error: error
+    }) + module.exports.EOL, 'utf-8', console.error);
 
     return module.exports.createError(undefined, undefined, true);
   },
