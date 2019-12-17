@@ -44,7 +44,13 @@ module.exports = {
 
     errLogStream.write(JSON.stringify({
       time: new Date().toUTCString(),
-      error: error
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+
+        error
+      }
     }) + module.exports.EOL, 'utf-8', console.error);
 
     return module.exports.createError(undefined, undefined, true);
