@@ -143,7 +143,7 @@ router.use('/provide', (req, res, next) => {
       }, null);
     });
   }
-  else if (Utils.isURL(value)) {
+  else if (Utils.isAbsoluteURL(value)) {
     return queueSkin(res, next, value, null, null, req.header('User-Agent'), internalUserAgent);
   }
 
