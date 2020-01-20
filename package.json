@@ -27,7 +27,7 @@
     "canvas": "^2.6.1",
     "express": "^4.17.1",
     "express-bearer-token": "^2.4.0",
-    "gl": "^4.3.3",
+    "gl": "^4.4.1",
     "jsdom": "^16.0.0",
     "morgan": "^1.9.1",
     "mysql": "^2.17.1",
