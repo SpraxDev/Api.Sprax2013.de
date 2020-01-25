@@ -222,14 +222,16 @@ router.use('/stats', (req, res, next) => {
 });
 
 router.use('/cdn/:id?/:type?', (req, res, next) => {
-  let id = Utils.toInteger(req.params.id),
+  let id = (req.params.id && req.params.id.toLowerCase().endsWith('.png')) ? req.params.id.substring(0, req.params.id.length - 4) : Utils.toInteger(req.params.id),
     type = (req.params.type || '').toLowerCase();
 
   // Check for invalid content
   if (Number.isNaN(id) ||
-    Utils.toNeutralString(type).length == 0 ||
-    (type != 'original.png' &&
-      type != 'skin.png')) return next(Utils.createError(404, 'Not Found'));
+    (type &&
+      type != 'original.png' &&
+      type != 'skin.png')) {
+    return next(Utils.createError(404, 'Not Found'));
+  }
 
   if (type == 'original.png') {
     type = 'original';
