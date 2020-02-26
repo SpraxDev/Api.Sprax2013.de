@@ -10,7 +10,7 @@ const SKIN_STEVE = fs.readFileSync('./resources/steve.png'),
 
 enum SkinType {
   HEAD, FRONT, BODY
-};
+}
 
 const router = Router();
 export const minecraftExpressRouter = router;

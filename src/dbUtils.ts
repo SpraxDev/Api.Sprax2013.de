@@ -27,7 +27,7 @@ export class dbUtils {
       (err, _res) => {
         callback(err || null);
       });
-  };
+  }
 
   updateProfile(profile: MinecraftProfile, callback: (err: Error | null) => void): void {
     this.pool.query(
@@ -36,7 +36,7 @@ export class dbUtils {
       (err, _res) => {
         callback(err || null);
       });
-  };
+  }
 
   updateNameHistory(profileId: string, apiRes: { name: string, changedToAt?: number }[], callback: (err: Error | null) => void): void {
     if (apiRes.length <= 0) return callback(new Error('apiRes may not be an empty array'));
@@ -60,5 +60,5 @@ export class dbUtils {
     this.pool.query(`${queryStr} ON CONFLICT DO NOTHING;`, queryArgs, (err, _res) => {
       callback(err || null);
     });
-  };
+  }
 }

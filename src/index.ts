@@ -90,9 +90,11 @@ server.on('error', (err: { syscall: string, code: string }) => {
     case 'EACCES':
       console.error(`${errPrefix} requires elevated privileges`);
       process.exit(1);
+      break;
     case 'EADDRINUSE':
       console.error(`${errPrefix} is already in use`);
       process.exit(1);
+      break;
     default:
       throw err;
   }
