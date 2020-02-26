@@ -6,15 +6,15 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9
 /**
  * This shortcut function responses with HTTP 405 to the requests having
  * a method that does not have corresponding request handler.
- * 
+ *
  * For example if a resource allows only GET and POST requests then
  * PUT, DELETE, etc. requests will be responsed with the 405.
- * 
+ *
  * HTTP 405 is required to have Allow-header set to a list of allowed
  * methods so in this case the response has "Allow: GET, POST, HEAD" in its headers.
- * 
+ *
  * Example usage
- * 
+ *
  *    // A handler that allows only GET (and HEAD) requests and returns
  *    app.all('/path', (req, res, next) => {
  *      restful(req, res, {
@@ -23,7 +23,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9
  *        }
  *      });
  *    });
- * 
+ *
  * Orignal author: https://stackoverflow.com/a/15754373/9346616
  */
 export function restful(req: Request, res: Response, handlers: { [key: string]: () => void }): void {
