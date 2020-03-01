@@ -2,8 +2,8 @@ import request = require('request');
 import fs = require('fs');
 import nCache = require('node-cache');
 import { Router, Request } from 'express';
-import { restful, isUUID, toBoolean, Image, addHyphensToUUID } from '../utils';
-import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, Cape } from '../global';
+import { restful, isUUID, toBoolean, Image } from '../utils';
+import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType } from '../global';
 import { db } from '../index';
 
 const uuidCache = new nCache({ stdTTL: 62, useClones: false }), /* key:name_lower, value: { id: string, name: string } | Error | null */
@@ -123,6 +123,24 @@ router.param('user', (req, res, next, value, name) => {
   } else {
     return next(new Error('400 - Invalid user param'));
   }
+});
+
+router.param('capeType', (req, res, next, value, name) => {
+  if (typeof value != 'string') return next(new Error('400 - Invalid user param'));
+
+  let capeType: string | null = null;
+
+  for (const key in CapeType) {
+    if (key == value.toUpperCase()) {
+      capeType = key;
+      break;
+    }
+  }
+
+  if (!capeType) return res.sendStatus(404);
+
+  req.params[name] = capeType;
+  next();
 });
 
 /* Account Routes */
@@ -247,7 +265,7 @@ router.all('/skin/:user?', (req, res, next) => {
 });
 
 /* Cape Routes */
-router.all('/capes/mojang/:user?', (req, res, next) => {
+router.all('/capes/:capeType/:user?', (req, res, next) => {
   restful(req, res, {
     get: () => {
       if (!req.params.user) return next(new Error('Invalid parameter for user'));
@@ -259,7 +277,10 @@ router.all('/capes/mojang/:user?', (req, res, next) => {
         if (err) return next(new Error('500'));
         if (!mcUser) return res.sendStatus(404);
 
-        const capeURL = mcUser.getSecureCapeURL();
+        const capeType = req.params.capeType as CapeType;
+        const capeURL = capeType == CapeType.MOJANG ? mcUser.getSecureCapeURL() :
+          capeType == CapeType.OPTIFINE ? mcUser.getOptiFineCapeURL() :
+            capeType == CapeType.LABY_MOD ? mcUser.getLabyModCapeURL() : null;
 
         if (capeURL) {
           request.get(capeURL, { encoding: null }, (err, httpRes, httpBody) => {
@@ -281,74 +302,6 @@ router.all('/capes/mojang/:user?', (req, res, next) => {
         } else {
           res.sendStatus(404);
         }
-      });
-    }
-  });
-});
-
-router.all('/capes/optifine/:user?', (req, res, next) => {
-  restful(req, res, {
-    get: () => {
-      if (!req.params.user) return next(new Error('Invalid parameter for user'));
-
-      const download = typeof req.query.download == 'string' ? toBoolean(req.query.download) : false;
-      const mimeType = download ? 'application/octet-stream' : 'png';
-
-      getByUUID(req.params.user, req, (err, mcUser) => {
-        if (err) return next(new Error('500'));
-        if (!mcUser) return res.sendStatus(404);
-
-        request.get(mcUser.getOptiFineCapeURL(), { encoding: null }, (err, httpRes, httpBody) => {
-          if (err) return next(new Error('500'));
-
-          if (httpRes.statusCode == 200) {
-            res.type(mimeType);
-            if (download) {
-              res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
-            }
-
-            res.send(httpBody);
-          } else {
-            if (httpRes.statusCode != 404) console.error(mcUser.skinURL, 'returned HTTP-Code', httpRes.statusCode); //TODO Log to file
-
-            res.sendStatus(404);
-          }
-        });
-      });
-    }
-  });
-});
-
-router.all('/capes/labymod/:user?', (req, res, next) => {
-  restful(req, res, {
-    get: () => {
-      if (!req.params.user) return next(new Error('Invalid parameter for user'));
-
-      const download = typeof req.query.download == 'string' ? toBoolean(req.query.download) : false;
-      const mimeType = download ? 'application/octet-stream' : 'png';
-
-      getByUUID(req.params.user, req, (err, mcUser) => {
-        if (err) return next(new Error('500'));
-        if (!mcUser) return res.sendStatus(404);
-
-        const capeURL = mcUser.getLabyModCapeURL();
-
-        request.get(capeURL, { encoding: null }, (err, httpRes, httpBody) => {
-          if (err) return next(new Error('500'));
-
-          if (httpRes.statusCode == 200) {
-            res.type(mimeType);
-            if (download) {
-              res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
-            }
-
-            res.send(httpBody);
-          } else {
-            if (httpRes.statusCode != 404) console.error(mcUser.skinURL, 'returned HTTP-Code', httpRes.statusCode); //TODO Log to file
-
-            res.sendStatus(404);
-          }
-        });
       });
     }
   });
