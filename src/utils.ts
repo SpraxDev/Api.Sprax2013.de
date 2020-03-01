@@ -104,7 +104,7 @@ export class Image {
 
   /**
    * Upgrades the skin to 64x64px and remove unused parts
-   * 
+   *
    * Creates an png Buffer to use
    */
   toCleanSkin(callback: (err: Error | null, png: Buffer | null) => void): void {

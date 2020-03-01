@@ -55,7 +55,7 @@ export interface Cape {
   readonly textureSignature?: string;
 }
 
-/** 
+/**
  * value equals remote database enum
 */
 export enum CapeType {
