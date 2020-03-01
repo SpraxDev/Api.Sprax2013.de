@@ -1,3 +1,5 @@
+import { addHyphensToUUID } from './utils';
+
 /* SpraxAPI */
 export interface SpraxAPIcfg {
   readonly listen: {
@@ -24,21 +26,72 @@ export interface SpraxAPIdbCfg {
   };
 }
 
+export interface UserAgent {
+  readonly id: number;
+  readonly name: string;
+  readonly internal: boolean;
+}
+
+export interface Skin {
+  readonly id: number;
+  readonly duplicateOf?: number;
+  readonly originalURL: string;
+  readonly textureValue?: string;
+  readonly textureSignature?: string;
+  readonly added: Date;
+  readonly addedBy: number;
+  readonly cleanHash?: string;
+}
+
+export interface Cape {
+  readonly id: number;
+  readonly duplicateOf?: number;
+  readonly type: CapeType;
+  readonly originalURL: string;
+  readonly addedBy: number;
+  readonly added: Date;
+  readonly cleanHash?: string;
+  readonly textureValue?: string;
+  readonly textureSignature?: string;
+}
+
+/** 
+ * value equals remote database enum
+*/
+export enum CapeType {
+  MOJANG = 'MOJANG',
+  OPTIFINE = 'OPTIFINE',
+  LABY_MOD = 'LABY_MOD'
+}
+
+/* Image (utils) */
+export interface Color {
+  readonly r: number;
+  readonly g: number;
+  readonly b: number;
+  readonly a: number;
+}
+
 /* Minecraft */
 export class MinecraftUser {
-  uuid: string;
-  username: string;
-  legacy?: boolean;
+  id: string;
+  name: string;
+  legacy: boolean | null;
 
   skinURL: string | null = null;
   capeURL: string | null = null;
   textureValue: string | null = null;
   textureSignature: string | null = null;
 
-  constructor(profile: MinecraftProfile) {
-    this.uuid = profile.id;
-    this.username = profile.name;
-    this.legacy = profile.legacy;
+  nameHistory: MinecraftNameHistoryElement[];
+  userAgent: UserAgent;
+
+  constructor(profile: MinecraftProfile, nameHistory: MinecraftNameHistoryElement[], userAgent: UserAgent, profileFromMojang: boolean = false) {
+    this.id = profile.id;
+    this.name = profile.name;
+    this.legacy = profile.legacy || (profileFromMojang ? false : null);
+    this.nameHistory = nameHistory;
+    this.userAgent = userAgent;
 
     for (const prop of profile.properties) {
       if (prop.name == 'textures') {
@@ -52,18 +105,58 @@ export class MinecraftUser {
     }
   }
 
+  getSecureSkinURL(): string | null {
+    if (!this.skinURL) return null;
+    if (!this.skinURL.toLowerCase().startsWith('http://')) return this.skinURL;
+
+    return 'https' + this.skinURL.substring(4);
+  }
+
+  getSecureCapeURL(): string | null {
+    if (!this.capeURL) return null;
+    if (!this.capeURL.toLowerCase().startsWith('http://')) return this.capeURL;
+
+    return 'https' + this.capeURL.substring(4);
+  }
+
+  getOptiFineCapeURL(): string {
+    return `http://s.optifine.net/capes/${this.name}.png`;
+  }
+
+  getLabyModCapeURL(): string {
+    return `https://capes.labymod.net/capes/${addHyphensToUUID(this.id)}`;
+  }
+
   /**
    * @author NudelErde (https://github.com/NudelErde/)
    */
   isAlexDefaultSkin(): boolean {
-    return ((parseInt(this.uuid[7], 16) ^ parseInt(this.uuid[15], 16) ^ parseInt(this.uuid[23], 16) ^ parseInt(this.uuid[31], 16)) & 1) == 1;
+    return ((parseInt(this.id[7], 16) ^ parseInt(this.id[15], 16) ^ parseInt(this.id[23], 16) ^ parseInt(this.id[31], 16)) & 1) == 1;
   }
 
-  toJSONString() {
-    let properties: MinecraftProfileProperty[] | undefined;
+  toCleanJSON(): { id: string, id_hyphens: string, name: string, legacy: boolean | null, textures: { skinURL: string | null, capeURL: string | null, texture_value: string | null, texture_signature: string | null }, name_history?: MinecraftNameHistoryElement[] } {
+    return {
+      id: this.id,
+      id_hyphens: addHyphensToUUID(this.id),
+      name: this.name,
+      legacy: this.legacy,
+
+      textures: {
+        skinURL: this.skinURL,
+        capeURL: this.capeURL,
+
+        texture_value: this.textureValue,
+        texture_signature: this.textureSignature || null,
+      },
+
+      name_history: this.nameHistory
+    };
+  }
+
+  toOriginal(): MinecraftProfile {
+    let properties: MinecraftProfileProperty[] = [];
 
     if (this.textureValue) {
-      properties = [];
       properties.push({
         name: 'textures',
         value: this.textureValue,
@@ -71,12 +164,12 @@ export class MinecraftUser {
       });
     }
 
-    return JSON.stringify({
-      id: this.uuid,
-      name: this.username,
+    return {
+      id: this.id,
+      name: this.name,
       properties,
-      legacy: this.legacy
-    });
+      legacy: this.legacy ? true : undefined
+    };
   }
 }
 
@@ -106,6 +199,11 @@ export interface MinecraftProfileTextureProperty {
       url: string
     }
   }
+}
+
+export interface MinecraftNameHistoryElement {
+  name: string;
+  changedToAt?: number;
 }
 
 /* Database */
