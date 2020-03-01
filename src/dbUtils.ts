@@ -231,7 +231,7 @@ export class dbUtils {
       client.query('BEGIN', (err) => {
         if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
 
-        client.query(`SELECT * FROM capes WHERE original_url =$1 LIMIT 1;`, [originalURL], (err, res) => {
+        client.query(`SELECT * FROM capes WHERE clean_hash =$1 AND type =$2 LIMIT 1;`, [cleanHash, type], (err, res) => {
           if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
 
           if (res.rows.length > 0) { // Exact same Cape-URL already in db
@@ -312,8 +312,8 @@ export class dbUtils {
       client.query('BEGIN', (err) => {
         if (this.shouldAbortTransaction(client, done, err)) return callback(err);
 
-        client.query(`SELECT EXISTS(SELECT * FROM (SELECT cape_id FROM cape_history WHERE profile_id =$1 ORDER BY added DESC LIMIT 1)x WHERE cape_id =$2);`,
-          [mcUser.id, cape.id], (err, res) => {
+        client.query(`SELECT EXISTS(SELECT * FROM (SELECT cape_id FROM cape_history WHERE profile_id =$1 AND cape_type =$2 ORDER BY added DESC LIMIT 1)x WHERE cape_id =$3);`,
+          [mcUser.id, cape.type, cape.id], (err, res) => {
             if (this.shouldAbortTransaction(client, done, err)) return callback(err);
 
             if (res.rows[0].exists) { // Skin hasn't changed
@@ -326,8 +326,8 @@ export class dbUtils {
               return callback(null);
             }
 
-            client.query(`INSERT INTO cape_history(profile_id,cape_id) VALUES($1,$2);`,
-              [mcUser.id, cape.id], (err, _res) => {
+            client.query(`INSERT INTO cape_history(profile_id,cape_id,cape_type) VALUES($1,$2,$3);`,
+              [mcUser.id, cape.id, cape.type], (err, _res) => {
                 if (this.shouldAbortTransaction(client, done, err)) return callback(err);
 
                 callback(null);
