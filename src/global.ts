@@ -11,6 +11,7 @@ export interface SpraxAPIcfg {
   };
 
   readonly trustProxy: boolean;
+  readonly accessLogFormat: string;
 }
 
 export interface SpraxAPIdbCfg {

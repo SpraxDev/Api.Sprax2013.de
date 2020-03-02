@@ -1,4 +1,6 @@
 import fs = require('fs');
+import rfs = require('rotating-file-stream');
+import path = require('path');
 import { Server, createServer } from 'http';
 import { SpraxAPIcfg, SpraxAPIdbCfg } from './global';
 import { dbUtils } from './dbUtils';
@@ -13,7 +15,8 @@ export let cfg: SpraxAPIcfg = {
     host: '127.0.0.1',
     port: 8091
   },
-  trustProxy: false
+  trustProxy: false,
+  accessLogFormat: '[:date[web]] :remote-addr by :remote-user | :method :url :status with :res[content-length] bytes | ":user-agent" referred from ":referrer" | :response-time[3] ms'
 };
 export let dbCfg: SpraxAPIdbCfg = {
   host: '127.0.0.1',
@@ -75,9 +78,13 @@ process.on('SIGQUIT', shutdownHook);
 process.on('SIGHUP', shutdownHook);
 process.on('SIGUSR2', shutdownHook);  // The package 'nodemon' is using this signal
 
-/* Start webserver */
+/* Prepare webserver */
 db = new dbUtils(dbCfg);
 
+export const webAccessLogStream = rfs.createStream('access.log', { interval: '1d', maxFiles: 14, path: path.join(__dirname, 'logs', 'access'), compress: true }),
+  errorLogStream = rfs.createStream('error.log', { interval: '1d', maxFiles: 90, path: path.join(__dirname, 'logs', 'error') });
+
+/* Start webserver */
 server = createServer(require('./server').app);
 
 server.on('error', (err: { syscall: string, code: string }) => {

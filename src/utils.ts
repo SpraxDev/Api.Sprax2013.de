@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { Color } from './global';
 import sharp = require('sharp');
 import crypto = require('crypto');
+import { EOL } from 'os';
+import { errorLogStream } from '.';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   UUID_PATTERN_ADD_DASH = /(.{8})(.{4})(.{4})(.{4})(.{12})/;
@@ -216,7 +218,8 @@ export class ApiError extends Error {
   }
 
   static log(msg: string, obj?: any): void {
-    console.error(`${msg}${obj ? ` (${JSON.stringify(obj)})` : ''}:`, new Error().stack); // TODO log
+    console.error('An error occurred:', msg);
+    errorLogStream.write(`[${new Date().toUTCString()}] ${JSON.stringify({ msg, obj, stack: new Error().stack })}` + EOL);
   }
 }
 

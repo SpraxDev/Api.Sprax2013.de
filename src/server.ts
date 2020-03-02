@@ -4,18 +4,27 @@ import morgan = require('morgan');
 import { minecraftExpressRouter } from './routes/minecraft';
 import { skindbExpressRouter } from './routes/skindb';
 import { ErrorBuilder, ApiError, HttpError } from './utils';
+import { cfg, webAccessLogStream } from '.';
 
 export const app = express();
 app.disable('x-powered-by');
 
-app.use(morgan('dev')); // DEBUG
+/* Logging webserver request */
+app.use(morgan(cfg.accessLogFormat, { stream: webAccessLogStream }));
+if (process.env.NODE_ENV == 'production') {
+  app.use(morgan('dev', { skip: (req, res) => res.statusCode < 400 || req.originalUrl.startsWith('/.well-known/acme-challenge/') }));
+} else {
+  app.use(morgan('dev'));
+}
 
+/* Webserver routes */
 app.use('/mojang', (_req, _res, next) => next(new ApiError('Please use /mc instad of /mojang', 410)));  // Temporary
 app.use('/hems', (_req, _res, next) => next(new ApiError(`Gone forever or as log as I desire`, 410)));  // Temporary
 
 app.use('/mc', minecraftExpressRouter);
 app.use('/skindb', skindbExpressRouter);
 
+/* Error handling */
 app.use((_req, _res, next) => {
   next(new ErrorBuilder().notFound());
 });
