@@ -84,65 +84,72 @@ db = new dbUtils(dbCfg);
 export const webAccessLogStream = rfs.createStream('access.log', { interval: '1d', maxFiles: 14, path: path.join(__dirname, 'logs', 'access'), compress: true }),
   errorLogStream = rfs.createStream('error.log', { interval: '1d', maxFiles: 90, path: path.join(__dirname, 'logs', 'error') });
 
-/* Start webserver */
-server = createServer(require('./server').app);
-
-server.on('error', (err: { syscall: string, code: string }) => {
-  if (err.syscall !== 'listen') {
-    throw err;
+/* Start webserver (and test database connection) */
+db.pool.query('SELECT NOW();', (err, _res) => {
+  if (err) {
+    console.error(`Database is not ready! (${err.message})`);
+    process.exit(2);
   }
 
-  const errPrefix = cfg.listen.usePath ? `path ${cfg.listen.path}` : `port ${cfg.listen.port}`;
-  switch (err.code) {
-    case 'EACCES':
-      console.error(`${errPrefix} requires elevated privileges`);
-      process.exit(1);
-      break;
-    case 'EADDRINUSE':
-      console.error(`${errPrefix} is already in use`);
-      process.exit(1);
-      break;
-    default:
+  server = createServer(require('./server').app);
+
+  server.on('error', (err: { syscall: string, code: string }) => {
+    if (err.syscall !== 'listen') {
       throw err;
+    }
+
+    const errPrefix = cfg.listen.usePath ? `path ${cfg.listen.path}` : `port ${cfg.listen.port}`;
+    switch (err.code) {
+      case 'EACCES':
+        console.error(`${errPrefix} requires elevated privileges`);
+        process.exit(1);
+        break;
+      case 'EADDRINUSE':
+        console.error(`${errPrefix} is already in use`);
+        process.exit(1);
+        break;
+      default:
+        throw err;
+    }
+  });
+  server.on('listening', () => {
+    console.log(`Listening on ${cfg.listen.usePath ? `path ${cfg.listen.path}` : `port ${cfg.listen.port}`}`);
+  });
+
+  if (cfg.listen.usePath) {
+    const unixSocketPath = cfg.listen.path,
+      unixSocketPIDPath = cfg.listen.path + '.pid',
+      parentDir = require('path').dirname(unixSocketPath);
+
+    if (!fs.existsSync(parentDir)) {
+      fs.mkdirSync(parentDir, { recursive: true });
+    }
+
+    const isProcessRunning = (pid: number): boolean => {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch (ex) {
+        return ex.code == 'EPERM';
+      }
+    };
+
+    if (fs.existsSync(unixSocketPath)) {
+      let isRunning: boolean = false;
+      if (!fs.existsSync(unixSocketPIDPath) || !(isRunning = isProcessRunning(parseInt(fs.readFileSync(unixSocketPIDPath, 'utf-8'))))) {
+        fs.unlinkSync(unixSocketPath);
+      }
+
+      if (isRunning) {
+        console.error(`It looks like the process that created '${unixSocketPath}' is still running!`);
+        process.exit(1);
+      }
+    }
+
+    fs.writeFileSync(unixSocketPIDPath, process.pid);
+    server.listen(unixSocketPath);
+    fs.chmodSync(unixSocketPath, '0777');
+  } else {
+    server.listen(cfg.listen.port, cfg.listen.host);
   }
 });
-server.on('listening', () => {
-  console.log(`Listening on ${cfg.listen.usePath ? `path ${cfg.listen.path}` : `port ${cfg.listen.port}`}`);
-});
-
-if (cfg.listen.usePath) {
-  const unixSocketPath = cfg.listen.path,
-    unixSocketPIDPath = cfg.listen.path + '.pid',
-    parentDir = require('path').dirname(unixSocketPath);
-
-  if (!fs.existsSync(parentDir)) {
-    fs.mkdirSync(parentDir, { recursive: true });
-  }
-
-  const isProcessRunning = (pid: number): boolean => {
-    try {
-      process.kill(pid, 0);
-      return true;
-    } catch (ex) {
-      return ex.code == 'EPERM';
-    }
-  };
-
-  if (fs.existsSync(unixSocketPath)) {
-    let isRunning: boolean = false;
-    if (!fs.existsSync(unixSocketPIDPath) || !(isRunning = isProcessRunning(parseInt(fs.readFileSync(unixSocketPIDPath, 'utf-8'))))) {
-      fs.unlinkSync(unixSocketPath);
-    }
-
-    if (isRunning) {
-      console.error(`It looks like the process that created '${unixSocketPath}' is still running!`);
-      process.exit(1);
-    }
-  }
-
-  fs.writeFileSync(unixSocketPIDPath, process.pid);
-  server.listen(unixSocketPath);
-  fs.chmodSync(unixSocketPath, '0777');
-} else {
-  server.listen(cfg.listen.port, cfg.listen.host);
-}
