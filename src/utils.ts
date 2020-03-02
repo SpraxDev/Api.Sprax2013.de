@@ -3,7 +3,8 @@ import { Color } from './global';
 import sharp = require('sharp');
 import crypto = require('crypto');
 import { EOL } from 'os';
-import { errorLogStream } from '.';
+import { errorLogStream, cfg, appVersion } from '.';
+import request = require('request');
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   UUID_PATTERN_ADD_DASH = /(.{8})(.{4})(.{4})(.{4})(.{12})/;
@@ -217,9 +218,47 @@ export class ApiError extends Error {
     return new ErrorBuilder().log(err.message, err.stack).unknown();
   }
 
-  static log(msg: string, obj?: any): void {
+  static async log(msg: string, obj?: any, skipWebHook: boolean = false) {
+    const stack = new Error().stack;
+
     console.error('An error occurred:', msg);
-    errorLogStream.write(`[${new Date().toUTCString()}] ${JSON.stringify({ msg, obj, stack: new Error().stack })}` + EOL);
+
+    if (errorLogStream) {
+      errorLogStream.write(`[${new Date().toUTCString()}] ${JSON.stringify({ msg, obj, stack })}` + EOL);
+    }
+
+    // Contact Discord-WebHook
+    if (!skipWebHook && cfg && cfg.logging.discordErrorWebHookURL && cfg.logging.discordErrorWebHookURL.toLowerCase().startsWith('http')) {
+      request.post(cfg.logging.discordErrorWebHookURL, {
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': `SpraxAPI/${appVersion}`,
+          Accept: 'application/json'
+        },
+        body: JSON.stringify({
+          username: 'SpraxAPI (Error-Reporter)',
+          avatar_url: 'https://cdn.discordapp.com/attachments/611940958568841227/684083067073200138/SpraxAPI-4096px.png',
+          embeds: [
+            {
+              title: 'An error occurred',
+              fields: [
+                {
+                  name: 'Message',
+                  value: msg
+                },
+                {
+                  name: 'Object',
+                  value: obj != undefined ? '```JS\n' + JSON.stringify(obj, null, 2) + '\n```' : 'Empty'
+                }
+              ]
+            }
+          ]
+        })
+      }, (err: Error, res, body) => {
+        if (err) return ApiError.log('Could not execute Discord-WebHook', { msg: err.message }, true);
+        if (res.statusCode != 204) return ApiError.log(`Could not execute Discord-WebHook: ${body}`, undefined, true);
+      });
+    }
   }
 }
 

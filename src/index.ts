@@ -17,7 +17,10 @@ export let cfg: SpraxAPIcfg = {
     port: 8091
   },
   trustProxy: false,
-  accessLogFormat: '[:date[web]] :remote-addr by :remote-user | :method :url :status with :res[content-length] bytes | ":user-agent" referred from ":referrer" | :response-time[3] ms'
+  logging: {
+    accessLogFormat: '[:date[web]] :remote-addr by :remote-user | :method :url :status with :res[content-length] bytes | ":user-agent" referred from ":referrer" | :response-time[3] ms',
+    discordErrorWebHookURL: null
+  }
 };
 export let dbCfg: SpraxAPIdbCfg = {
   host: '127.0.0.1',
@@ -31,6 +34,7 @@ export let dbCfg: SpraxAPIdbCfg = {
     skindb: 'skindb'
   }
 };
+export const appVersion = JSON.parse(fs.readFileSync('./package.json', 'utf-8')).version;
 
 /* Init configuration files */
 

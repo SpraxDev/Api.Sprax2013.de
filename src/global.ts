@@ -11,7 +11,11 @@ export interface SpraxAPIcfg {
   };
 
   readonly trustProxy: boolean;
-  readonly accessLogFormat: string;
+
+  readonly logging: {
+    readonly accessLogFormat: string;
+    readonly discordErrorWebHookURL: string | null;
+  }
 }
 
 export interface SpraxAPIdbCfg {

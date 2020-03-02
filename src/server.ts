@@ -10,7 +10,7 @@ export const app = express();
 app.disable('x-powered-by');
 
 /* Logging webserver request */
-app.use(morgan(cfg.accessLogFormat, { stream: webAccessLogStream }));
+app.use(morgan(cfg.logging.accessLogFormat, { stream: webAccessLogStream }));
 if (process.env.NODE_ENV == 'production') {
   app.use(morgan('dev', { skip: (req, res) => res.statusCode < 400 || req.originalUrl.startsWith('/.well-known/acme-challenge/') }));
 } else {
