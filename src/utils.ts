@@ -301,126 +301,73 @@ export class ErrorBuilder {
 
 export class HttpError {
   static getName(httpCode: number): string | null {
-    switch (httpCode) {
-      case 100:
-        return 'Continue';
-      case 101:
-        return 'Switching Protocols';
-      case 102:
-        return 'Processing';
+    /* 100s */
+    if (httpCode == 100) return 'Continue';
+    if (httpCode == 101) return 'Switching Protocols';
+    if (httpCode == 102) return 'Processing';
 
-      case 200:
-        return 'OK';
-      case 201:
-        return 'Created';
-      case 202:
-        return 'Accepted';
-      case 203:
-        return 'Non-Authoritative Information';
-      case 204:
-        return 'No Content';
-      case 205:
-        return 'Reset Content';
-      case 206:
-        return 'Partial Content';
-      case 207:
-        return 'Multi-Status';
+    /* 200s */
+    if (httpCode == 200) return 'OK';
+    if (httpCode == 201) return 'Created';
+    if (httpCode == 202) return 'Accepted';
+    if (httpCode == 203) return 'Non-Authoritative Information';
+    if (httpCode == 204) return 'No Content';
+    if (httpCode == 205) return 'Reset Content';
+    if (httpCode == 206) return 'Partial Content';
+    if (httpCode == 207) return 'Multi-Status';
 
-      case 300:
-        return 'Multiple Choices';
-      case 301:
-        return 'Moved Permanently';
-      case 302:
-        return 'Found (Moved Temporarily)';
-      case 303:
-        return 'See Other';
-      case 304:
-        return 'Not Modified';
-      case 305:
-        return 'Use Proxy';
-      case 307:
-        return 'Temporary Redirect';
-      case 308:
-        return 'Permanent Redirect';
+    /* 300s */
+    if (httpCode == 300) return 'Multiple Choices';
+    if (httpCode == 301) return 'Moved Permanently';
+    if (httpCode == 302) return 'Found (Moved Temporarily)';
+    if (httpCode == 303) return 'See Other';
+    if (httpCode == 304) return 'Not Modified';
+    if (httpCode == 305) return 'Use Proxy';
+    if (httpCode == 307) return 'Temporary Redirect';
+    if (httpCode == 308) return 'Permanent Redirect';
 
-      case 400:
-        return 'Bad Request';
-      case 401:
-        return 'Unauthorized';
-      case 402:
-        return 'Payment Required';
-      case 403:
-        return 'Forbidden';
-      case 404:
-        return 'Not Found';
-      case 405:
-        return 'Method Not Allowed';
-      case 406:
-        return 'Not Acceptable';
-      case 407:
-        return 'Proxy Authentication Required';
-      case 408:
-        return 'Request Timeout';
-      case 409:
-        return 'Conflict';
-      case 410:
-        return 'Gone';
-      case 411:
-        return 'Length Required';
-      case 412:
-        return 'Precondition Failed';
-      case 413:
-        return 'Request Entity Too Large';
-      case 414:
-        return 'URI Too Long';
-      case 415:
-        return 'Unsupported Media Type';
-      case 416:
-        return 'Requested range not satisfiable';
-      case 417:
-        return 'Expectation Failed';
-      case 420:
-        return 'Policy Not Fulfilled';
-      case 421:
-        return 'Misdirected Request';
-      case 422:
-        return 'Unprocessable Entity';
-      case 423:
-        return 'Locked';
-      case 424:
-        return 'Failed Dependency';
-      case 426:
-        return 'Upgrade Required';
-      case 428:
-        return 'Precondition Required';
-      case 429:
-        return 'Too Many Requests';
-      case 431:
-        return 'Request Header Fields Too Large';
-      case 451:
-        return 'Unavailable For Legal Reasons';
+    /* 400s */
+    if (httpCode == 400) return 'Bad Request';
+    if (httpCode == 401) return 'Unauthorized';
+    if (httpCode == 402) return 'Payment Required';
+    if (httpCode == 403) return 'Forbidden';
+    if (httpCode == 404) return 'Not Found';
+    if (httpCode == 405) return 'Method Not Allowed';
+    if (httpCode == 406) return 'Not Acceptable';
+    if (httpCode == 407) return 'Proxy Authentication Required';
+    if (httpCode == 408) return 'Request Timeout';
+    if (httpCode == 409) return 'Conflict';
+    if (httpCode == 410) return 'Gone';
+    if (httpCode == 411) return 'Length Required';
+    if (httpCode == 412) return 'Precondition Failed';
+    if (httpCode == 413) return 'Request Entity Too Large';
+    if (httpCode == 414) return 'URI Too Long';
+    if (httpCode == 415) return 'Unsupported Media Type';
+    if (httpCode == 416) return 'Requested range not satisfiable';
+    if (httpCode == 417) return 'Expectation Failed';
+    if (httpCode == 420) return 'Policy Not Fulfilled';
+    if (httpCode == 421) return 'Misdirected Request';
+    if (httpCode == 422) return 'Unprocessable Entity';
+    if (httpCode == 423) return 'Locked';
+    if (httpCode == 424) return 'Failed Dependency';
+    if (httpCode == 426) return 'Upgrade Required';
+    if (httpCode == 428) return 'Precondition Required';
+    if (httpCode == 429) return 'Too Many Requests';
+    if (httpCode == 431) return 'Request Header Fields Too Large';
+    if (httpCode == 451) return 'Unavailable For Legal Reasons';
 
-      case 500:
-        return 'Internal Server Error';
-      case 501:
-        return 'Not Implemented';
-      case 502:
-        return 'Bad Gateway';
-      case 503:
-        return 'Service Unavailable';
-      case 504:
-        return 'Gateway Timeout';
-      case 505:
-        return 'HTTP Version not supported';
-      case 506:
-        return 'Variant Also Negotiates';
-      case 507:
-        return 'Insufficient Storage';
-      case 508:
-        return 'Loop Detected';
-      default:
-        return null;
-    }
+    /* 500s */
+    if (httpCode == 500) return 'Internal Server Error';
+    if (httpCode == 501) return 'Not Implemented';
+    if (httpCode == 502) return 'Bad Gateway';
+    if (httpCode == 503) return 'Service Unavailable';
+    if (httpCode == 504) return 'Gateway Timeout';
+    if (httpCode == 505) return 'HTTP Version not supported';
+    if (httpCode == 506) return 'Variant Also Negotiates';
+    if (httpCode == 507) return 'Insufficient Storage';
+    if (httpCode == 508) return 'Loop Detected';
+
+    return null;
   }
 }
 
