@@ -8,6 +8,7 @@ import { cfg, webAccessLogStream } from '.';
 
 export const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', cfg.trustProxy);
 
 /* Logging webserver request */
 app.use(morgan(cfg.logging.accessLogFormat, { stream: webAccessLogStream }));
