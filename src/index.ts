@@ -1,6 +1,7 @@
 import fs = require('fs');
 import rfs = require('rotating-file-stream');
 import path = require('path');
+import objectAssignDeep = require('object-assign-deep');
 import { Server, createServer } from 'http';
 import { SpraxAPIcfg, SpraxAPIdbCfg } from './global';
 import { dbUtils } from './dbUtils';
@@ -38,18 +39,17 @@ if (!fs.existsSync('./storage')) {
 }
 
 if (fs.existsSync('./storage/config.json')) {
-  cfg = Object.assign({}, cfg, JSON.parse(fs.readFileSync('./storage/config.json', 'utf-8')));  // Merge existing cfg into default one
+  cfg = objectAssignDeep({}, cfg, JSON.parse(fs.readFileSync('./storage/config.json', 'utf-8'))); // Merge existing cfg into default one
 }
 fs.writeFileSync('./storage/config.json', JSON.stringify(cfg, null, 2));  // Write current config (+ missing default values) to file
 
 // Repeat above for db.json
 if (fs.existsSync('./storage/db.json')) {
-  dbCfg = Object.assign({}, dbCfg, JSON.parse(fs.readFileSync('./storage/db.json', 'utf-8')));
+  dbCfg = objectAssignDeep({}, dbCfg, JSON.parse(fs.readFileSync('./storage/db.json', 'utf-8')));
 }
 fs.writeFileSync('./storage/db.json', JSON.stringify(dbCfg, null, 2));
 
 /* Register shutdown hook */
-
 function shutdownHook() {
   console.log('Shutting down...');
 
