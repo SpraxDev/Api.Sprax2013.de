@@ -198,6 +198,190 @@ export class Image {
   }
 }
 
+export class ApiError extends Error {
+  readonly httpCode: number;
+  readonly details?: { param: string, condition: string }[];
+  logged: boolean;
+
+  constructor(message: string, httpCode: number, details?: { param: string, condition: string }[], logged?: boolean) {
+    super(message);
+
+    this.httpCode = httpCode;
+    this.details = details;
+    this.logged = logged || false;
+  }
+
+  static fromError(err: Error): ApiError {
+    return new ErrorBuilder().log(err.message, err.stack).unknown();
+  }
+
+  static log(msg: string, obj?: any): void {
+    console.error(`${msg}${obj ? ` (${JSON.stringify(obj)})` : ''}:`, new Error().stack); // TODO log
+  }
+}
+
+export class ErrorBuilder {
+  logged: boolean = false;
+
+  constructor() { }
+
+  log(msg: string, obj?: any): this {
+    ApiError.log(msg, obj);
+    this.logged = true;
+
+    return this;
+  }
+
+  unknown(): ApiError {
+    return new ApiError('An unknown error occurred', 500, undefined, this.logged);
+  }
+
+  notFound(whatCouldNotBeFound: string = 'The requested resource could not be found', adminLog?: string | boolean): ApiError {
+    if (adminLog) {
+      this.log(typeof adminLog == 'boolean' ? `This should not have happened: ${whatCouldNotBeFound}` : adminLog);
+    }
+
+    return new ApiError(`${whatCouldNotBeFound}${adminLog ? ' (server-side error)' : ''}`, adminLog ? 500 : 404, undefined, this.logged);
+  }
+
+  serverErr(whatFailed: string = 'An error occurred', adminLog?: string | boolean): ApiError {
+    if (adminLog) {
+      this.log(typeof adminLog == 'boolean' ? `This should not have happened: ${whatFailed}` : adminLog);
+    }
+
+    return new ApiError(`${whatFailed}`, 500, undefined, this.logged);
+  }
+
+  invalidParams(paramType: 'url' | 'query', params: { param: string, condition: string }[]): ApiError {
+    return new ApiError(`Missing or invalid ${paramType} parameters`, 400, params, this.logged);
+  }
+}
+
+export class HttpError {
+  static getName(httpCode: number): string | null {
+    switch (httpCode) {
+      case 100:
+        return 'Continue';
+      case 101:
+        return 'Switching Protocols';
+      case 102:
+        return 'Processing';
+
+      case 200:
+        return 'OK';
+      case 201:
+        return 'Created';
+      case 202:
+        return 'Accepted';
+      case 203:
+        return 'Non-Authoritative Information';
+      case 204:
+        return 'No Content';
+      case 205:
+        return 'Reset Content';
+      case 206:
+        return 'Partial Content';
+      case 207:
+        return 'Multi-Status';
+
+      case 300:
+        return 'Multiple Choices';
+      case 301:
+        return 'Moved Permanently';
+      case 302:
+        return 'Found (Moved Temporarily)';
+      case 303:
+        return 'See Other';
+      case 304:
+        return 'Not Modified';
+      case 305:
+        return 'Use Proxy';
+      case 307:
+        return 'Temporary Redirect';
+      case 308:
+        return 'Permanent Redirect';
+
+      case 400:
+        return 'Bad Request';
+      case 401:
+        return 'Unauthorized';
+      case 402:
+        return 'Payment Required';
+      case 403:
+        return 'Forbidden';
+      case 404:
+        return 'Not Found';
+      case 405:
+        return 'Method Not Allowed';
+      case 406:
+        return 'Not Acceptable';
+      case 407:
+        return 'Proxy Authentication Required';
+      case 408:
+        return 'Request Timeout';
+      case 409:
+        return 'Conflict';
+      case 410:
+        return 'Gone';
+      case 411:
+        return 'Length Required';
+      case 412:
+        return 'Precondition Failed';
+      case 413:
+        return 'Request Entity Too Large';
+      case 414:
+        return 'URI Too Long';
+      case 415:
+        return 'Unsupported Media Type';
+      case 416:
+        return 'Requested range not satisfiable';
+      case 417:
+        return 'Expectation Failed';
+      case 420:
+        return 'Policy Not Fulfilled';
+      case 421:
+        return 'Misdirected Request';
+      case 422:
+        return 'Unprocessable Entity';
+      case 423:
+        return 'Locked';
+      case 424:
+        return 'Failed Dependency';
+      case 426:
+        return 'Upgrade Required';
+      case 428:
+        return 'Precondition Required';
+      case 429:
+        return 'Too Many Requests';
+      case 431:
+        return 'Request Header Fields Too Large';
+      case 451:
+        return 'Unavailable For Legal Reasons';
+
+      case 500:
+        return 'Internal Server Error';
+      case 501:
+        return 'Not Implemented';
+      case 502:
+        return 'Bad Gateway';
+      case 503:
+        return 'Service Unavailable';
+      case 504:
+        return 'Gateway Timeout';
+      case 505:
+        return 'HTTP Version not supported';
+      case 506:
+        return 'Variant Also Negotiates';
+      case 507:
+        return 'Insufficient Storage';
+      case 508:
+        return 'Loop Detected';
+      default:
+        return null;
+    }
+  }
+}
+
 /**
  * This shortcut function responses with HTTP 405 to the requests having
  * a method that does not have corresponding request handler.
@@ -267,8 +451,8 @@ export function toBoolean(input: string | number | boolean): boolean {
 }
 
 /**
- * sha256
+ * Defaults to 'sha256' algorithm
  */
-export function generateHash(data: Buffer, algorithm?: string, options?: crypto.HashOptions): string {
-  return crypto.createHash(algorithm || 'sha256', options).update(data).digest('hex');
+export function generateHash(data: Buffer, algorithm: string = 'sha256', options?: crypto.HashOptions): string {
+  return crypto.createHash(algorithm, options).update(data).digest('hex');
 }
