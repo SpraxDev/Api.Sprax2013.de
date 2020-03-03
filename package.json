@@ -2,6 +2,7 @@
   "name": "api.sprax2013.de",
   "version": "0.1.0",
   "description": "",
+  "homepage": "https://github.com/Sprax2013/Api.Sprax2013.de#readme",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -12,6 +13,13 @@
   },
   "author": "Sprax2013",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sprax2013/Api.Sprax2013.de.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Sprax2013/Api.Sprax2013.de/issues"
+  },
   "dependencies": {
     "express": "^4.17.1",
     "morgan": "^1.9.1",
