@@ -36,7 +36,7 @@ export class Image {
       .toBuffer({ resolveWithObject: true })
       .then((res) => callback(null, new Image(res)))
       .catch((err) => callback(err, null));
-  };
+  }
 
   static fromImg(img: string | Buffer, callback: (err: Error | null, rawImg: Image | null) => void): void {
     sharp(img)
