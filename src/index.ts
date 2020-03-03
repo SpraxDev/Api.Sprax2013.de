@@ -85,8 +85,8 @@ process.on('SIGUSR2', shutdownHook);  // The package 'nodemon' is using this sig
 /* Prepare webserver */
 db = new dbUtils(dbCfg);
 
-export const webAccessLogStream = rfs.createStream('access.log', { interval: '1d', maxFiles: 14, path: path.join(__dirname, 'logs', 'access'), compress: true }),
-  errorLogStream = rfs.createStream('error.log', { interval: '1d', maxFiles: 90, path: path.join(__dirname, 'logs', 'error') });
+export const webAccessLogStream = rfs.createStream('access.log', { interval: '1d', maxFiles: 14, path: path.join(process.cwd(), 'logs', 'access'), compress: true }),
+  errorLogStream = rfs.createStream('error.log', { interval: '1d', maxFiles: 90, path: path.join(process.cwd(), 'logs', 'error') });
 
 /* Start webserver (and test database connection) */
 db.pool.query('SELECT NOW();', (err, _res) => {
