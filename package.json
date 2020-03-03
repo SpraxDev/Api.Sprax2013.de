@@ -1,6 +1,6 @@
 {
   "name": "api.sprax2013.de",
-  "version": "0.0.1-DEV",
+  "version": "0.1.0",
   "description": "",
   "main": "index.js",
   "scripts": {
