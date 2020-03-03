@@ -1,4 +1,5 @@
 import { Router } from 'express';
+
 import { restful, setCaching } from '../utils';
 
 const router = Router();

@@ -1,10 +1,12 @@
 import fs = require('fs');
-import rfs = require('rotating-file-stream');
-import path = require('path');
 import objectAssignDeep = require('object-assign-deep');
+import path = require('path');
+import rfs = require('rotating-file-stream');
+
 import { Server, createServer } from 'http';
-import { SpraxAPIcfg, SpraxAPIdbCfg } from './global';
+
 import { dbUtils } from './dbUtils';
+import { SpraxAPIcfg, SpraxAPIdbCfg } from './global';
 
 let server: Server;
 export let db: dbUtils;

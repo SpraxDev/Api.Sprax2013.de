@@ -1,6 +1,7 @@
 import { Pool, PoolClient } from 'pg';
-import { SpraxAPIdbCfg, UserAgent, Skin, MinecraftUser, Cape, CapeType } from './global';
+
 import { generateHash } from './utils';
+import { SpraxAPIdbCfg, UserAgent, Skin, MinecraftUser, Cape, CapeType } from './global';
 
 export class dbUtils {
   readonly pool: Pool;

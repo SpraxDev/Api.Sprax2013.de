@@ -1,11 +1,13 @@
-import request = require('request');
 import fs = require('fs');
-import path = require('path');
 import nCache = require('node-cache');
+import path = require('path');
+import request = require('request');
+
 import { Router, Request } from 'express';
-import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL } from '../utils';
-import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
+
 import { db } from '../index';
+import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
+import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL } from '../utils';
 
 const uuidCache = new nCache({ stdTTL: 62, useClones: false }), /* key:${name_lower};${at||''}, value: { id: string, name: string } | Error | null */
   userCache = new nCache({ stdTTL: 62, useClones: false }), /* key: profile.id, value: MinecraftUser | Error | null */

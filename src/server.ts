@@ -3,9 +3,10 @@ import morgan = require('morgan');
 
 import { minecraftExpressRouter } from './routes/minecraft';
 import { skindbExpressRouter } from './routes/skindb';
-import { ErrorBuilder, ApiError, HttpError } from './utils';
-import { cfg, webAccessLogStream } from '.';
 import { statusExpressRouter } from './routes/status';
+
+import { cfg, webAccessLogStream } from '.';
+import { ErrorBuilder, ApiError, HttpError } from './utils';
 
 export const app = express();
 app.disable('x-powered-by');
