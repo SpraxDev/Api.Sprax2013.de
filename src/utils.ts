@@ -66,7 +66,7 @@ export class Image {
 
   getColor(x: number, y: number): Color {
     if (x < 0 || y < 0) throw new Error('coordinates cannot be negative');
-    if (x >= this.img.info.width || y >= this.img.info.height) throw new Error('coordinates are out of bounds');
+    if (x >= this.img.info.width || y >= this.img.info.height) throw new Error(`coordinates(x=${x}, y=${y}) are out of bounds(width=${this.img.info.width}, height=${this.img.info.height})`);
 
     return {
       r: this.img.data[(x * 4) + (y * (this.img.info.width * 4))],
@@ -78,7 +78,7 @@ export class Image {
 
   setColor(x: number, y: number, color: Color): void {
     if (x < 0 || y < 0) throw new Error('coordinates cannot be negative');
-    if (x >= this.img.info.width || y >= this.img.info.height) throw new Error('coordinates are out of bounds');
+    if (x >= this.img.info.width || y >= this.img.info.height) throw new Error(`coordinates(x=${x}, y=${y}) are out of bounds(width=${this.img.info.width}, height=${this.img.info.height})`);
 
     this.img.data[(x * 4) + (y * (this.img.info.width * 4))] = color.r;
     this.img.data[(x * 4) + (y * (this.img.info.width * 4)) + 1] = color.g;
@@ -268,7 +268,7 @@ export class ApiError extends Error {
   static async log(msg: string, obj?: any, skipWebHook: boolean = false) {
     const stack = new Error().stack;
 
-    console.error('An error occurred:', msg);
+    console.error('An error occurred:', msg, process.env.NODE_ENV != 'production' ? stack : undefined);
 
     if (errorLogStream) {
       errorLogStream.write(`[${new Date().toUTCString()}] ${JSON.stringify({ msg, obj, stack })}` + EOL);
