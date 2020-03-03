@@ -222,20 +222,3 @@ export interface MinecraftNameHistoryElement {
   name: string;
   changedToAt?: number;
 }
-
-/* Database */
-// export enum ProfileRefreshPriority {
-//   SKINDB = 1,
-//   DEFAULT = 100
-// }
-// export function getProfileRefreshPriority(prioStr: string): number | null {
-//   if (isValidProfileRefreshPriority(prioStr)) {
-//     return (ProfileRefreshPriority as any)[prioStr];  //TODO: Find solution without 'as any'
-//   }
-
-//   return null;
-// }
-
-// export function isValidProfileRefreshPriority(prioStr: string): boolean {
-//   return prioStr in ProfileRefreshPriority;
-// }

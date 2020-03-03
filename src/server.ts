@@ -2,7 +2,6 @@ import express = require('express');
 import morgan = require('morgan');
 
 import { minecraftExpressRouter } from './routes/minecraft';
-import { skindbExpressRouter } from './routes/skindb';
 import { statusExpressRouter } from './routes/status';
 
 import { cfg, webAccessLogStream } from '.';
@@ -38,7 +37,6 @@ app.use('/hems', (_req, _res, next) => next(new ApiError(`Gone forever or as log
 
 app.use('/status', statusExpressRouter);
 app.use('/mc', minecraftExpressRouter);
-app.use('/skindb', skindbExpressRouter);
 
 /* Error handling */
 app.use((_req, _res, next) => {
