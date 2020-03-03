@@ -34,24 +34,24 @@ export let dbCfg: SpraxAPIdbCfg = {
     skindb: 'skindb'
   }
 };
-export const appVersion = JSON.parse(fs.readFileSync('./package.json', 'utf-8')).version;
+export const appVersion = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8')).version;
 
 /* Init configuration files */
 
-if (!fs.existsSync('./storage')) {
-  fs.mkdirSync('./storage');
+if (!fs.existsSync(path.join(process.cwd(), 'storage'))) {
+  fs.mkdirSync(path.join(process.cwd(), 'storage'));
 }
 
-if (fs.existsSync('./storage/config.json')) {
-  cfg = objectAssignDeep({}, cfg, JSON.parse(fs.readFileSync('./storage/config.json', 'utf-8'))); // Merge existing cfg into default one
+if (fs.existsSync(path.join(process.cwd(), 'storage', 'config.json'))) {
+  cfg = objectAssignDeep({}, cfg, JSON.parse(fs.readFileSync(path.join(process.cwd(), 'storage', 'config.json'), 'utf-8'))); // Merge existing cfg into default one
 }
-fs.writeFileSync('./storage/config.json', JSON.stringify(cfg, null, 2));  // Write current config (+ missing default values) to file
+fs.writeFileSync(path.join(process.cwd(), 'storage', 'config.json'), JSON.stringify(cfg, null, 2));  // Write current config (+ missing default values) to file
 
 // Repeat above for db.json
-if (fs.existsSync('./storage/db.json')) {
-  dbCfg = objectAssignDeep({}, dbCfg, JSON.parse(fs.readFileSync('./storage/db.json', 'utf-8')));
+if (fs.existsSync(path.join(process.cwd(), 'storage', 'db.json'))) {
+  dbCfg = objectAssignDeep({}, dbCfg, JSON.parse(fs.readFileSync(path.join(process.cwd(), 'storage', 'db.json'), 'utf-8')));
 }
-fs.writeFileSync('./storage/db.json', JSON.stringify(dbCfg, null, 2));
+fs.writeFileSync(path.join(process.cwd(), 'storage', 'db.json'), JSON.stringify(dbCfg, null, 2));
 
 /* Register shutdown hook */
 function shutdownHook() {

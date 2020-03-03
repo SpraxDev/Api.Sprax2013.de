@@ -1,5 +1,6 @@
 import request = require('request');
 import fs = require('fs');
+import path = require('path');
 import nCache = require('node-cache');
 import { Router, Request } from 'express';
 import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL } from '../utils';
@@ -79,8 +80,8 @@ userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) =>
   }
 });
 
-const SKIN_STEVE = fs.readFileSync('./resources/steve.png'),
-  SKIN_ALEX = fs.readFileSync('./resources/alex.png');
+const SKIN_STEVE = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'steve.png')),
+  SKIN_ALEX = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'steve.png'));
 
 const router = Router();
 export const minecraftExpressRouter = router;
