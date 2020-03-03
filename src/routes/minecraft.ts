@@ -212,6 +212,73 @@ router.all('/history/:user?', (req, res, next) => {
 });
 
 /* Skin Routes */
+router.all('/skin/:user?', (req, res, next) => {
+  restful(req, res, {
+    get: () => {
+      if (!req.params.user) return next(new ErrorBuilder().invalidParams('url', [{ param: 'user', condition: 'user.length > 0' }]));
+
+      const raw = typeof req.query.raw == 'string' ? toBoolean(req.query.raw) : false;
+      const download = typeof req.query.download == 'string' ? toBoolean(req.query.download) : false;
+      const mimeType = download ? 'application/octet-stream' : 'png';
+
+      getByUUID(req.params.user, req, (err, mcUser) => {
+        if (err) return next(err);
+        if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given user', true));
+
+        const skinURL = mcUser.getSecureSkinURL();
+
+        if (skinURL) {
+          request.get(skinURL, { encoding: null }, (err, httpRes, httpBody) => {
+            if (err) return next(err);
+
+            if (httpRes.statusCode == 200) {
+              if (raw) {
+                res.type(mimeType);
+                if (download) {
+                  res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
+                }
+
+                setCaching(res, true, true, 60).send(httpBody);
+              } else {
+                Image.fromImg(httpBody, (err, img) => {
+                  if (err || !img) return next(err);
+
+                  img.toCleanSkinBuffer((err, png) => {
+                    if (err) return next(err);
+
+                    res.type(mimeType);
+                    if (download) {
+                      res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
+                    }
+
+                    setCaching(res, true, true, 60).send(png);
+                  });
+                });
+              }
+            } else {
+              if (httpRes.statusCode != 404) ApiError.log(`${mcUser.skinURL} returned HTTP-Code ${httpRes.statusCode}`);
+
+              res.type(mimeType);
+              if (download) {
+                res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
+              }
+
+              setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
+            }
+          });
+        } else {
+          res.type(mimeType);
+          if (download) {
+            res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
+          }
+
+          setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
+        }
+      });
+    }
+  });
+});
+
 router.all('/skin/:skinArea/:user?', (req, res, next) => {
   const renderSkin = function (skin: Buffer, area: SkinArea, overlay: boolean, size: number, slim: boolean | null, callback: (err: Error | null, png: Buffer | null) => void): void {
     Image.fromImg(skin, (err, skinImg) => {
@@ -332,73 +399,6 @@ router.all('/skin/:skinArea/:user?', (req, res, next) => {
 
             setCaching(res, true, true, 60).send(png);
           });
-        }
-      });
-    }
-  });
-});
-
-router.all('/skin/:user?', (req, res, next) => {
-  restful(req, res, {
-    get: () => {
-      if (!req.params.user) return next(new ErrorBuilder().invalidParams('url', [{ param: 'user', condition: 'user.length > 0' }]));
-
-      const raw = typeof req.query.raw == 'string' ? toBoolean(req.query.raw) : false;
-      const download = typeof req.query.download == 'string' ? toBoolean(req.query.download) : false;
-      const mimeType = download ? 'application/octet-stream' : 'png';
-
-      getByUUID(req.params.user, req, (err, mcUser) => {
-        if (err) return next(err);
-        if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given user', true));
-
-        const skinURL = mcUser.getSecureSkinURL();
-
-        if (skinURL) {
-          request.get(skinURL, { encoding: null }, (err, httpRes, httpBody) => {
-            if (err) return next(err);
-
-            if (httpRes.statusCode == 200) {
-              if (raw) {
-                res.type(mimeType);
-                if (download) {
-                  res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
-                }
-
-                setCaching(res, true, true, 60).send(httpBody);
-              } else {
-                Image.fromImg(httpBody, (err, img) => {
-                  if (err || !img) return next(err);
-
-                  img.toCleanSkinBuffer((err, png) => {
-                    if (err) return next(err);
-
-                    res.type(mimeType);
-                    if (download) {
-                      res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
-                    }
-
-                    setCaching(res, true, true, 60).send(png);
-                  });
-                });
-              }
-            } else {
-              if (httpRes.statusCode != 404) ApiError.log(`${mcUser.skinURL} returned HTTP-Code ${httpRes.statusCode}`);
-
-              res.type(mimeType);
-              if (download) {
-                res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
-              }
-
-              setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
-            }
-          });
-        } else {
-          res.type(mimeType);
-          if (download) {
-            res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
-          }
-
-          setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
         }
       });
     }
