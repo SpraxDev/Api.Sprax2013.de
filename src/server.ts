@@ -18,8 +18,20 @@ if (process.env.NODE_ENV == 'production') {
   app.use(morgan('dev'));
 }
 
+// Default response headers
+app.use((_req, res, next) => {
+  res.set({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'User-Agent,Authorization,If-None-Match,Content-Type,If-Unmodified-Since',
+
+    'Cache-Control': 'public, s-maxage=30, max-age=30'
+  });
+
+  next();
+});
+
 /* Webserver routes */
-app.use('/mojang', (_req, _res, next) => next(new ApiError('Please use /mc instad of /mojang', 410)));  // Temporary
+app.use('/mojang', (_req, _res, next) => next(new ApiError('Please use /mc instead of /mojang', 410)));  // Temporary
 app.use('/hems', (_req, _res, next) => next(new ApiError(`Gone forever or as log as I desire`, 410)));  // Temporary
 
 app.use('/mc', minecraftExpressRouter);

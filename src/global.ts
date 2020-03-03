@@ -69,12 +69,18 @@ export enum CapeType {
   LABY_MOD = 'LABY_MOD'
 }
 
+export enum SkinArea {
+  HEAD = 'HEAD',
+  BUST = 'BUST',
+  BODY = 'BODY'
+}
+
 /* Image (utils) */
 export interface Color {
   readonly r: number;
   readonly g: number;
   readonly b: number;
-  readonly a: number;
+  readonly alpha: number;
 }
 
 /* Minecraft */
@@ -87,6 +93,8 @@ export class MinecraftUser {
   capeURL: string | null = null;
   textureValue: string | null = null;
   textureSignature: string | null = null;
+
+  modelSlim: boolean = false;
 
   nameHistory: MinecraftNameHistoryElement[];
   userAgent: UserAgent;
@@ -106,6 +114,7 @@ export class MinecraftUser {
         const json: MinecraftProfileTextureProperty = JSON.parse(Buffer.from(prop.value, 'base64').toString('utf-8'));
         this.skinURL = json.textures.SKIN?.url || null;
         this.capeURL = json.textures.CAPE?.url || null;
+        this.modelSlim = json.textures.SKIN?.metadata?.model == 'slim' || false;
       }
     }
   }
@@ -198,7 +207,10 @@ export interface MinecraftProfileTextureProperty {
   signatureRequired?: boolean,
   textures: {
     SKIN?: {
-      url: string
+      url: string,
+      metadata?: {
+        model?: 'slim'
+      }
     },
     CAPE?: {
       url: string

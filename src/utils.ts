@@ -19,6 +19,25 @@ export class Image {
     this.img = rgbaArr;
   }
 
+  static empty(width: number, height: number, callback: (err: Error | null, img: Image | null) => void): void {
+    sharp({
+      create: {
+        background: {
+          r: 0,
+          g: 0,
+          b: 0,
+          alpha: 0
+        },
+        channels: 4,
+        width,
+        height
+      }
+    }).raw()
+      .toBuffer({ resolveWithObject: true })
+      .then((res) => callback(null, new Image(res)))
+      .catch((err) => callback(err, null));
+  };
+
   static fromImg(img: string | Buffer, callback: (err: Error | null, rawImg: Image | null) => void): void {
     sharp(img)
       .ensureAlpha()
@@ -29,31 +48,42 @@ export class Image {
       .catch((err) => callback(err, null));
   }
 
-  toPngBuffer(callback: (err: Error, png: Buffer | null) => void): void {
-    sharp(this.img.data, {
+  toPngBuffer(callback: (err: Error | null, png: Buffer | null) => void, width?: number, height?: number): void {
+    const result = sharp(this.img.data, {
       raw: {
         channels: 4,
         width: this.img.info.width,
         height: this.img.info.height
       }
-    }).png()
-      .toBuffer((err, buffer, _info) => callback(err, buffer));
+    }).png();
+
+    if (width || height) {
+      result.resize(width || this.img.info.width, height || this.img.info.height, { kernel: 'nearest', fit: 'outside' });
+    }
+
+    result.toBuffer((err, buffer, _info) => callback(err, buffer));
   }
 
   getColor(x: number, y: number): Color {
+    if (x < 0 || y < 0) throw new Error('coordinates cannot be negative');
+    if (x >= this.img.info.width || y >= this.img.info.height) throw new Error('coordinates are out of bounds');
+
     return {
       r: this.img.data[(x * 4) + (y * (this.img.info.width * 4))],
       g: this.img.data[(x * 4) + (y * (this.img.info.width * 4)) + 1],
       b: this.img.data[(x * 4) + (y * (this.img.info.width * 4)) + 2],
-      a: this.img.data[(x * 4) + (y * (this.img.info.width * 4)) + 3]
+      alpha: this.img.data[(x * 4) + (y * (this.img.info.width * 4)) + 3]
     }
   }
 
   setColor(x: number, y: number, color: Color): void {
+    if (x < 0 || y < 0) throw new Error('coordinates cannot be negative');
+    if (x >= this.img.info.width || y >= this.img.info.height) throw new Error('coordinates are out of bounds');
+
     this.img.data[(x * 4) + (y * (this.img.info.width * 4))] = color.r;
     this.img.data[(x * 4) + (y * (this.img.info.width * 4)) + 1] = color.g;
     this.img.data[(x * 4) + (y * (this.img.info.width * 4)) + 2] = color.b;
-    this.img.data[(x * 4) + (y * (this.img.info.width * 4)) + 3] = color.a;
+    this.img.data[(x * 4) + (y * (this.img.info.width * 4)) + 3] = color.alpha;
   }
 
   drawImg(imgToDraw: Image, x: number, y: number): void {
@@ -75,8 +105,9 @@ export class Image {
         const newTargetX = targetX + i,
           newTargetY = targetY + j;
 
-        if (newTargetX <= this.img.info.width && newTargetY <= this.img.info.height) {
-          this.setColor(newTargetX, newTargetY, imgToDraw.getColor(subX + i, subY + j));
+        const color: Color = imgToDraw.getColor(subX + i, subY + j);
+        if (newTargetX <= this.img.info.width && newTargetY <= this.img.info.height && color.alpha > 0) {
+          this.setColor(newTargetX, newTargetY, color);
         }
       }
     }
@@ -88,8 +119,9 @@ export class Image {
         const newX = targetX + width - i - 1,
           newY = targetY + j;
 
-        if (newX <= this.img.info.width && newY <= this.img.info.height) {
-          this.setColor(newX, newY, imgToDraw.getColor(originX + i, originY + j));
+        const color = imgToDraw.getColor(originX + i, originY + j);
+        if (newX <= this.img.info.width && newY <= this.img.info.height && color.alpha > 0) {
+          this.setColor(newX, newY, color);
         }
       }
     }
@@ -110,11 +142,9 @@ export class Image {
    *
    * Creates an png Buffer to use
    */
-  toCleanSkin(callback: (err: Error | null, png: Buffer | null) => void): void {
-    this.upgradeSkin((err) => {
+  toCleanSkinBuffer(callback: (err: Error | null, png: Buffer | null) => void): void {
+    this.toCleanSkin((err) => {
       if (err) return callback(err, null);
-
-      this.removeUnusedSkinParts();
 
       this.toPngBuffer((err, png) => {
         if (err) return callback(err, null);
@@ -124,8 +154,25 @@ export class Image {
     });
   }
 
+  /**
+   * Upgrades the skin to 64x64px and remove unused parts
+   */
+  toCleanSkin(callback: (err: Error | null) => void): void {
+    this.upgradeSkin((err) => {
+      if (err) return callback(err);
+
+      this.removeUnusedSkinParts();
+
+      callback(null);
+    });
+  }
+
   hasSkinDimensions(): boolean {
     return this.img.info.width == 64 && (this.img.info.height == 64 || this.img.info.height == 32);
+  }
+
+  isSlimSkinModel(): boolean {
+    return this.getColor(55, 20).alpha == 0;
   }
 
   upgradeSkin(callback: (err: Error | null) => void): void {
@@ -177,7 +224,7 @@ export class Image {
     if (!this.hasSkinDimensions()) throw new Error('Image does not have valid skin dimensions');
     if (this.img.info.height != 64) throw new Error('Legacy skin dimensions are not supported');
 
-    const color: Color = { r: 0, g: 0, b: 0, a: 0 };
+    const color: Color = { r: 0, g: 0, b: 0, alpha: 0 };
 
     this.drawRect(0, 0, 8, 8, color);
     this.drawRect(24, 0, 16, 8, color);
@@ -410,6 +457,32 @@ export function restful(req: Request, res: Response, handlers: { [key: string]: 
   }
 }
 
+export function setCaching(res: Response, cacheResource: boolean = true, publicResource: boolean = true, duration?: number | 'immutable', proxyDuration?: number | undefined): Response {
+  let value = '';
+
+  if (cacheResource) {
+    value += publicResource ? 'public' : 'private';
+
+    if (duration) {
+      if (duration == 'immutable') {
+        value += ', immutable';
+      } else {
+        value += `, max-age=${duration}`;
+      }
+    }
+
+    if (proxyDuration) {
+      value += `, s-maxage=${proxyDuration}`;
+    } else if (typeof duration == 'number') {
+      value += `, s-maxage=${duration}`;
+    }
+  } else {
+    value = 'no-cache, no-store, must-revalidate';
+  }
+
+  return res.set('Cache-Control', value);
+}
+
 export function isUUID(str: string): boolean {
   if (typeof str !== 'string') return false;
 
@@ -437,6 +510,15 @@ export function toBoolean(input: string | number | boolean): boolean {
   }
 
   return false;
+}
+
+export function toInt(input: string | number | boolean): number | null {
+  if (input) {
+    if (typeof input == 'number') return input;
+    if (typeof input == 'string' && isNumber(input)) return parseInt(input);
+  }
+
+  return null;
 }
 
 /**

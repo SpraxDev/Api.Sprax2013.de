@@ -2,8 +2,8 @@ import request = require('request');
 import fs = require('fs');
 import nCache = require('node-cache');
 import { Router, Request } from 'express';
-import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError } from '../utils';
-import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType } from '../global';
+import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt } from '../utils';
+import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
 import { db } from '../index';
 
 const uuidCache = new nCache({ stdTTL: 62, useClones: false }), /* key:${name_lower};${at||''}, value: { id: string, name: string } | Error | null */
@@ -28,7 +28,7 @@ userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) =>
               img.toPngBuffer((err, orgSkin) => {
                 if (err || !orgSkin) return ApiError.log('Could not create png-Buffer from image', { skinURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
 
-                img.toCleanSkin((err, cleanSkin) => {
+                img.toCleanSkinBuffer((err, cleanSkin) => {
                   if (err || !cleanSkin) return ApiError.log('Could not create cleanSkin-Buffer from image', { skinURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
 
                   db.addSkin(orgSkin, cleanSkin, skinURL, value.textureValue, value.textureSignature, value.userAgent, (err, skin) => {
@@ -86,13 +86,13 @@ const router = Router();
 export const minecraftExpressRouter = router;
 
 // Turn :user into uuid (without hyphenes)
-router.param('user', (req, res, next, value, name) => {
+router.param('user', (req, _res, next, value, name) => {
   if (typeof value != 'string') return next(new ErrorBuilder().invalidParams('url', [{ param: 'user', condition: 'Is string' }]));
 
   if (value.length <= 16) {
     let at: string | null = null;
     if (req.query.at) {
-      if (!(/^\d+$/.test(req.query.at))) return next(new ErrorBuilder().invalidParams('query', [{ param: 'at', condition: 'Is numeric string (0-9)' }]));
+      if (!isNumber(req.query.at)) return next(new ErrorBuilder().invalidParams('query', [{ param: 'at', condition: 'Is numeric string (0-9)' }]));
       at = req.query.at;
     }
 
@@ -121,7 +121,25 @@ router.param('user', (req, res, next, value, name) => {
   }
 });
 
-router.param('capeType', (req, res, next, value, name) => {
+router.param('skinArea', (req, _res, next, value, name) => {
+  if (typeof value != 'string') return next(new ErrorBuilder().invalidParams('url', [{ param: 'skinArea', condition: 'Is string' }]));
+
+  let skinArea: string | null = null;
+
+  for (const key in SkinArea) {
+    if (key == value.toUpperCase()) {
+      skinArea = key;
+      break;
+    }
+  }
+
+  if (!skinArea) return next(new ErrorBuilder().invalidParams('url', [{ param: 'skinArea', condition: `Equal (ignore case) one of the following: ${Object.keys(SkinArea).join(', ')}` }]));
+
+  req.params[name] = skinArea;
+  next();
+});
+
+router.param('capeType', (req, _res, next, value, name) => {
   if (typeof value != 'string') return next(new ErrorBuilder().invalidParams('url', [{ param: 'capeType', condition: 'Is string' }]));
 
   let capeType: string | null = null;
@@ -133,13 +151,34 @@ router.param('capeType', (req, res, next, value, name) => {
     }
   }
 
-  if (!capeType) return next(new ErrorBuilder().invalidParams('url', [{ param: 'capeType', condition: `capeType equals (ignore case) one of the following: ${Object.keys(CapeType).join(', ')}` }]));
+  if (!capeType) return next(new ErrorBuilder().invalidParams('url', [{ param: 'capeType', condition: `Equal (ignore case) one of the following: ${Object.keys(CapeType).join(', ')}` }]));
 
   req.params[name] = capeType;
   next();
 });
 
 /* Account Routes */
+router.all('/uuid/:name?', (req, res, next) => {
+  restful(req, res, {
+    get: () => {
+      if (!req.params.name) return next(new ErrorBuilder().invalidParams('url', [{ param: 'name', condition: 'name.length > 0' }]));
+
+      let at;
+      if (req.query.at) {
+        if (!isNumber(req.query.at)) return next(new ErrorBuilder().invalidParams('query', [{ param: 'at', condition: 'Is numeric string (0-9)' }]));
+        at = req.query.at;
+      }
+
+      getByUsername(req.params.name, at, (err, apiRes) => {
+        if (err) return next(err);
+        if (!apiRes) return next(new ErrorBuilder().notFound('Profile for given user', true));
+
+        setCaching(res, true, true, 60).send(apiRes);
+      });
+    }
+  });
+});
+
 router.all('/profile/:user?', (req, res, next) => {
   restful(req, res, {
     get: () => {
@@ -150,28 +189,7 @@ router.all('/profile/:user?', (req, res, next) => {
         if (err) return next(err);
         if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given user', true));
 
-        return res.send(raw ? mcUser.toOriginal() : mcUser.toCleanJSON());
-      });
-    }
-  });
-});
-
-router.all('/uuid/:name?', (req, res, next) => {
-  restful(req, res, {
-    get: () => {
-      if (!req.params.name) return next(new ErrorBuilder().invalidParams('url', [{ param: 'name', condition: 'name.length > 0' }]));
-
-      let at;
-      if (req.query.at) {
-        if (!(/^\d+$/.test(req.query.at))) return next(new ErrorBuilder().invalidParams('query', [{ param: 'at', condition: 'Is numeric string (0-9)' }]));
-        at = req.query.at;
-      }
-
-      getByUsername(req.params.name, at, (err, apiRes) => {
-        if (err) return next(err);
-        if (!apiRes) return next(new ErrorBuilder().notFound('Profile for given user', true));
-
-        res.send(apiRes);
+        return setCaching(res, true, true, 60).send(raw ? mcUser.toOriginal() : mcUser.toCleanJSON());
       });
     }
   });
@@ -187,14 +205,139 @@ router.all('/history/:user?', (req, res, next) => {
         if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given user', true));
         if (!mcUser.nameHistory) return next(new ErrorBuilder().notFound('Name history for given user', true));
 
-        res.send(mcUser.nameHistory);
+        setCaching(res, true, true, 60).send(mcUser.nameHistory);
       });
     }
   });
 });
 
 /* Skin Routes */
-// TODO Skin renders anbieten (head, body, front, 3d, ...)
+router.all('/skin/:skinArea/:user?', (req, res, next) => {
+  const renderSkin = function (skin: Buffer, area: SkinArea, overlay: boolean, size: number, slim: boolean | null, callback: (err: Error | null, png: Buffer | null) => void): void {
+    Image.fromImg(skin, (err, skinImg) => {
+      if (err || !skinImg) return callback(err, null);
+
+      skinImg.toCleanSkin((err) => {
+        if (err) return callback(err, null);
+
+        const dimensions: { x: number, y: number } =
+          area == SkinArea.HEAD ? { x: 8, y: 8 } :
+            area == SkinArea.BUST ? { x: 14, y: 20 } : { x: 14, y: 32 };
+
+        Image.empty(dimensions.x, dimensions.y, (err, img) => {
+          if (err || !img) return callback(err, null);
+
+          if (typeof slim != 'boolean') slim = skinImg.isSlimSkinModel();
+
+          const armWidth = slim ? 3 : 4,
+            xOffset = slim ? 1 : 0;
+
+          if (area == SkinArea.HEAD) {
+            img.drawSubImg(skinImg, 8, 8, 8, 8, 0, 0);                        // Head
+          } else if (area == SkinArea.BUST || area == SkinArea.BODY) {
+            img.drawSubImg(skinImg, 8, 8, 8, 8, 4 - xOffset, 0);              // Head
+
+            img.drawSubImg(skinImg, 20, 20, 8, 12, 4 - xOffset, 8);           // Body
+            img.drawSubImg(skinImg, 44, 20, armWidth, 12, 0, 8);              // Right arm
+            img.drawSubImg(skinImg, 36, 52, armWidth, 12, 12 - xOffset, 8);   // Left arm
+          }
+
+          if (area == SkinArea.BODY) {
+            img.drawSubImg(skinImg, 4, 20, 4, 12, 4 - xOffset, 20);           // Right leg
+            img.drawSubImg(skinImg, 20, 52, 4, 12, 8 - xOffset, 20);          // Left leg
+          }
+
+          if (overlay) {
+            if (area == SkinArea.HEAD) {
+              img.drawSubImg(skinImg, 40, 8, 8, 8, 0, 0);                     // Head (overlay)
+            } else if (area == SkinArea.BUST || area == SkinArea.BODY) {
+              img.drawSubImg(skinImg, 40, 8, 8, 8, 4 - xOffset, 0);           // Head (overlay)
+
+              img.drawSubImg(skinImg, 20, 36, 8, 12, 4 - xOffset, 8);         // Body (overlay)
+              img.drawSubImg(skinImg, 44, 36, armWidth, 12, 0, 8);            // Right arm (overlay)
+              img.drawSubImg(skinImg, 52, 52, armWidth, 12, 12 - xOffset, 8); // Left arm (overlay)
+            }
+
+            if (area == SkinArea.BODY) {
+              img.drawSubImg(skinImg, 4, 36, 4, 12, 4 - xOffset, 20);         // Right leg (overlay)
+              img.drawSubImg(skinImg, 4, 52, 4, 12, 8 - xOffset, 20);         // Left leg (overlay)
+            }
+          }
+
+          img.toPngBuffer((err, png) => callback(err, png), size, size);
+        });
+      });
+    });
+  };
+
+  restful(req, res, {
+    get: () => {
+      if (!req.params.user) return next(new ErrorBuilder().invalidParams('url', [{ param: 'user', condition: 'user.length > 0' }]));
+
+      const overlay: boolean = typeof req.query.overlay == 'string' ? toBoolean(req.query.overlay) : true;
+      // const render3D: boolean = typeof req.query['3d'] == 'string' ? toBoolean(req.query['3d']) : true;
+      const size: number | null = typeof req.query.size == 'string' ? toInt(req.query.size) : 512;
+
+      if (!size || size < 8 || size > 1024) return next(new ErrorBuilder().invalidParams('query', [{ param: 'size', condition: 'size >= 8 and size <= 1024' }]));
+
+      const skinArea = req.params.skinArea as SkinArea;
+
+      const download: boolean = typeof req.query.download == 'string' ? toBoolean(req.query.download) : false;
+      const mimeType: string = download ? 'application/octet-stream' : 'png';
+
+      getByUUID(req.params.user, req, (err, mcUser) => {
+        if (err) return next(err);
+        if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given user', true));
+
+        const skinURL = mcUser.getSecureSkinURL();
+
+        if (skinURL) {
+          request.get(skinURL, { encoding: null }, (err, httpRes, httpBody) => {
+            if (err) return next(err);
+
+            if (httpRes.statusCode == 200) {
+              renderSkin(httpBody, skinArea, overlay, size, mcUser.modelSlim, (err, png) => {
+                if (err || !png) return next(err);
+
+                res.type(mimeType);
+                if (download) {
+                  res.set('Content-Disposition', `attachment;filename=${mcUser.name}-body.png`);
+                }
+
+                setCaching(res, true, true, 60).send(png);
+              });
+            } else {
+              if (httpRes.statusCode != 404) ApiError.log(`${mcUser.skinURL} returned HTTP-Code ${httpRes.statusCode}`);
+
+              renderSkin(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE, skinArea, overlay, size, mcUser.modelSlim, (err, png) => {
+                if (err || !png) return next(err);
+
+                res.type(mimeType);
+                if (download) {
+                  res.set('Content-Disposition', `attachment;filename=${mcUser.name}-body.png`);
+                }
+
+                setCaching(res, true, true, 60).send(png);
+              });
+            }
+          });
+        } else {
+          renderSkin(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE, skinArea, overlay, size, null, (err, png) => {
+            if (err || !png) return next(err);
+
+            res.type(mimeType);
+            if (download) {
+              res.set('Content-Disposition', `attachment;filename=${mcUser.name}-body.png`);
+            }
+
+            setCaching(res, true, true, 60).send(png);
+          });
+        }
+      });
+    }
+  });
+});
+
 router.all('/skin/:user?', (req, res, next) => {
   restful(req, res, {
     get: () => {
@@ -221,12 +364,12 @@ router.all('/skin/:user?', (req, res, next) => {
                   res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
                 }
 
-                res.send(httpBody);
+                setCaching(res, true, true, 60).send(httpBody);
               } else {
                 Image.fromImg(httpBody, (err, img) => {
                   if (err || !img) return next(err);
 
-                  img.toCleanSkin((err, png) => {
+                  img.toCleanSkinBuffer((err, png) => {
                     if (err) return next(err);
 
                     res.type(mimeType);
@@ -234,7 +377,7 @@ router.all('/skin/:user?', (req, res, next) => {
                       res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
                     }
 
-                    res.send(png);
+                    setCaching(res, true, true, 60).send(png);
                   });
                 });
               }
@@ -246,7 +389,7 @@ router.all('/skin/:user?', (req, res, next) => {
                 res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
               }
 
-              res.send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
+              setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
             }
           });
         } else {
@@ -255,7 +398,7 @@ router.all('/skin/:user?', (req, res, next) => {
             res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
           }
 
-          res.send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
+          setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
         }
       });
     }
@@ -290,7 +433,7 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
                 res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
               }
 
-              res.send(httpBody);
+              setCaching(res, true, true, 60).send(httpBody);
             } else {
               if (httpRes.statusCode != 404) ApiError.log(`${mcUser.skinURL} returned HTTP-Code ${httpRes.statusCode}`);
 
@@ -313,7 +456,7 @@ router.all('/servers/blocked', (req, res, next) => {  // TODO: return object (ke
         if (err) return next(err);
         if (!hashes) return next(new ErrorBuilder().notFound('List of blocked servers', true));
 
-        res.send(hashes);
+        setCaching(res, true, true, 120).send(hashes);
       });
     }
   });
