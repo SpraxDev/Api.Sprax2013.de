@@ -5,6 +5,7 @@ import { minecraftExpressRouter } from './routes/minecraft';
 import { skindbExpressRouter } from './routes/skindb';
 import { ErrorBuilder, ApiError, HttpError } from './utils';
 import { cfg, webAccessLogStream } from '.';
+import { statusExpressRouter } from './routes/status';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -34,6 +35,7 @@ app.use((_req, res, next) => {
 app.use('/mojang', (_req, _res, next) => next(new ApiError('Please use /mc instead of /mojang', 410)));  // Temporary
 app.use('/hems', (_req, _res, next) => next(new ApiError(`Gone forever or as log as I desire`, 410)));  // Temporary
 
+app.use('/status', statusExpressRouter);
 app.use('/mc', minecraftExpressRouter);
 app.use('/skindb', skindbExpressRouter);
 
