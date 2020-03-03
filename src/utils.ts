@@ -495,6 +495,32 @@ export function addHyphensToUUID(str: string): string {
   return str.replace(/-/g, '').replace(UUID_PATTERN_ADD_DASH, '$1-$2-$3-$4-$5');
 }
 
+/**
+ * Only looks for http(s) protocol
+ */
+export function isHttpURL(str: string): boolean {
+  return /^(http|https):\/\/[^]+$/.test(str.toLowerCase());
+}
+
+export function getFileNameFromURL(str: string, stripFileExtension: boolean = false): string {
+  const url = new URL(str);
+
+  let fileName = url.pathname.substring(url.pathname.lastIndexOf('/') + 1);
+
+  if (stripFileExtension) {
+    const i = fileName.lastIndexOf('.');
+
+    if (i != -1) {
+      return fileName.substring(0, i);
+    }
+  }
+
+  return fileName;
+}
+
+/**
+ * Checks if string only contains numbers (negative numbers are not allowed)
+ */
 export function isNumber(str: string): boolean {
   if (typeof str == 'number') return !Number.isNaN(str) && Number.isFinite(str);
   if (typeof str != 'string') return false;
