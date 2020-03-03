@@ -113,6 +113,9 @@ export class Image {
     }
   }
 
+  /**
+   * @author NudelErde (https://github.com/NudelErde/)
+   */
   drawSubImgFlipped(imgToDraw: Image, originX: number, originY: number, width: number, height: number, targetX: number, targetY: number): void {
     for (let i = 0; i < width; i++) {
       for (let j = 0; j < height; j++) {
