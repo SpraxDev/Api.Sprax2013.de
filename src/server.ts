@@ -13,7 +13,7 @@ app.set('trust proxy', cfg.trustProxy);
 /* Logging webserver request */
 app.use(morgan(cfg.logging.accessLogFormat, { stream: webAccessLogStream }));
 if (process.env.NODE_ENV == 'production') {
-  app.use(morgan('dev', { skip: (req, res) => res.statusCode < 400 || req.originalUrl.startsWith('/.well-known/acme-challenge/') }));
+  app.use(morgan('dev', { skip: (_req, res) => res.statusCode < 500 }));
 } else {
   app.use(morgan('dev'));
 }
