@@ -85,10 +85,10 @@ userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) =>
 const SKIN_STEVE = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'steve.png')),
   SKIN_ALEX = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'steve.png'));
 
+const whitelistedSkinURLs = ['//textures.minecraft.net/texture/'];
+
 const router = Router();
 export const minecraftExpressRouter = router;
-
-const whitelistedSkinURLs = ['//textures.minecraft.net/texture/'];
 
 // Turn :user into uuid (without hyphenes)
 router.param('user', (req, _res, next, value, name) => {
