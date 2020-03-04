@@ -1,11 +1,17 @@
-# Api.Sprax2013.de [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=Sprax2013_Api.Sprax2013.de&metric=ncloc)](https://sonarcloud.io/dashboard?id=Sprax2013_Api.Sprax2013.de) [![Discord-Chat](https://img.shields.io/discord/344982818863972352?label=Discord&logo=discord&logoColor=white)](https://sprax.me/discord)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Sprax2013_Api.Sprax2013.de&metric=alert_status)](https://sonarcloud.io/dashboard?id=Sprax2013_Api.Sprax2013.de) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Sprax2013_Api.Sprax2013.de&metric=security_rating)](https://sonarcloud.io/dashboard?id=Sprax2013_Api.Sprax2013.de) [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=Sprax2013_Api.Sprax2013.de&metric=duplicated_lines_density)](https://sonarcloud.io/dashboard?id=Sprax2013_Api.Sprax2013.de)
+# Api.Sprax2013.de ![SpraxAPI Logo](https://cdn.discordapp.com/attachments/611940958568841227/684744018990727178/SpraxAPI-48px.png)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Sprax2013_Api.Sprax2013.de&metric=security_rating)](https://sonarcloud.io/dashboard?id=Sprax2013_Api.Sprax2013.de)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=Sprax2013_Api.Sprax2013.de&metric=ncloc)](https://sonarcloud.io/dashboard?id=Sprax2013_Api.Sprax2013.de)
+[![Discord-Chat](https://img.shields.io/discord/344982818863972352?label=Discord&logo=discord&logoColor=white)](https://sprax.me/discord)
 
-Api.Sprax2013.de or *SpraxAPI* for short is a collection of different APIs used by and for my projects.
+
+Api.Sprax2013.de or *SpraxAPI* for short is a collection of different public APIs that everyone can use.
+
+SpraxAPI started as a private API in PHP to ensure my projects keep working without hitting the rate limit for some APIs. As soon as I discoverd [Node.js](https://nodejs.org/), I quickly felt confident that my API can handle requests from the public (performance and security). And currently servers over 2,000,000 request a month (as of the 4th May 2020).
 
 You currently can request all sort of Minecraft related things without hitting any rate limitations.
 My API achieves this thanks to CloudFlare and internal caching of responses. Additionally, you can request processed version of this data. For example Skins upgraded to the 1.8 format (64x64 pixels) or a rendered Version of it (3D coming soon!).
 
+The API is currently under a complete recode to improve readability and maintainability. This allows me to add new features more easily and reduce duplicate code. Thanks to TypeScript I can even reduce the amount of errors in production. I took this opportunity to introduce breaking changes (if you are new to SpraxAPI, don't worry: No more breaking changes will be introduced).
 
 ### Another API for Minecraft?
 Yes, but did you use any of the known other ones? Only allowing UUIDs, caching for multiple minutes not allowing for accurate data in some use cases? Or even response times and raw body size?
