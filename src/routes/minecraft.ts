@@ -575,6 +575,8 @@ function getByUsername(username: string, at: number | string | null, callback: (
 }
 
 function getByUUID(uuid: string, req: Request, callback: (err: Error | null, user: MinecraftUser | null) => void): void {
+  uuid = uuid.replace(/-/g, '');
+
   const cacheKey = uuid.toLowerCase();
   const cacheValue: MinecraftUser | Error | null | undefined = userCache.get(cacheKey);
 
