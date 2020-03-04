@@ -25,6 +25,7 @@ export let cfg: SpraxAPIcfg = {
   }
 };
 export let dbCfg: SpraxAPIdbCfg = {
+  enabled: false,
   host: '127.0.0.1',
   port: 5432,
   user: 'user007',
@@ -62,7 +63,7 @@ function shutdownHook() {
   const ready = async () => {
     try {
       if (db) {
-        await db.pool.end();
+        await db.shutdown();
       }
     } catch (ex) {
       console.error(ex);
@@ -91,7 +92,7 @@ export const webAccessLogStream = rfs.createStream('access.log', { interval: '1d
   errorLogStream = rfs.createStream('error.log', { interval: '1d', maxFiles: 90, path: path.join(process.cwd(), 'logs', 'error') });
 
 /* Start webserver (and test database connection) */
-db.pool.query('SELECT NOW();', (err, _res) => {
+db.isReady((err) => {
   if (err) {
     console.error(`Database is not ready! (${err.message})`);
     process.exit(2);
