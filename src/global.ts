@@ -19,6 +19,7 @@ export interface SpraxAPIcfg {
 }
 
 export interface SpraxAPIdbCfg {
+  readonly enabled: boolean;
   readonly host: string;
   readonly port: number;
   readonly user: string;

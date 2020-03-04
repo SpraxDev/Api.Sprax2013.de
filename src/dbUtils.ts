@@ -4,25 +4,29 @@ import { generateHash, ApiError } from './utils';
 import { SpraxAPIdbCfg, UserAgent, Skin, MinecraftUser, Cape, CapeType, MinecraftProfile } from './global';
 
 export class dbUtils {
-  readonly pool: Pool;
+  private readonly pool: Pool | null = null;
 
   constructor(dbCfg: SpraxAPIdbCfg) {
-    this.pool = new Pool({
-      host: dbCfg.host,
-      port: dbCfg.port,
-      user: dbCfg.user,
-      password: dbCfg.password,
-      database: dbCfg.databases.skindb,
-      ssl: dbCfg.ssl ? { rejectUnauthorized: false } : false,
-      max: dbCfg.connectionPoolSize
-    });
+    if (dbCfg.enabled) {
+      this.pool = new Pool({
+        host: dbCfg.host,
+        port: dbCfg.port,
+        user: dbCfg.user,
+        password: dbCfg.password,
+        database: dbCfg.databases.skindb,
+        ssl: dbCfg.ssl ? { rejectUnauthorized: false } : false,
+        max: dbCfg.connectionPoolSize
+      });
 
-    this.pool.on('error', (err, _client) => {
-      console.error('Unexpected error on idle client:', err);
-    });
+      this.pool.on('error', (err, _client) => {
+        console.error('Unexpected error on idle client:', err);
+      });
+    }
   }
 
   updateUser(mcUser: MinecraftUser, callback: (err: Error | null) => void): void {
+    if (this.pool == null) return callback(null);
+
     if (mcUser.nameHistory.length <= 0) return callback(new Error('apiRes may not be an empty array'));
 
     this.pool.connect((err, client, done) => {
@@ -69,13 +73,18 @@ export class dbUtils {
   }
 
   getProfile(id: string, callback: (err: Error | null, profile: MinecraftProfile | null) => void): void {
+    if (this.pool == null) return callback(null, null);
+
     this.pool.query(`SELECT raw_json FROM "profiles" WHERE id =$1 AND raw_json IS NOT NULL AND last_update >= NOW() - INTERVAL '120 seconds';`, [id], (err, res) => {
       if (err) return callback(err, null);
 
       callback(null, res.rows.length > 0 ? res.rows[0].raw_json : null);
     });
   }
+
   getUserAgent(name: string, internal: boolean, callback: (err: Error | null, userAgent: UserAgent | null) => void): void {
+    if (this.pool == null) return callback(null, null);
+
     this.pool.connect((err, client, done) => {
       if (err) return callback(err, null);
 
@@ -111,6 +120,8 @@ export class dbUtils {
   }
 
   addSkin(originalPng: Buffer, cleanPng: Buffer, originalURL: string, textureValue: string | null, textureSignature: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null) => void): void {
+    if (this.pool == null) return callback(null, null);
+
     const cleanHash = generateHash(cleanPng);
 
     this.pool.connect((err, client, done) => {
@@ -189,6 +200,8 @@ export class dbUtils {
   }
 
   addSkinToUserHistory(mcUser: MinecraftUser, skin: Skin, callback: (err: Error | null) => void): void {
+    if (this.pool == null) return callback(null);
+
     this.pool.connect((err, client, done) => {
       if (err) return callback(err);
 
@@ -224,6 +237,8 @@ export class dbUtils {
   }
 
   addCape(capePng: Buffer, type: CapeType, originalURL: string, textureValue: string | null, textureSignature: string | null, userAgent: UserAgent, callback: (err: Error | null, cape: Cape | null) => void): void {
+    if (this.pool == null) return callback(null, null);
+
     const cleanHash = generateHash(capePng);
 
     this.pool.connect((err, client, done) => {
@@ -304,6 +319,8 @@ export class dbUtils {
   }
 
   addCapeToUserHistory(mcUser: MinecraftUser, cape: Cape, callback: (err: Error | null) => void): void {
+    if (this.pool == null) return callback(null);
+
     this.pool.connect((err, client, done) => {
       if (err) return callback(err);
 
@@ -337,6 +354,24 @@ export class dbUtils {
           });
       });
     });
+  }
+
+  /* Helper */
+
+  isAvailable(): boolean {
+    return this.pool != null;
+  }
+
+  isReady(callback: (err: Error | null) => void): void {
+    if (this.pool == null) return callback(null);
+
+    this.pool.query('SELECT NOW();', (err, _res) => callback(err));
+  }
+
+  shutdown(): Promise<void> {
+    if (this.pool == null) return new Promise((resolve, _reject) => { resolve(); });
+
+    return this.pool.end();
   }
 
   private shouldAbortTransaction(client: PoolClient, done: (release?: any) => void, err: Error): boolean {

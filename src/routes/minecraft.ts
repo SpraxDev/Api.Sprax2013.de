@@ -17,6 +17,8 @@ const profileRequestQueue: { key: string, callback: (err: Error | null, user: Mi
   uuidRequestQueue: { key: string, callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void }[] = [];
 
 userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) => {
+  if (!db.isAvailable()) return;
+
   if (value instanceof MinecraftUser) {
     db.updateUser(value, (err) => {
       if (err) return ApiError.log('Could not update user in database', { profile: value.id, stack: err.stack });
@@ -505,11 +507,11 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
             } else {
               if (httpRes.statusCode != 404) ApiError.log(`${mcUser.skinURL} returned HTTP-Code ${httpRes.statusCode}`);
 
-              return next(new ErrorBuilder().notFound());
+              return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
             }
           });
         } else {
-          return next(new ErrorBuilder().notFound('CapeURL for given CapeType', true));
+          return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
         }
       });
     }
@@ -802,6 +804,8 @@ function getBlockedServers(callback: (err: Error | null, hashes: string[] | null
 }
 
 function getUserAgent(req: Request | null, callback: (err: Error | null, userAgent: UserAgent | null) => void): void {
+  if (!db.isAvailable()) return callback(null, { id: -1, name: 'SpraxAPI', internal: true });
+
   const agentName = req && req.headers['user-agent'] ? req.headers['user-agent'] : 'SpraxAPI',
     isInternalAgent = req ? !req.headers['user-agent'] : true;
 
