@@ -144,7 +144,7 @@ router.param('user', (req, _res, next, value, name) => {
   } else if (isUUID(value)) {
     getByUUID(value, req, (err, mcUser) => {
       if (err) return next(err);
-      if (!mcUser) return next(new ErrorBuilder().invalidParams('url', [{ param: 'user', condition: 'Profile for given UUID' }]));
+      if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given uuid'));
 
       req.params[name] = mcUser.id;
       return next();
