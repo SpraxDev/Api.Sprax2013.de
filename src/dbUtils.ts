@@ -68,31 +68,31 @@ export class dbUtils {
     });
   }
 
-  getUserAgent(name: string, internal: boolean, callback: (err: Error | null, userAgent?: UserAgent) => void): void {
+  getUserAgent(name: string, internal: boolean, callback: (err: Error | null, userAgent: UserAgent | null) => void): void {
     this.pool.connect((err, client, done) => {
-      if (err) return callback(err);
+      if (err) return callback(err, null);
 
       client.query('BEGIN', (err) => {
-        if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+        if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
 
         client.query(`SELECT * FROM user_agents WHERE name =$1 AND internal =$2;`, [name, internal], (err, res) => {
-          if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+          if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
 
           if (res.rows.length > 0) {
             client.query('COMMIT', (err) => {
               done();
-              if (err) return callback(err);
+              if (err) return callback(err, null);
 
               callback(null, { id: res.rows[0].id, name: res.rows[0].name, internal: res.rows[0].internal });
             });
           } else {
             client.query(`INSERT INTO user_agents(name,internal) VALUES($1,$2) RETURNING *;`,
               [name, internal], (err, res) => {
-                if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+                if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
 
                 client.query('COMMIT', (err) => {
                   done();
-                  if (err) return callback(err);
+                  if (err) return callback(err, null);
 
                   callback(null, { id: res.rows[0].id, name: res.rows[0].name, internal: res.rows[0].internal });
                 });
