@@ -273,7 +273,7 @@ export class ApiError extends Error {
   static async log(msg: string, obj?: any, skipWebHook: boolean = false) {
     const stack = new Error().stack;
 
-    console.error('An error occurred:', msg, obj, process.env.NODE_ENV != 'production' ? stack : '');
+    console.error('An error occurred:', msg, typeof obj != 'undefined' ? obj : '', process.env.NODE_ENV != 'production' ? stack : '');
 
     if (errorLogStream) {
       errorLogStream.write(`[${new Date().toUTCString()}] ${JSON.stringify({ msg, obj, stack })}` + EOL);
