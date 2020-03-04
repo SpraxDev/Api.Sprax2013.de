@@ -672,7 +672,7 @@ function getByUUID(uuid: string, req: Request, callback: (err: Error | null, use
                 getUserAgent(req, (err, userAgent) => {
                   if (err || !userAgent) return callback(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`), null);
 
-                  const mcUser = profile && nameHistory ? new MinecraftUser(profile, nameHistory, userAgent, true) : null;
+                  const mcUser = nameHistory ? new MinecraftUser(profile, nameHistory, userAgent, true) : null;
 
                   if (mcUser) {
                     uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
