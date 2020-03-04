@@ -1,7 +1,7 @@
 import { Pool, PoolClient } from 'pg';
 
 import { generateHash, ApiError } from './utils';
-import { SpraxAPIdbCfg, UserAgent, Skin, MinecraftUser, Cape, CapeType } from './global';
+import { SpraxAPIdbCfg, UserAgent, Skin, MinecraftUser, Cape, CapeType, MinecraftProfile } from './global';
 
 export class dbUtils {
   readonly pool: Pool;
@@ -68,6 +68,13 @@ export class dbUtils {
     });
   }
 
+  getProfile(id: string, callback: (err: Error | null, profile: MinecraftProfile | null) => void): void {
+    this.pool.query(`SELECT raw_json FROM "profiles" WHERE id =$1 AND raw_json IS NOT NULL AND last_update >= NOW() - INTERVAL '120 seconds';`, [id], (err, res) => {
+      if (err) return callback(err, null);
+
+      callback(null, res.rows.length > 0 ? res.rows[0].raw_json : null);
+    });
+  }
   getUserAgent(name: string, internal: boolean, callback: (err: Error | null, userAgent: UserAgent | null) => void): void {
     this.pool.connect((err, client, done) => {
       if (err) return callback(err, null);
