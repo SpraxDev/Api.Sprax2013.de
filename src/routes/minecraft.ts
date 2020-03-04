@@ -9,8 +9,8 @@ import { db } from '../index';
 import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
 import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL } from '../utils';
 
-const uuidCache = new nCache({ stdTTL: 62, useClones: false }), /* key:${name_lower};${at||''}, value: { id: string, name: string } | Error | null */
-  userCache = new nCache({ stdTTL: 62, useClones: false }), /* key: profile.id, value: MinecraftUser | Error | null */
+const uuidCache = new nCache({ stdTTL: 64, useClones: false }), /* key:${name_lower};${at||''}, value: { id: string, name: string } | Error | null */
+  userCache = new nCache({ stdTTL: 64, useClones: false }), /* key: profile.id, value: MinecraftUser | Error | null */
   userAgentCache = new nCache({ stdTTL: 10 * 60, useClones: false }) /* key: ${userAgent};${internal(boolean)}, value: UserAgent */;
 
 userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) => {
@@ -206,7 +206,7 @@ router.all('/uuid/:name?', (req, res, next) => {
         if (err) return next(err);
         if (!apiRes) return next(new ErrorBuilder().notFound('Profile for given user', true));
 
-        setCaching(res, true, true, 60).send(apiRes);
+        setCaching(res, true, true, 65).send(apiRes);
       });
     }
   });
@@ -222,7 +222,7 @@ router.all('/profile/:user?', (req, res, next) => {
         if (err) return next(err);
         if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given user', true));
 
-        return setCaching(res, true, true, 60).send(raw ? mcUser.toOriginal() : mcUser.toCleanJSON());
+        return setCaching(res, true, true, 65).send(raw ? mcUser.toOriginal() : mcUser.toCleanJSON());
       });
     }
   });
@@ -238,7 +238,7 @@ router.all('/history/:user?', (req, res, next) => {
         if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given user', true));
         if (!mcUser.nameHistory) return next(new ErrorBuilder().notFound('Name history for given user', true));
 
-        setCaching(res, true, true, 60).send(mcUser.nameHistory);
+        setCaching(res, true, true, 65).send(mcUser.nameHistory);
       });
     }
   });
@@ -281,25 +281,25 @@ router.all('/skin/:user?', (req, res, next) => {
                       if (err) return next(err);
 
                       sendDownloadHeaders(mimeType, download, mcUser.name);
-                      setCaching(res, true, true, 60).send(png);
+                      setCaching(res, true, true, 65).send(png);
                     });
                   });
                 } else {
                   sendDownloadHeaders(mimeType, download, mcUser.name);
-                  setCaching(res, true, true, 60).send(httpBody);
+                  setCaching(res, true, true, 65).send(httpBody);
                 }
               } else {
                 if (httpRes.statusCode != 404) ApiError.log(`${mcUser.skinURL} returned HTTP-Code ${httpRes.statusCode}`);
 
                 sendDownloadHeaders(mimeType, download, mcUser.name);
 
-                setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
+                setCaching(res, true, true, 65).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
               }
             });
           } else {
             sendDownloadHeaders(mimeType, download, mcUser.name);
 
-            setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
+            setCaching(res, true, true, 65).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
           }
         });
       } else {
@@ -435,7 +435,7 @@ router.all('/skin/:user?/:skinArea?', (req, res, next) => {
                 if (err || !png) return next(err);
 
                 sendDownloadHeaders(mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
-                setCaching(res, true, true, 60).send(png);
+                setCaching(res, true, true, 65).send(png);
               });
             });
           } else {
@@ -443,7 +443,7 @@ router.all('/skin/:user?/:skinArea?', (req, res, next) => {
               if (err || !png) return next(err);
 
               sendDownloadHeaders(mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
-              setCaching(res, true, true, 60).send(png);
+              setCaching(res, true, true, 65).send(png);
             });
           }
         });
@@ -498,7 +498,7 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
                 res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
               }
 
-              setCaching(res, true, true, 60).send(httpBody);
+              setCaching(res, true, true, 65).send(httpBody);
             } else {
               if (httpRes.statusCode != 404) ApiError.log(`${mcUser.skinURL} returned HTTP-Code ${httpRes.statusCode}`);
 
@@ -556,7 +556,7 @@ function getByUsername(username: string, at: number | string | null, callback: (
 
           const json = JSON.parse(httpBody);
           const apiRes = { id: json.uuid.replace(/-/g, ''), name: json.username };
-          uuidCache.set(cacheKey, apiRes, 10);  // TODO cache 404 and err
+          uuidCache.set(cacheKey, apiRes);  // TODO cache 404 and err
           return callback(null, apiRes);
         });
       } else {
@@ -666,8 +666,8 @@ function getByUUID(uuid: string, req: Request, callback: (err: Error | null, use
             }, nameHistory, userAgent);
 
             // TODO cache 404 and err
-            uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name }, 10);
-            userCache.set(cacheKey, mcUser, 10);
+            uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
+            userCache.set(cacheKey, mcUser);
 
             return callback(null, mcUser); // Success
           });
