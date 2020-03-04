@@ -507,11 +507,11 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
             } else {
               if (httpRes.statusCode != 404) ApiError.log(`${mcUser.skinURL} returned HTTP-Code ${httpRes.statusCode}`);
 
-              return next(new ErrorBuilder().notFound());
+              return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
             }
           });
         } else {
-          return next(new ErrorBuilder().notFound('CapeURL for given CapeType', true));
+          return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
         }
       });
     }
