@@ -1,6 +1,6 @@
 import { Pool, PoolClient } from 'pg';
 
-import { generateHash } from './utils';
+import { generateHash, ApiError } from './utils';
 import { SpraxAPIdbCfg, UserAgent, Skin, MinecraftUser, Cape, CapeType } from './global';
 
 export class dbUtils {
@@ -57,10 +57,10 @@ export class dbUtils {
               if (this.shouldAbortTransaction(client, done, err)) return callback(err);
 
               client.query('COMMIT', (err) => {
-                if (err) return callback(err);  // TODO Log to file
-
                 done();
-                return callback(null);
+                if (err) return callback(err);
+
+                callback(null);
               });
             });
           });
@@ -80,26 +80,24 @@ export class dbUtils {
 
           if (res.rows.length > 0) {
             client.query('COMMIT', (err) => {
-              if (err) console.error('Error committing transaction', err);  // TODO Log to file
-
               done();
-            });
-
-            return callback(null, { id: res.rows[0].id, name: res.rows[0].name, internal: res.rows[0].internal });
-          }
-
-          client.query(`INSERT INTO user_agents(name,internal) VALUES($1,$2) RETURNING *;`,
-            [name, internal], (err, res) => {
-              if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+              if (err) return callback(err);
 
               callback(null, { id: res.rows[0].id, name: res.rows[0].name, internal: res.rows[0].internal });
-
-              client.query('COMMIT', (err) => {
-                if (err) console.error('Error committing transaction', err);  // TODO Log to file
-
-                done();
-              });
             });
+          } else {
+            client.query(`INSERT INTO user_agents(name,internal) VALUES($1,$2) RETURNING *;`,
+              [name, internal], (err, res) => {
+                if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+
+                client.query('COMMIT', (err) => {
+                  done();
+                  if (err) return callback(err);
+
+                  callback(null, { id: res.rows[0].id, name: res.rows[0].name, internal: res.rows[0].internal });
+                });
+              });
+          }
         });
       });
     });
@@ -119,68 +117,65 @@ export class dbUtils {
 
           if (res.rows.length > 0) { // Exact same Skin-URL already in db
             client.query('COMMIT', (err) => {
-              if (err) console.error('Error committing transaction', err);  // TODO Log to file
-
               done();
+              if (err) return callback(err, null);
+
+              callback(null, {
+                id: res.rows[0].id,
+                duplicateOf: res.rows[0].duplicate_of,
+                originalURL: res.rows[0].original_url,
+                textureValue: res.rows[0].texture_value,
+                textureSignature: res.rows[0].texture_signature,
+                added: res.rows[0].added,
+                addedBy: res.rows[0].added_by,
+                cleanHash: res.rows[0].clean_hash
+              });
             });
+          } else {
+            client.query(`SELECT * FROM skins WHERE clean_hash =$1 AND duplicate_of IS NULL LIMIT 1;`, [cleanHash], (err, res) => {
+              if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
 
-            return callback(null, {
-              id: res.rows[0].id,
-              duplicateOf: res.rows[0].duplicate_of,
-              originalURL: res.rows[0].original_url,
-              textureValue: res.rows[0].texture_value,
-              textureSignature: res.rows[0].texture_signature,
-              added: res.rows[0].added,
-              addedBy: res.rows[0].added_by,
-              cleanHash: res.rows[0].clean_hash
-            });
-          }
+              const duplicateID: number | null = res.rows.length > 0 ? res.rows[0].id : null,
+                isDuplicate = res.rows.length > 0;
 
-          client.query(`SELECT * FROM skins WHERE clean_hash =$1 AND duplicate_of IS NULL LIMIT 1;`, [cleanHash], (err, res) => {
-            if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+              client.query(`INSERT INTO skins(duplicate_of,original_url,texture_value,texture_signature,clean_hash,added_by)VALUES($1,$2,$3,$4,$5,$6) RETURNING *;`,
+                [duplicateID, originalURL, textureValue, textureSignature, (isDuplicate ? null : cleanHash), userAgent.id], (err, res) => {
+                  if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
 
-            const duplicateID: number | null = res.rows.length > 0 ? res.rows[0].id : null,
-              isDuplicate = res.rows.length > 0;
+                  const resultSkin: Skin = {
+                    id: res.rows[0].id,
+                    duplicateOf: res.rows[0].duplicate_of,
+                    originalURL: res.rows[0].original_url,
+                    textureValue: res.rows[0].texture_value,
+                    textureSignature: res.rows[0].texture_signature,
+                    added: res.rows[0].added,
+                    addedBy: res.rows[0].added_by,
+                    cleanHash: res.rows[0].clean_hash
+                  };
 
-            client.query(`INSERT INTO skins(duplicate_of,original_url,texture_value,texture_signature,clean_hash,added_by)VALUES($1,$2,$3,$4,$5,$6) RETURNING *;`,
-              [duplicateID, originalURL, textureValue, textureSignature, (isDuplicate ? null : cleanHash), userAgent.id], (err, res) => {
-                if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+                  if (!isDuplicate) {
+                    client.query(`INSERT INTO skin_images(skin_id,original,clean)VALUES($1,$2,$3);`,
+                      [resultSkin.id, originalPng, cleanPng], (err, _res) => {
+                        if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
 
-                const resultSkin: Skin = {
-                  id: res.rows[0].id,
-                  duplicateOf: res.rows[0].duplicate_of,
-                  originalURL: res.rows[0].original_url,
-                  textureValue: res.rows[0].texture_value,
-                  textureSignature: res.rows[0].texture_signature,
-                  added: res.rows[0].added,
-                  addedBy: res.rows[0].added_by,
-                  cleanHash: res.rows[0].clean_hash
-                };
+                        client.query('COMMIT', (err) => {
+                          done();
+                          if (err) return callback(err, null);
 
-                if (!isDuplicate) {
-                  client.query(`INSERT INTO skin_images(skin_id,original,clean)VALUES($1,$2,$3);`,
-                    [resultSkin.id, originalPng, cleanPng], (err, _res) => {
-                      if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+                          callback(null, resultSkin);
+                        });
+                      });
+                  } else {
+                    client.query('COMMIT', (err) => {
+                      done();
+                      if (err) return callback(err, null);
 
                       callback(null, resultSkin);
-
-                      client.query('COMMIT', (err) => {
-                        if (err) console.error('Error committing transaction', err);  // TODO Log to file
-
-                        done();
-                      });
                     });
-                } else {
-                  callback(null, resultSkin);
-
-                  client.query('COMMIT', (err) => {
-                    if (err) console.error('Error committing transaction', err);  // TODO Log to file
-
-                    done();
-                  });
-                }
-              });
-          });
+                  }
+                });
+            });
+          }
         });
       });
     });
@@ -198,26 +193,24 @@ export class dbUtils {
 
           if (res.rows[0].exists) { // Skin hasn't changed
             client.query('COMMIT', (err) => {
-              if (err) console.error('Error committing transaction', err);  // TODO Log to file
-
               done();
-            });
-
-            return callback(null);
-          }
-
-          client.query(`INSERT INTO skin_history(profile_id,skin_id) VALUES($1,$2);`,
-            [mcUser.id, skin.id], (err, res) => {
-              if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+              if (err) return callback(err);
 
               callback(null);
-
-              client.query('COMMIT', (err) => {
-                if (err) console.error('Error committing transaction', err);  // TODO Log to file
-
-                done();
-              });
             });
+          } else {
+            client.query(`INSERT INTO skin_history(profile_id,skin_id) VALUES($1,$2);`,
+              [mcUser.id, skin.id], (err, _res) => {
+                if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+
+                client.query('COMMIT', (err) => {
+                  done();
+                  if (err) return callback(err);
+
+                  callback(null);
+                });
+              });
+          }
         });
       });
     });
@@ -237,70 +230,67 @@ export class dbUtils {
 
           if (res.rows.length > 0) { // Exact same Cape-URL already in db
             client.query('COMMIT', (err) => {
-              if (err) console.error('Error committing transaction', err);  // TODO Log to file
-
               done();
+              if (err) return callback(err, null);
+
+              callback(null, {
+                id: res.rows[0].id,
+                type: res.rows[0].type as CapeType,
+                duplicateOf: res.rows[0].duplicate_of,
+                originalURL: res.rows[0].original_url,
+                addedBy: res.rows[0].added_by,
+                added: res.rows[0].added,
+                cleanHash: res.rows[0].clean_hash,
+                textureValue: res.rows[0].texture_value,
+                textureSignature: res.rows[0].texture_signature
+              });
             });
+          } else {
+            client.query(`SELECT * FROM capes WHERE clean_hash =$1 AND duplicate_of IS NULL LIMIT 1;`, [cleanHash], (err, res) => {
+              if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
 
-            return callback(null, {
-              id: res.rows[0].id,
-              type: res.rows[0].type as CapeType,
-              duplicateOf: res.rows[0].duplicate_of,
-              originalURL: res.rows[0].original_url,
-              addedBy: res.rows[0].added_by,
-              added: res.rows[0].added,
-              cleanHash: res.rows[0].clean_hash,
-              textureValue: res.rows[0].texture_value,
-              textureSignature: res.rows[0].texture_signature
-            });
-          }
+              const duplicateID: number | null = res.rows.length > 0 ? res.rows[0].id : null,
+                isDuplicate = res.rows.length > 0;
 
-          client.query(`SELECT * FROM capes WHERE clean_hash =$1 AND duplicate_of IS NULL LIMIT 1;`, [cleanHash], (err, res) => {
-            if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+              client.query(`INSERT INTO capes(type,duplicate_of,original_url,added_by,clean_hash,texture_value,texture_signature)VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *;`,
+                [type, duplicateID, originalURL, userAgent.id, (isDuplicate ? null : cleanHash), textureValue, textureSignature], (err, res) => {
+                  if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
 
-            const duplicateID: number | null = res.rows.length > 0 ? res.rows[0].id : null,
-              isDuplicate = res.rows.length > 0;
+                  const resultCape: Cape = {
+                    id: res.rows[0].id,
+                    type: res.rows[0].type as CapeType,
+                    duplicateOf: res.rows[0].duplicate_of,
+                    originalURL: res.rows[0].original_url,
+                    addedBy: res.rows[0].added_by,
+                    added: res.rows[0].added,
+                    cleanHash: res.rows[0].clean_hash,
+                    textureValue: res.rows[0].texture_value,
+                    textureSignature: res.rows[0].texture_signature
+                  };
 
-            client.query(`INSERT INTO capes(type,duplicate_of,original_url,added_by,clean_hash,texture_value,texture_signature)VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *;`,
-              [type, duplicateID, originalURL, userAgent.id, (isDuplicate ? null : cleanHash), textureValue, textureSignature], (err, res) => {
-                if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+                  if (!isDuplicate) {
+                    client.query(`INSERT INTO cape_images(cape_id,original)VALUES($1,$2);`,
+                      [resultCape.id, capePng], (err, _res) => {
+                        if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
 
-                const resultCape: Cape = {
-                  id: res.rows[0].id,
-                  type: res.rows[0].type as CapeType,
-                  duplicateOf: res.rows[0].duplicate_of,
-                  originalURL: res.rows[0].original_url,
-                  addedBy: res.rows[0].added_by,
-                  added: res.rows[0].added,
-                  cleanHash: res.rows[0].clean_hash,
-                  textureValue: res.rows[0].texture_value,
-                  textureSignature: res.rows[0].texture_signature
-                };
+                        client.query('COMMIT', (err) => {
+                          done();
+                          if (err) return callback(err, null);
 
-                if (!isDuplicate) {
-                  client.query(`INSERT INTO cape_images(cape_id,original)VALUES($1,$2);`,
-                    [resultCape.id, capePng], (err, _res) => {
-                      if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+                          callback(null, resultCape);
+                        });
+                      });
+                  } else {
+                    client.query('COMMIT', (err) => {
+                      done();
+                      if (err) return callback(err, null);
 
                       callback(null, resultCape);
-
-                      client.query('COMMIT', (err) => {
-                        if (err) console.error('Error committing transaction', err);  // TODO Log to file
-
-                        done();
-                      });
                     });
-                } else {
-                  callback(null, resultCape);
-
-                  client.query('COMMIT', (err) => {
-                    if (err) console.error('Error committing transaction', err);  // TODO Log to file
-
-                    done();
-                  });
-                }
-              });
-          });
+                  }
+                });
+            });
+          }
         });
       });
     });
@@ -319,26 +309,24 @@ export class dbUtils {
 
             if (res.rows[0].exists) { // Skin hasn't changed
               client.query('COMMIT', (err) => {
-                if (err) console.error('Error committing transaction', err);  // TODO Log to file
-
                 done();
-              });
-
-              return callback(null);
-            }
-
-            client.query(`INSERT INTO cape_history(profile_id,cape_id,cape_type) VALUES($1,$2,$3);`,
-              [mcUser.id, cape.id, cape.type], (err, _res) => {
-                if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+                if (err) return callback(err);
 
                 callback(null);
-
-                client.query('COMMIT', (err) => {
-                  if (err) console.error('Error committing transaction', err);  // TODO Log to file
-
-                  done();
-                });
               });
+            } else {
+              client.query(`INSERT INTO cape_history(profile_id,cape_id,cape_type) VALUES($1,$2,$3);`,
+                [mcUser.id, cape.id, cape.type], (err, _res) => {
+                  if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+
+                  client.query('COMMIT', (err) => {
+                    done();
+                    if (err) return callback(err);
+
+                    callback(null);
+                  });
+                });
+            }
           });
       });
     });
@@ -346,12 +334,9 @@ export class dbUtils {
 
   private shouldAbortTransaction(client: PoolClient, done: (release?: any) => void, err: Error): boolean {
     if (err) {
-      console.error('Error in transaction', err); // TODO log to file
-
       client.query('ROLLBACK', (err) => {
-        if (err) console.error('Error rolling back client', err); // TODO log to file
-
         done();
+        if (err) return ApiError.log('Error rolling back client', err);
       });
     }
 
