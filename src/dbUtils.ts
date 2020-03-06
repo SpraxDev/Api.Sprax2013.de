@@ -4,7 +4,7 @@ import { generateHash, ApiError } from './utils';
 import { SpraxAPIdbCfg, UserAgent, Skin, MinecraftUser, Cape, CapeType, MinecraftProfile } from './global';
 
 export class dbUtils {
-  private readonly pool: Pool | null = null;
+  private pool: Pool | null = null;
 
   constructor(dbCfg: SpraxAPIdbCfg) {
     if (dbCfg.enabled) {
@@ -371,7 +371,10 @@ export class dbUtils {
   shutdown(): Promise<void> {
     if (this.pool == null) return new Promise((resolve, _reject) => { resolve(); });
 
-    return this.pool.end();
+    const result = this.pool.end();
+    this.pool = null;
+
+    return result;
   }
 
   private shouldAbortTransaction(client: PoolClient, done: (release?: any) => void, err: Error): boolean {
