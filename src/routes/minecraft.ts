@@ -16,6 +16,8 @@ const uuidCache = new nCache({ stdTTL: 59, useClones: false }), /* key:${name_lo
 const profileRequestQueue: { key: string, callback: (err: Error | null, user: MinecraftUser | null) => void }[] = [],
   uuidRequestQueue: { key: string, callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void }[] = [];
 
+let rateLimitedNameHistory = 0;
+
 userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) => {
   if (!db.isAvailable()) return;
 
@@ -86,6 +88,8 @@ userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) =>
     });
   }
 });
+
+setInterval(() => { rateLimitedNameHistory = 0 }, 120 * 1000);
 
 const SKIN_STEVE = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'steve.png')),
   SKIN_ALEX = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'steve.png'));
@@ -616,43 +620,66 @@ function getByUUID(uuid: string, req: Request, callback: (err: Error | null, use
       const getNameHistory = function (mcUser: MinecraftProfile | null, callback: (err: Error | null, nameHistory: MinecraftNameHistoryElement[] | null) => void): void {
         if (!mcUser) return callback(null, null);
 
-        request.get(`https://api.mojang.com/user/profiles/${mcUser.id}/names`, {}, (err, httpRes, httpBody) => {
-          if (err) return callback(err, null);
+        // TODO: Reduce duplicate code
+        if (rateLimitedNameHistory > 6) {
+          // Contact fallback api (should not be necessary but is better than returning an 429 or 500
+          request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, {}, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
+            if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
+              return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`, true), null);
+            }
+            if (httpRes.statusCode == 404) return callback(null, null);
 
-          if (httpRes.statusCode != 200 && httpRes.statusCode != 204) {
-            // Contact fallback api (should not be necessary but is better than returning an 429 or 500
-            ApiError.log(`Mojang returned ${httpRes.statusCode} on name history lookup for ${mcUser.id}`);
-            request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, {}, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
-              if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
-                return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`, true), null);
-              }
-              if (httpRes.statusCode == 404) return callback(null, null);
-
-              const result: MinecraftNameHistoryElement[] = [];
-              for (const elem of JSON.parse(httpBody).username_history) {
-                result.push({
-                  name: elem.username,
-                  changedToAt: elem.changed_at ? new Date(elem.changed_at).getTime() : undefined
-                });
-              }
-
-              return callback(null, result);
-            });
-          } else {
             const result: MinecraftNameHistoryElement[] = [];
-
-            if (httpRes.statusCode == 200) {
-              for (const elem of JSON.parse(httpBody)) {
-                result.push({
-                  name: elem.name,
-                  changedToAt: elem.changedToAt
-                });
-              }
+            for (const elem of JSON.parse(httpBody).username_history) {
+              result.push({
+                name: elem.username,
+                changedToAt: elem.changed_at ? new Date(elem.changed_at).getTime() : undefined
+              });
             }
 
             return callback(null, result);
-          }
-        });
+          });
+        } else {
+          request.get(`https://api.mojang.com/user/profiles/${mcUser.id}/names`, {}, (err, httpRes, httpBody) => {
+            if (err) return callback(err, null);
+
+            if (httpRes.statusCode != 200 && httpRes.statusCode != 204) {
+              // Contact fallback api (should not be necessary but is better than returning an 429 or 500
+              ApiError.log(`Mojang returned ${httpRes.statusCode} on name history lookup for ${mcUser.id}`);
+              rateLimitedNameHistory++;
+
+              request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, {}, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
+                if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
+                  return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`, true), null);
+                }
+                if (httpRes.statusCode == 404) return callback(null, null);
+
+                const result: MinecraftNameHistoryElement[] = [];
+                for (const elem of JSON.parse(httpBody).username_history) {
+                  result.push({
+                    name: elem.username,
+                    changedToAt: elem.changed_at ? new Date(elem.changed_at).getTime() : undefined
+                  });
+                }
+
+                return callback(null, result);
+              });
+            } else {
+              const result: MinecraftNameHistoryElement[] = [];
+
+              if (httpRes.statusCode == 200) {
+                for (const elem of JSON.parse(httpBody)) {
+                  result.push({
+                    name: elem.name,
+                    changedToAt: elem.changedToAt
+                  });
+                }
+              }
+
+              return callback(null, result);
+            }
+          });
+        }
       };
 
       request.get(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?unsigned=false`, {}, (err, httpRes, httpBody) => {
