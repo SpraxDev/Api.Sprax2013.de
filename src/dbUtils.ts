@@ -327,7 +327,7 @@ export class dbUtils {
       client.query('BEGIN', (err) => {
         if (this.shouldAbortTransaction(client, done, err)) return callback(err);
 
-        client.query(`SELECT EXISTS(SELECT * FROM (SELECT cape_id FROM cape_history WHERE profile_id =$1 AND cape_type =$2 ORDER BY added DESC LIMIT 1)x WHERE cape_id =$3);`,
+        client.query(`SELECT EXISTS(SELECT cape_id FROM (SELECT cape_id FROM(SELECT cape_id,added FROM cape_history WHERE profile_id =$1)x JOIN capes ON x.cape_id = capes.id AND capes.type =$2 ORDER BY x.added DESC LIMIT 1)x WHERE x.cape_id =$3);`,
           [mcUser.id, cape.type, cape.id], (err, res) => {
             if (this.shouldAbortTransaction(client, done, err)) return callback(err);
 
@@ -339,8 +339,8 @@ export class dbUtils {
                 callback(null);
               });
             } else {
-              client.query(`INSERT INTO cape_history(profile_id,cape_id,cape_type) VALUES($1,$2,$3);`,
-                [mcUser.id, cape.id, cape.type], (err, _res) => {
+              client.query(`INSERT INTO cape_history(profile_id,cape_id) VALUES($1,$2);`,
+                [mcUser.id, cape.id], (err, _res) => {
                   if (this.shouldAbortTransaction(client, done, err)) return callback(err);
 
                   client.query('COMMIT', (err) => {
