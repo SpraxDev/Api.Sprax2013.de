@@ -8,7 +8,7 @@ import { Server, createServer } from 'http';
 import { dbUtils } from './dbUtils';
 import { SpraxAPIcfg, SpraxAPIdbCfg } from './global';
 
-let server: Server;
+let server: Server | null;
 export let db: dbUtils;
 export let cfg: SpraxAPIcfg = {
   listen: {
@@ -72,11 +72,14 @@ function shutdownHook() {
     process.exit();
   };
 
-  server.close((err) => {
-    if (err && err.message != 'Server is not running.') console.error(err);
+  if (server != null) {
+    server.close((err) => {
+      if (err && err.message != 'Server is not running.') console.error(err);
 
-    ready();
-  });
+      ready();
+    });
+    server = null;
+  }
 }
 
 process.on('SIGTERM', shutdownHook);
