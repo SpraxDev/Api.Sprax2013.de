@@ -102,6 +102,7 @@ export const minecraftExpressRouter = router;
 // Turn :user into uuid (without hyphenes)
 router.param('user', (req, _res, next, value, name) => {
   if (typeof value != 'string') return next(new ErrorBuilder().invalidParams('url', [{ param: 'user', condition: 'Is string' }]));
+  value = value.trim();
 
   if (value.length <= 16) {
     if (req.route.path.startsWith('/skin/:user') && value.toLowerCase() != 'x-url' && req.query.url) return next(new ErrorBuilder().invalidParams('query', [{ param: 'url', condition: `User to equal (ignore case) "X-URL" or no url parameter` }]));
