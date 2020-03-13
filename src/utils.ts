@@ -346,8 +346,20 @@ export class ErrorBuilder {
     return new ApiError(`${whatFailed}`, 500, undefined, this.logged);
   }
 
+  serviceUnavailable(description: string = 'Service Unavailable', adminLog?: string | boolean): ApiError {
+    if (adminLog) {
+      this.log(typeof adminLog == 'boolean' ? `This should not have happened: ${description}` : adminLog);
+    }
+
+    return new ApiError(`${description}`, 503, undefined, this.logged);
+  }
+
   invalidParams(paramType: 'url' | 'query', params: { param: string, condition: string }[]): ApiError {
     return new ApiError(`Missing or invalid ${paramType} parameters`, 400, params, this.logged);
+  }
+
+  invalidBody(expected: { param: string, condition: string }[]): ApiError {
+    return new ApiError(`Missing or invalid body`, 400, expected, this.logged);
   }
 }
 

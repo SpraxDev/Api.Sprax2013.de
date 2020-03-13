@@ -85,6 +85,20 @@ export interface Color {
 }
 
 /* Minecraft */
+export interface CleanMinecraftUser {
+  id: string;
+  id_hyphens: string;
+  name: string;
+  legacy: boolean | null;
+  textures: {
+    skinURL: string | null;
+    capeURL: string | null;
+    texture_value: string | null;
+    texture_signature: string | null
+  };
+  name_history?: MinecraftNameHistoryElement[];
+}
+
 export class MinecraftUser {
   id: string;
   name: string;
@@ -149,7 +163,7 @@ export class MinecraftUser {
     return ((parseInt(this.id[7], 16) ^ parseInt(this.id[15], 16) ^ parseInt(this.id[23], 16) ^ parseInt(this.id[31], 16)) & 1) == 1;
   }
 
-  toCleanJSON(): { id: string, id_hyphens: string, name: string, legacy: boolean | null, textures: { skinURL: string | null, capeURL: string | null, texture_value: string | null, texture_signature: string | null }, name_history?: MinecraftNameHistoryElement[] } {
+  toCleanJSON(): CleanMinecraftUser {
     return {
       id: this.id,
       id_hyphens: addHyphensToUUID(this.id),

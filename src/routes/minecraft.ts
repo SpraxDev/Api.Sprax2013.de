@@ -537,7 +537,7 @@ router.all('/servers/blocked', (req, res, next) => {  // TODO: return object (ke
 });
 
 /* Helper */
-function getByUsername(username: string, at: number | string | null, callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void): void {
+export function getByUsername(username: string, at: number | string | null, callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void): void {
   if (typeof at != 'number' || (typeof at == 'number' && at > Date.now())) {
     at = null;
   }
@@ -612,7 +612,7 @@ function getByUsername(username: string, at: number | string | null, callback: (
   }
 }
 
-function getByUUID(uuid: string, req: Request, callback: (err: Error | null, user: MinecraftUser | null) => void): void {
+export function getByUUID(uuid: string, req: Request, callback: (err: Error | null, user: MinecraftUser | null) => void): void {
   const get = (callback: (err: Error | null, user: MinecraftUser | null) => void) => {
     const cacheValue: MinecraftUser | Error | null | undefined = userCache.get(uuid);
 

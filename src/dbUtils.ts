@@ -356,6 +356,16 @@ export class dbUtils {
     });
   }
 
+  getSkinImage(skinID: string, type: 'clean' | 'original', callback: (err: Error | null, img: Buffer | null) => void): void {
+    if (this.pool == null) return callback(null, null);
+
+    this.pool.query(`SELECT ${type == 'original' ? 'original' : 'clean'} as img FROM skin_images WHERE skin_id =$1;`, [skinID], (err, res) => {
+      if (err) return callback(err, null);
+
+      callback(null, res.rows.length > 0 ? res.rows[0].img : null);
+    });
+  }
+
   /* Helper */
 
   isAvailable(): boolean {
