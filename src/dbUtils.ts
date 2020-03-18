@@ -121,6 +121,7 @@ export class dbUtils {
 
   addSkin(originalPng: Buffer, cleanPng: Buffer, originalURL: string, textureValue: string | null, textureSignature: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null) => void): void {
     if (this.pool == null) return callback(null, null);
+    if (!originalURL.toLowerCase().startsWith('https://textures.minecraft.net/texture/')) return callback(new Error(`The provided originalURL(=${originalURL}) does not start with 'https://textures.minecraft.net/texture/'`), null);
 
     const cleanHash = generateHash(cleanPng);
 

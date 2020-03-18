@@ -136,9 +136,14 @@ export class MinecraftUser {
 
   getSecureSkinURL(): string | null {
     if (!this.skinURL) return null;
-    if (!this.skinURL.toLowerCase().startsWith('http://')) return this.skinURL;
 
-    return 'https' + this.skinURL.substring(4);
+    return MinecraftUser.getSecureURL(this.skinURL);
+  }
+
+  static getSecureURL(skinURL: string): string {
+    if (!skinURL.toLowerCase().startsWith('http://')) return skinURL;
+
+    return 'https' + skinURL.substring(4);
   }
 
   getSecureCapeURL(): string | null {

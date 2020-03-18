@@ -1,12 +1,12 @@
 // import * as tmImage from '@teachablemachine/image';
 // import canvas = require('canvas');
-import { Router } from 'express';
+import { Router, response } from 'express';
 // import { JSDOM } from 'jsdom';
 
 import { db } from '..';
 import { CleanMinecraftUser, MinecraftUser, UserAgent, Skin, Cape, CapeType } from '../global';
-import { ApiError, ErrorBuilder, isUUID, restful, Image } from '../utils';
-import { getByUsername, getByUUID } from './minecraft';
+import { ApiError, ErrorBuilder, isUUID, restful, Image, setCaching } from '../utils';
+import { getByUsername, getByUUID, getUserAgent } from './minecraft';
 import request = require('request');
 
 /* AI */
@@ -44,7 +44,17 @@ router.all('/import', (req, res, next) => {
                 if (err) return next(err);
                 if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given username'));
 
-                res.send(mcUser);
+                if (!mcUser.textureValue) return next(new ErrorBuilder().notFound('The provided user does not habe a skin'));
+
+                importByTexture(mcUser.textureValue, mcUser.textureSignature, mcUser.userAgent, (err, skin, cape) => {
+                  if (err) return next(err);
+
+                  setCaching(res, false, false)
+                    .send({
+                      skin: skin || undefined,
+                      cape: cape || undefined
+                    });
+                });
               });
             });
           } else if (isUUID(json.user)) {
@@ -52,26 +62,47 @@ router.all('/import', (req, res, next) => {
               if (err) return next(err);
               if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given uuid'));
 
-              res.send(mcUser);
+              if (!mcUser.textureValue) return next(new ErrorBuilder().notFound('The provided user does not habe a skin'));
+
+              importByTexture(mcUser.textureValue, mcUser.textureSignature, mcUser.userAgent, (err, skin, cape) => {
+                if (err) return next(err);
+
+                setCaching(res, false, false)
+                  .send({
+                    skin: skin || undefined,
+                    cape: cape || undefined
+                  });
+              });
             });
           } else {
             return next(new ErrorBuilder().invalidBody([]));  //TODO
           }
         } else if (json.raw) {
-          if (!json.raw.value) return next(new ErrorBuilder().invalidBody([]));  //TODO
+          if (!json.raw || !json.raw.value) return next(new ErrorBuilder().invalidBody([]));  //TODO
 
-          if (json.raw.signature) {
+          // if (json.raw.signature) {
 
-          } else {
-            const texture = MinecraftUser.extractMinecraftProfileTextureProperty(json.raw.value);
-            const skinURL: string | undefined = texture.textures.SKIN?.url,
-              capeURL: string | undefined = texture.textures.CAPE?.url;
-          }
+          // } else {
+          getUserAgent(req, (err, userAgent) => {
+            if (err || !userAgent) return next(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`));
+            if (!json.raw) return;  // FIXME: why does TypeScript need this line? o.0
+
+            importByTexture(json.raw.value, json.raw.signature || null, userAgent, (err, skin, cape) => {
+              if (err) return next(err);
+
+              setCaching(res, false, false)
+                .send({
+                  skin: skin || undefined,
+                  cape: cape || undefined
+                });
+            });
+          });
+          // }
         } else {
           return next(new ErrorBuilder().invalidBody([]));  //TODO
         }
       } else {
-        res.sendStatus(400);
+        return next(new ErrorBuilder().invalidBody([]));  //TODO
       }
     }
   });
@@ -203,6 +234,9 @@ export function importByTexture(textureValue: string, textureSignature: string |
   let resultSkin: Skin | null = null,
     resultCape: Cape | null = null;
 
+  // TODO signature invalid? Set null!
+  // TODO request textures profile in case it is not in the db already (hits memory cache anyways if originated from profile look up)
+
   let waitingFor = 0;
   const done = () => {
     waitingFor--;
@@ -212,11 +246,10 @@ export function importByTexture(textureValue: string, textureSignature: string |
     }
   };
 
-
   if (skinURL) {
     waitingFor++;
 
-    importSkinByURL(skinURL, userAgent, (err, skin) => {
+    importSkinByURL(MinecraftUser.getSecureURL(skinURL), userAgent, (err, skin) => {
       if (err || !skin) return callback(err, null, null);
 
       resultSkin = skin;
@@ -227,7 +260,7 @@ export function importByTexture(textureValue: string, textureSignature: string |
   if (capeURL) {
     waitingFor++;
 
-    importCapeByURL(capeURL, CapeType.MOJANG, userAgent, (err, cape) => {
+    importCapeByURL(MinecraftUser.getSecureURL(capeURL), CapeType.MOJANG, userAgent, (err, cape) => {
       if (err || !cape) return callback(err, null, null);
 
       resultCape = cape;

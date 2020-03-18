@@ -806,7 +806,8 @@ function getBlockedServers(callback: (err: Error | null, hashes: string[] | null
   });
 }
 
-function getUserAgent(req: Request | null, callback: (err: Error | null, userAgent: UserAgent | null) => void): void {
+// TODO put inside global and change the UserAgent-interface to an class
+export function getUserAgent(req: Request | null, callback: (err: Error | null, userAgent: UserAgent | null) => void): void {
   if (!db.isAvailable()) return callback(null, { id: -1, name: 'SpraxAPI', internal: true });
 
   const agentName = req && req.headers['user-agent'] ? req.headers['user-agent'] : 'SpraxAPI',
