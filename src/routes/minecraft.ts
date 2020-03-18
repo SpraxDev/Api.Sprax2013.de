@@ -8,6 +8,7 @@ import { Router, Request } from 'express';
 import { db } from '../index';
 import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
 import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL } from '../utils';
+import { importByTexture, importCapeByURL } from './skindb';
 
 const uuidCache = new nCache({ stdTTL: 59, useClones: false }), /* key:${name_lower};${at||''}, value: { id: string, name: string } | Error | null */
   userCache = new nCache({ stdTTL: 59, useClones: false }), /* key: profile.id, value: MinecraftUser | Error | null */
@@ -26,30 +27,19 @@ userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) =>
       if (err) return ApiError.log('Could not update user in database', { profile: value.id, stack: err.stack });
 
       /* Skin */
-      const skinURL = value.getSecureSkinURL();
-      if (skinURL) {
-        request.get(skinURL, { encoding: null }, (err, httpRes, httpBody) => {
-          if (err) return ApiError.log(`Could not fetch skinURL`, { skinURL, stack: err.stack });
+      if (value.textureValue) {
+        importByTexture(value.textureValue, value.textureSignature, value.userAgent, (err, skin, cape) => {
+          if (err) return ApiError.log('Could not import skin/cape from profile', { skinURL: value.skinURL, profile: value.id, stack: (err || new Error()).stack });
 
-          if (httpRes.statusCode == 200) {
-            Image.fromImg(httpBody, (err, img) => {
-              if (err || !img) return ApiError.log('Could not create image from skin-Buffer', { skinURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
+          if (skin) {
+            db.addSkinToUserHistory(value, skin, (err) => {
+              if (err) return ApiError.log(`Could not update skin-history in database`, { skin: skin.id, profile: value.id, stack: err.stack });
+            });
+          }
 
-              img.toPngBuffer((err, orgSkin) => {
-                if (err || !orgSkin) return ApiError.log('Could not create png-Buffer from image', { skinURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
-
-                img.toCleanSkinBuffer((err, cleanSkin) => {
-                  if (err || !cleanSkin) return ApiError.log('Could not create cleanSkin-Buffer from image', { skinURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
-
-                  db.addSkin(orgSkin, cleanSkin, skinURL, value.textureValue, value.textureSignature, value.userAgent, (err, skin) => {
-                    if (err || !skin) return ApiError.log('Could not update skin in database', { skinURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
-
-                    db.addSkinToUserHistory(value, skin, (err) => {
-                      if (err) return ApiError.log(`Could not update skin-history in database`, { skin: skin.id, profile: value.id, stack: err.stack });
-                    });
-                  });
-                });
-              });
+          if (cape) {
+            db.addCapeToUserHistory(value, cape, (err) => {
+              if (err) return ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
             });
           }
         });
@@ -57,32 +47,17 @@ userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) =>
 
       const processCape = function (capeURL: string | null, capeType: CapeType) {
         if (capeURL) {
-          request.get(capeURL, { encoding: null }, (err, httpRes, httpBody) => {
-            if (err) return ApiError.log(`Could not fetch capeURL`, { capeURL, stack: err.stack });
+          importCapeByURL(capeURL, capeType, value.userAgent, (err, cape) => {
+            if (err || !cape) return ApiError.log('Could not import cape from profile', { capeURL: value.capeURL, profile: value.id, stack: (err || new Error()).stack });
 
-            if (httpRes.statusCode == 200) {
-              Image.fromImg(httpBody, (err, img) => {
-                if (err || !img) return ApiError.log('Could not create image from cape-Buffer', { capeURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
-
-                img.toPngBuffer((err, capePng) => {
-                  if (err || !capePng) return ApiError.log('Could not create png-Buffer from image', { capeURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
-
-                  db.addCape(capePng, capeType, capeURL, value.textureValue, value.textureSignature, value.userAgent, (err, cape) => {
-                    if (err || !cape) return ApiError.log('Could not update cape in database', { capeURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
-
-                    db.addCapeToUserHistory(value, cape, (err) => {
-                      if (err) return ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
-                    });
-                  });
-                });
-              });
-            }
-          });
+            db.addCapeToUserHistory(value, cape, (err) => {
+              if (err) return ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
+            });
+          }, value.textureValue || undefined, value.textureSignature || undefined);
         }
       };
 
       /* Capes */
-      processCape(value.getSecureCapeURL(), CapeType.MOJANG);
       processCape(value.getOptiFineCapeURL(), CapeType.OPTIFINE);
       processCape(value.getLabyModCapeURL(), CapeType.LABY_MOD);
     });

@@ -126,7 +126,7 @@ export class MinecraftUser {
         this.textureValue = prop.value;
         this.textureSignature = prop.signature || null;
 
-        const json: MinecraftProfileTextureProperty = JSON.parse(Buffer.from(prop.value, 'base64').toString('utf-8'));
+        const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(prop.value);
         this.skinURL = json.textures.SKIN?.url || null;
         this.capeURL = json.textures.CAPE?.url || null;
         this.modelSlim = json.textures.SKIN?.metadata?.model == 'slim' || false;
@@ -199,6 +199,10 @@ export class MinecraftUser {
       properties,
       legacy: this.legacy ? true : undefined
     };
+  }
+
+  static extractMinecraftProfileTextureProperty(textureValue: string): MinecraftProfileTextureProperty {
+    return JSON.parse(Buffer.from(textureValue, 'base64').toString('utf-8'));
   }
 }
 
