@@ -270,7 +270,7 @@ export function importByTexture(textureValue: string, textureSignature: string |
 }
 
 export function importSkinByURL(skinURL: string, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null) => void, textureValue?: string, textureSignature?: string): void {
-  request.get(skinURL, { encoding: null }, (err, httpRes, httpBody) => {
+  request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
     if (err) return callback(err, null);
 
     if (httpRes.statusCode == 200) {
@@ -296,7 +296,7 @@ export function importSkinByURL(skinURL: string, userAgent: UserAgent, callback:
 }
 
 export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: UserAgent, callback: (err: Error | null, cape: Cape | null) => void, textureValue?: string, textureSignature?: string): void {
-  request.get(capeURL, { encoding: null }, (err, httpRes, httpBody) => {
+  request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
     if (err) return callback(err, null);
 
     if (httpRes.statusCode == 200) {

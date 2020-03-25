@@ -254,7 +254,7 @@ router.all('/skin/:user?', (req, res, next) => {
           const skinURL = mcUser.getSecureSkinURL();
 
           if (skinURL) {
-            request.get(skinURL, { encoding: null }, (err, httpRes, httpBody) => {
+            request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
               if (err) return next(err);
 
               if (httpRes.statusCode == 200) {
@@ -290,7 +290,7 @@ router.all('/skin/:user?', (req, res, next) => {
       } else {
         const skinURL: string = req.query.url.toLowerCase().startsWith('http://') ? 'https' + req.query.url.substring(4) : req.query.url;
 
-        request.get(skinURL, { encoding: null }, (err, httpRes, httpBody) => {
+        request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
           if (err) return next(err);
 
           if (httpRes.statusCode == 200) {
@@ -410,7 +410,7 @@ router.all('/skin/:user?/:skinArea?', (req, res, next) => {
           const skinURL = mcUser.getSecureSkinURL();
 
           if (skinURL) {
-            request.get(skinURL, { encoding: null }, (err, httpRes, httpBody) => {
+            request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
               if (err) return next(err);
 
               if (httpRes.statusCode != 200 && httpRes.statusCode != 404) ApiError.log(`${mcUser.skinURL} returned HTTP-Code ${httpRes.statusCode}`);
@@ -435,7 +435,7 @@ router.all('/skin/:user?/:skinArea?', (req, res, next) => {
       } else {
         const skinURL: string = req.query.url.toLowerCase().startsWith('http://') ? 'https' + req.query.url.substring(4) : req.query.url;
 
-        request.get(skinURL, { encoding: null }, (err, httpRes, httpBody) => {
+        request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
           if (err) return next(err);
 
           if (httpRes.statusCode == 200) {
@@ -474,7 +474,7 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
             capeType == CapeType.LABY_MOD ? mcUser.getLabyModCapeURL() : null;
 
         if (capeURL) {
-          request.get(capeURL, { encoding: null }, (err, httpRes, httpBody) => {
+          request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
             if (err) return next(err);
 
             if (httpRes.statusCode == 200) {
@@ -523,7 +523,7 @@ export function getByUsername(username: string, at: number | string | null, call
   const get = (callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void) => {
     const cacheValue: { id: string, name: string } | Error | null | undefined = uuidCache.get(cacheKey);
     if (cacheValue == undefined) {
-      request.get(`https://api.mojang.com/users/profiles/minecraft/${username}${at != null ? `?at=${at}` : ''}`, {}, (err, httpRes, httpBody) => {
+      request.get(`https://api.mojang.com/users/profiles/minecraft/${username}${at != null ? `?at=${at}` : ''}`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {
         if (err) {
           uuidCache.set(cacheKey, err);
           return callback(err, null);
@@ -536,7 +536,7 @@ export function getByUsername(username: string, at: number | string | null, call
 
           // Contact fallback api (should not be necessary but is better than returning an 429 or 500)
           ApiError.log(`Contacting api.ashcon.app for username lookup: ${username}`);
-          request.get(`https://api.ashcon.app/mojang/v1/user/${username}`, {}, (err, httpRes, httpBody) => {
+          request.get(`https://api.ashcon.app/mojang/v1/user/${username}`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {
             if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
               return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`), null);
             }
@@ -599,7 +599,7 @@ export function getByUUID(uuid: string, req: Request, callback: (err: Error | nu
         // TODO: Reduce duplicate code
         if (rateLimitedNameHistory > 6) {
           // Contact fallback api (should not be necessary but is better than returning an 429 or 500
-          request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, {}, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
+          request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
             if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
               return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`, true), null);
             }
@@ -616,7 +616,7 @@ export function getByUUID(uuid: string, req: Request, callback: (err: Error | nu
             return callback(null, result);
           });
         } else {
-          request.get(`https://api.mojang.com/user/profiles/${mcUser.id}/names`, {}, (err, httpRes, httpBody) => {
+          request.get(`https://api.mojang.com/user/profiles/${mcUser.id}/names`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {
             if (err) return callback(err, null);
 
             if (httpRes.statusCode != 200 && httpRes.statusCode != 204) {
@@ -624,7 +624,7 @@ export function getByUUID(uuid: string, req: Request, callback: (err: Error | nu
               ApiError.log(`Mojang returned ${httpRes.statusCode} on name history lookup for ${mcUser.id}`);
               rateLimitedNameHistory++;
 
-              request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, {}, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
+              request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
                 if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
                   return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`, true), null);
                 }
@@ -658,7 +658,7 @@ export function getByUUID(uuid: string, req: Request, callback: (err: Error | nu
         }
       };
 
-      request.get(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?unsigned=false`, {}, (err, httpRes, httpBody) => {
+      request.get(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?unsigned=false`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {
         if (err) {
           userCache.set(uuid, err);
           return callback(err, null);
@@ -691,7 +691,7 @@ export function getByUUID(uuid: string, req: Request, callback: (err: Error | nu
               ApiError.log(`Contacting api.ashcon.app for profile lookup: ${uuid}`);
 
               // Contact fallback api (should not be necessary but is better than returning an 429 or 500
-              request.get(`https://api.ashcon.app/mojang/v2/user/${uuid}`, {}, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
+              request.get(`https://api.ashcon.app/mojang/v2/user/${uuid}`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
                 if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
                   return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`, true), null);
                 }
@@ -788,7 +788,7 @@ export function getByUUID(uuid: string, req: Request, callback: (err: Error | nu
 }
 
 function getBlockedServers(callback: (err: Error | null, hashes: string[] | null) => void): void {
-  request.get(`https://sessionserver.mojang.com/blockedservers`, {}, (err, httpRes, httpBody) => {
+  request.get(`https://sessionserver.mojang.com/blockedservers`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {
     if (err) return callback(err, null);
     if (httpRes.statusCode != 200) return callback(null, null);
 
