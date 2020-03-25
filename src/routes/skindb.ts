@@ -1,12 +1,12 @@
 // import * as tmImage from '@teachablemachine/image';
 // import canvas = require('canvas');
-import { Router, response } from 'express';
+import { Router } from 'express';
 // import { JSDOM } from 'jsdom';
 
 import { db } from '..';
-import { CleanMinecraftUser, MinecraftUser, UserAgent, Skin, Cape, CapeType } from '../global';
-import { ApiError, ErrorBuilder, isUUID, restful, Image, setCaching } from '../utils';
-import { getByUsername, getByUUID, getUserAgent } from './minecraft';
+import { MinecraftUser, UserAgent, Skin, Cape, CapeType } from '../global';
+import { ErrorBuilder, restful, Image, setCaching } from '../utils';
+import { getUserAgent } from './minecraft';
 import request = require('request');
 
 /* AI */
@@ -31,53 +31,76 @@ router.all('/import', (req, res, next) => {
     post: () => {
       const contentType = (req.headers['content-type'] || '').toLowerCase();
 
-      if (contentType == 'application/json') {
-        const json: { user?: string, raw?: { value: string, signature?: string } } = req.body;
+      if (contentType == 'image/png') {
+        if (!(req.body instanceof Buffer)) return next(new ErrorBuilder().invalidBody([{ param: 'body', condition: 'Valid png under 3MB' }]));
 
-        if (json.user) {
-          if (json.user.length <= 16) {
-            getByUsername(json.user, null, (err, apiRes) => {
-              if (err) return next(err);
-              if (!apiRes) return next(new ErrorBuilder().notFound('UUID for given username'));
+        Image.fromImg(req.body, (err, img) => {
+          if (err || !img) return next(new ErrorBuilder().invalidBody([{ param: 'body', condition: 'Valid png' }]));
+          if (!img.hasSkinDimensions()) return next(new ErrorBuilder().invalidBody([{ param: 'body', condition: 'Valid minecraft skin dimensions 64x32px or 64x64px' }]));
 
-              getByUUID(apiRes.id, req, (err, mcUser) => {
-                if (err) return next(err);
-                if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given username'));
+          getUserAgent(req, (err, userAgent) => {
+            if (err || !userAgent) return next(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`));
 
-                if (!mcUser.textureValue) return next(new ErrorBuilder().notFound('The provided user does not habe a skin'));
+            importSkinByBuffer(req.body, null, userAgent, (err, skin, exactMatch) => {
+              if (err || !skin) return next(err || new ErrorBuilder().serverErr(undefined, `Could not import uploaded skin by Buffer`));
 
-                importByTexture(mcUser.textureValue, mcUser.textureSignature, mcUser.userAgent, (err, skin, cape) => {
-                  if (err) return next(err);
-
-                  setCaching(res, false, false)
-                    .send({
-                      skin: skin || undefined,
-                      cape: cape || undefined
-                    });
+              return setCaching(res, false, false)
+                .status(exactMatch ? 200 : 201)
+                .send({
+                  result: exactMatch ? 'Already in database' : 'Added to database',
+                  skinID: skin.id
                 });
-              });
             });
-          } else if (isUUID(json.user)) {
-            getByUUID(json.user, req, (err, mcUser) => {
-              if (err) return next(err);
-              if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given uuid'));
+          });
+        });
+      } else if (contentType == 'application/json') {
+        const json: { /*user?: string,*/ raw?: { value: string, signature?: string } } = req.body;
 
-              if (!mcUser.textureValue) return next(new ErrorBuilder().notFound('The provided user does not habe a skin'));
+        // if (json.user) {
+        //   if (json.user.length <= 16) {
+        //     getByUsername(json.user, null, (err, apiRes) => {
+        //       if (err) return next(err);
+        //       if (!apiRes) return next(new ErrorBuilder().notFound('UUID for given username'));
 
-              importByTexture(mcUser.textureValue, mcUser.textureSignature, mcUser.userAgent, (err, skin, cape) => {
-                if (err) return next(err);
+        //       getByUUID(apiRes.id, req, (err, mcUser) => {
+        //         if (err) return next(err);
+        //         if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given username'));
 
-                setCaching(res, false, false)
-                  .send({
-                    skin: skin || undefined,
-                    cape: cape || undefined
-                  });
-              });
-            });
-          } else {
-            return next(new ErrorBuilder().invalidBody([]));  //TODO
-          }
-        } else if (json.raw) {
+        //         if (!mcUser.textureValue) return next(new ErrorBuilder().notFound('The provided user does not habe a skin'));
+
+        //         importByTexture(mcUser.textureValue, mcUser.textureSignature, mcUser.userAgent, (err, skin, cape) => {
+        //           if (err) return next(err);
+
+        //           setCaching(res, false, false)
+        //             .send({
+        //               skin: skin || undefined,
+        //               cape: cape || undefined
+        //             });
+        //         });
+        //       });
+        //     });
+        //   } else if (isUUID(json.user)) {
+        //     getByUUID(json.user, req, (err, mcUser) => {
+        //       if (err) return next(err);
+        //       if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given uuid'));
+
+        //       if (!mcUser.textureValue) return next(new ErrorBuilder().notFound('The provided user does not habe a skin'));
+
+        //       importByTexture(mcUser.textureValue, mcUser.textureSignature, mcUser.userAgent, (err, skin, cape) => {
+        //         if (err) return next(err);
+
+        //         setCaching(res, false, false)
+        //           .send({
+        //             skin: skin || undefined,
+        //             cape: cape || undefined
+        //           });
+        //       });
+        //     });
+        //   } else {
+        //     return next(new ErrorBuilder().invalidBody([]));  //TODO
+        //   }
+        // } else
+        if (json.raw) {
           if (!json.raw || !json.raw.value) return next(new ErrorBuilder().invalidBody([]));  //TODO
 
           // if (json.raw.signature) {
@@ -108,75 +131,75 @@ router.all('/import', (req, res, next) => {
   });
 });
 
-router.all('/search', (req, res, next) => {
-  // Currently supported: user (uuid, name)
+// router.all('/search', (req, res, next) => {
+//   // Currently supported: user (uuid, name)
 
-  restful(req, res, {
-    get: () => {
-      if (typeof req.query.q != 'string') return next(new ErrorBuilder().invalidParams('query', [{ param: 'q', condition: 'Is string' }]));
-      if (!req.query.q || req.query.q.trim() <= 128) return next(new ErrorBuilder().invalidParams('query', [{ param: 'q', condition: 'q.length > 0 and q.length <= 128' }]));
+//   restful(req, res, {
+//     get: () => {
+//       if (typeof req.query.q != 'string') return next(new ErrorBuilder().invalidParams('query', [{ param: 'q', condition: 'Is string' }]));
+//       if (!req.query.q || req.query.q.trim() <= 128) return next(new ErrorBuilder().invalidParams('query', [{ param: 'q', condition: 'q.length > 0 and q.length <= 128' }]));
 
-      const query: string = req.query.q.trim();
-      let waitingFor = 0;
+//       const query: string = req.query.q.trim();
+//       let waitingFor = 0;
 
-      const result: { profiles?: { direct?: CleanMinecraftUser[], indirect?: CleanMinecraftUser[] } } = {};
+//       const result: { profiles?: { direct?: CleanMinecraftUser[], indirect?: CleanMinecraftUser[] } } = {};
 
-      const sendResponse = (): void => {
-        if (waitingFor == 0) {
-          res.send(result);
-        }
-      };
+//       const sendResponse = (): void => {
+//         if (waitingFor == 0) {
+//           res.send(result);
+//         }
+//       };
 
-      if (query.length <= 16) {
-        waitingFor++;
+//       if (query.length <= 16) {
+//         waitingFor++;
 
-        getByUsername(query, null, (err, apiRes) => {
-          if (err) ApiError.log(`Searching by username for ${query} failed`, err);
+//         getByUsername(query, null, (err, apiRes) => {
+//           if (err) ApiError.log(`Searching by username for ${query} failed`, err);
 
-          if (apiRes) {
-            getByUUID(apiRes.id, req, (err, mcUser) => {
-              if (err) ApiError.log(`Searching by username for ${query} failed`, err);
+//           if (apiRes) {
+//             getByUUID(apiRes.id, req, (err, mcUser) => {
+//               if (err) ApiError.log(`Searching by username for ${query} failed`, err);
 
-              if (mcUser) {
-                if (!result.profiles) result.profiles = {};
-                if (!result.profiles.direct) result.profiles.direct = [];
+//               if (mcUser) {
+//                 if (!result.profiles) result.profiles = {};
+//                 if (!result.profiles.direct) result.profiles.direct = [];
 
-                result.profiles.direct.push(mcUser.toCleanJSON());
-              }
+//                 result.profiles.direct.push(mcUser.toCleanJSON());
+//               }
 
-              waitingFor--;
-              sendResponse();
-            });
-          } else {
-            waitingFor--;
+//               waitingFor--;
+//               sendResponse();
+//             });
+//           } else {
+//             waitingFor--;
 
-            if (waitingFor == 0) {
-              res.send(result);
-            }
-          }
-        });
-      } else if (isUUID(query)) {
-        waitingFor++;
+//             if (waitingFor == 0) {
+//               res.send(result);
+//             }
+//           }
+//         });
+//       } else if (isUUID(query)) {
+//         waitingFor++;
 
-        getByUUID(query, req, (err, mcUser) => {
-          if (err) ApiError.log(`Searching by uuid for ${query} failed`, err);
+//         getByUUID(query, req, (err, mcUser) => {
+//           if (err) ApiError.log(`Searching by uuid for ${query} failed`, err);
 
-          if (mcUser) {
-            if (!result.profiles) result.profiles = {};
-            if (!result.profiles.direct) result.profiles.direct = [];
+//           if (mcUser) {
+//             if (!result.profiles) result.profiles = {};
+//             if (!result.profiles.direct) result.profiles.direct = [];
 
-            result.profiles.direct.push(mcUser.toCleanJSON());
-          }
+//             result.profiles.direct.push(mcUser.toCleanJSON());
+//           }
 
-          waitingFor--;
-          sendResponse();
-        });
-      }
+//           waitingFor--;
+//           sendResponse();
+//         });
+//       }
 
-      sendResponse();
-    }
-  });
-});
+//       sendResponse();
+//     }
+//   });
+// });
 
 // router.all('/ai/:model?', async (req, res, next) => {
 //   restful(req, res, {
@@ -269,29 +292,31 @@ export function importByTexture(textureValue: string, textureSignature: string |
   }
 }
 
-export function importSkinByURL(skinURL: string, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null) => void, textureValue?: string, textureSignature?: string): void {
+export function importSkinByURL(skinURL: string, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null) => void, textureValue: string | null = null, textureSignature: string | null = null): void {
   request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
-    if (err) return callback(err, null);
+    if (err || httpRes.statusCode != 200) return callback(err, null);
 
-    if (httpRes.statusCode == 200) {
-      Image.fromImg(httpBody, (err, img) => {
-        if (err || !img) return callback(err, null);
+    return importSkinByBuffer(httpBody, skinURL, userAgent, callback, textureValue, textureSignature);
+  });
+}
 
-        img.toPngBuffer((err, orgSkin) => {
-          if (err || !orgSkin) return callback(err, null);
+export function importSkinByBuffer(skin: Buffer, skinURL: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void, textureValue: string | null = null, textureSignature: string | null = null): void {
+  Image.fromImg(skin, (err, img) => {
+    if (err || !img) return callback(err, null, false);
 
-          img.toCleanSkinBuffer((err, cleanSkin) => {
-            if (err || !cleanSkin) return callback(err, null);
+    img.toPngBuffer((err, orgSkin) => {
+      if (err || !orgSkin) return callback(err, null, false);
 
-            db.addSkin(orgSkin, cleanSkin, skinURL, null, null, userAgent, (err, skin) => {
-              if (err || !skin) return callback(err, null);
+      img.toCleanSkinBuffer((err, cleanSkin) => {
+        if (err || !cleanSkin) return callback(err, null, false);
 
-              return callback(null, skin);
-            });
-          });
+        db.addSkin(orgSkin, cleanSkin, skinURL, textureValue, textureSignature, userAgent, (err, skin, exactMatch) => {
+          if (err || !skin) return callback(err, null, false);
+
+          return callback(null, skin, exactMatch);
         });
       });
-    }
+    });
   });
 }
 

@@ -41,7 +41,7 @@ export interface UserAgent {
 export interface Skin {
   readonly id: number;
   readonly duplicateOf?: number;
-  readonly originalURL: string;
+  readonly originalURL?: string;
   readonly textureValue?: string;
   readonly textureSignature?: string;
   readonly added: Date;

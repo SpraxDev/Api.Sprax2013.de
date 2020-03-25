@@ -119,25 +119,28 @@ export class dbUtils {
     });
   }
 
-  addSkin(originalPng: Buffer, cleanPng: Buffer, originalURL: string, textureValue: string | null, textureSignature: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null) => void): void {
-    if (this.pool == null) return callback(null, null);
-    if (!originalURL.toLowerCase().startsWith('https://textures.minecraft.net/texture/')) return callback(new Error(`The provided originalURL(=${originalURL}) does not start with 'https://textures.minecraft.net/texture/'`), null);
+  addSkin(originalPng: Buffer, cleanPng: Buffer, originalURL: string | null, textureValue: string | null, textureSignature: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void): void {
+    if (this.pool == null) return callback(null, null, false);
+    if (originalURL && !originalURL.toLowerCase().startsWith('https://textures.minecraft.net/texture/')) return callback(new Error(`The provided originalURL(=${originalURL}) does not start with 'https://textures.minecraft.net/texture/'`), null, false);
 
     const cleanHash = generateHash(cleanPng);
 
     this.pool.connect((err, client, done) => {
-      if (err) return callback(err, null);
+      if (err) return callback(err, null, false);
 
       client.query('BEGIN', (err) => {
-        if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+        if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
 
-        client.query(`SELECT * FROM skins WHERE original_url =$1 LIMIT 1;`, [originalURL], (err, res) => {
-          if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+        const fieldName: string = typeof originalURL == 'string' ? 'original_url' : 'clean_hash',
+          args = typeof originalURL == 'string' ? [originalURL] : [cleanHash];
+
+        client.query(`SELECT * FROM skins WHERE ${fieldName} =$1 LIMIT 1;`, args, (err, res) => {
+          if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
 
           if (res.rows.length > 0) { // Exact same Skin-URL already in db
             client.query('COMMIT', (err) => {
               done();
-              if (err) return callback(err, null);
+              if (err) return callback(err, null, false);
 
               callback(null, {
                 id: res.rows[0].id,
@@ -148,18 +151,18 @@ export class dbUtils {
                 added: res.rows[0].added,
                 addedBy: res.rows[0].added_by,
                 cleanHash: res.rows[0].clean_hash
-              });
+              }, true);
             });
           } else {
             client.query(`SELECT * FROM skins WHERE clean_hash =$1 AND duplicate_of IS NULL LIMIT 1;`, [cleanHash], (err, res) => {
-              if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+              if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
 
               const duplicateID: number | null = res.rows.length > 0 ? res.rows[0].id : null,
                 isDuplicate = res.rows.length > 0;
 
               client.query(`INSERT INTO skins(duplicate_of,original_url,texture_value,texture_signature,clean_hash,added_by)VALUES($1,$2,$3,$4,$5,$6) RETURNING *;`,
                 [duplicateID, originalURL, textureValue, textureSignature, (isDuplicate ? null : cleanHash), userAgent.id], (err, res) => {
-                  if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+                  if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
 
                   const resultSkin: Skin = {
                     id: res.rows[0].id,
@@ -175,21 +178,21 @@ export class dbUtils {
                   if (!isDuplicate) {
                     client.query(`INSERT INTO skin_images(skin_id,original,clean)VALUES($1,$2,$3);`,
                       [resultSkin.id, originalPng, cleanPng], (err, _res) => {
-                        if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+                        if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
 
                         client.query('COMMIT', (err) => {
                           done();
-                          if (err) return callback(err, null);
+                          if (err) return callback(err, null, false);
 
-                          callback(null, resultSkin);
+                          callback(null, resultSkin, false);
                         });
                       });
                   } else {
                     client.query('COMMIT', (err) => {
                       done();
-                      if (err) return callback(err, null);
+                      if (err) return callback(err, null, false);
 
-                      callback(null, resultSkin);
+                      callback(null, resultSkin, false);
                     });
                   }
                 });
