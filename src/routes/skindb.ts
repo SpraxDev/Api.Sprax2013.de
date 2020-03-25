@@ -1,13 +1,20 @@
-// import * as tmImage from '@teachablemachine/image';
+import crypto = require('crypto');
+import fs = require('fs');
+import path = require('path');
+import request = require('request');
+
 // import canvas = require('canvas');
-import { Router } from 'express';
 // import { JSDOM } from 'jsdom';
+// import * as tmImage from '@teachablemachine/image';
+
+import { Router } from 'express';
 
 import { db } from '..';
 import { MinecraftUser, UserAgent, Skin, Cape, CapeType } from '../global';
 import { ErrorBuilder, restful, Image, setCaching } from '../utils';
 import { getUserAgent } from './minecraft';
-import request = require('request');
+
+const yggdrasilPublicKey = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));
 
 /* AI */
 // (global as any).document = new JSDOM('<body></body>').window.document;
@@ -47,80 +54,34 @@ router.all('/import', (req, res, next) => {
               return setCaching(res, false, false)
                 .status(exactMatch ? 200 : 201)
                 .send({
-                  result: exactMatch ? 'Already in database' : 'Added to database',
+                  result: exactMatch ? 'Skin already in database' : 'Skin added to database',
                   skinID: skin.id
                 });
             });
           });
         });
       } else if (contentType == 'application/json') {
-        const json: { /*user?: string,*/ raw?: { value: string, signature?: string } } = req.body;
+        const json: { raw?: { value: string, signature?: string } } = req.body;
 
-        // if (json.user) {
-        //   if (json.user.length <= 16) {
-        //     getByUsername(json.user, null, (err, apiRes) => {
-        //       if (err) return next(err);
-        //       if (!apiRes) return next(new ErrorBuilder().notFound('UUID for given username'));
-
-        //       getByUUID(apiRes.id, req, (err, mcUser) => {
-        //         if (err) return next(err);
-        //         if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given username'));
-
-        //         if (!mcUser.textureValue) return next(new ErrorBuilder().notFound('The provided user does not habe a skin'));
-
-        //         importByTexture(mcUser.textureValue, mcUser.textureSignature, mcUser.userAgent, (err, skin, cape) => {
-        //           if (err) return next(err);
-
-        //           setCaching(res, false, false)
-        //             .send({
-        //               skin: skin || undefined,
-        //               cape: cape || undefined
-        //             });
-        //         });
-        //       });
-        //     });
-        //   } else if (isUUID(json.user)) {
-        //     getByUUID(json.user, req, (err, mcUser) => {
-        //       if (err) return next(err);
-        //       if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given uuid'));
-
-        //       if (!mcUser.textureValue) return next(new ErrorBuilder().notFound('The provided user does not habe a skin'));
-
-        //       importByTexture(mcUser.textureValue, mcUser.textureSignature, mcUser.userAgent, (err, skin, cape) => {
-        //         if (err) return next(err);
-
-        //         setCaching(res, false, false)
-        //           .send({
-        //             skin: skin || undefined,
-        //             cape: cape || undefined
-        //           });
-        //       });
-        //     });
-        //   } else {
-        //     return next(new ErrorBuilder().invalidBody([]));  //TODO
-        //   }
-        // } else
         if (json.raw) {
-          if (!json.raw || !json.raw.value) return next(new ErrorBuilder().invalidBody([]));  //TODO
+          if (!json.raw.value) return next(new ErrorBuilder().invalidBody([{ param: 'JSON-Body: json.raw.value', condition: 'Valid skin value from mojang profile' }]));
+          if (json.raw.signature && !isFromYggdrasil(json.raw.value, json.raw.signature)) json.raw.signature = undefined;
 
-          // if (json.raw.signature) {
-
-          // } else {
           getUserAgent(req, (err, userAgent) => {
             if (err || !userAgent) return next(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`));
-            if (!json.raw) return;  // FIXME: why does TypeScript need this line? o.0
+            if (!json.raw) return next(new ErrorBuilder().unknown());  // FIXME: why does TypeScript need this line? o.0
 
             importByTexture(json.raw.value, json.raw.signature || null, userAgent, (err, skin, cape) => {
               if (err) return next(err);
 
-              setCaching(res, false, false)
+              return setCaching(res, false, false)
+                .status(202) // TODO report if skin added to db or already was in db
                 .send({
-                  skin: skin || undefined,
-                  cape: cape || undefined
+                  result: null, // TODO report if skin added to db or already was in db
+                  skinID: skin?.id
                 });
             });
           });
-          // }
         } else {
           return next(new ErrorBuilder().invalidBody([]));  //TODO
         }
@@ -277,7 +238,7 @@ export function importByTexture(textureValue: string, textureSignature: string |
 
       resultSkin = skin;
       done();
-    }, textureValue, textureSignature || undefined);
+    }, textureValue, textureSignature);
   }
 
   if (capeURL) {
@@ -340,4 +301,11 @@ export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: 
       });
     }
   });
+}
+
+function isFromYggdrasil(data: string, signature: string) {
+  const ver = crypto.createVerify('sha1WithRSAEncryption');
+  ver.update(data);
+
+  return ver.verify(yggdrasilPublicKey, Buffer.from(signature, 'base64'));
 }

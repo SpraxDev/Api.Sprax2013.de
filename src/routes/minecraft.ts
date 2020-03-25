@@ -1,15 +1,15 @@
 import fs = require('fs');
 import nCache = require('node-cache');
+import net = require('net');
 import path = require('path');
 import request = require('request');
-import net = require('net');
 
 import { Router, Request } from 'express';
 
 import { db } from '../index';
+import { importByTexture, importCapeByURL } from './skindb';
 import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
 import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL, generateHash } from '../utils';
-import { importByTexture, importCapeByURL } from './skindb';
 
 const uuidCache = new nCache({ stdTTL: 59, useClones: false }), /* key:${name_lower};${at||''}, value: { id: string, name: string } | Error | null */
   userCache = new nCache({ stdTTL: 59, useClones: false }), /* key: profile.id, value: MinecraftUser | Error | null */
