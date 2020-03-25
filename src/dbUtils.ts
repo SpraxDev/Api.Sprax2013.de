@@ -367,6 +367,22 @@ export class dbUtils {
     });
   }
 
+  addHost(host: string, sha1: string, callback: (err: Error | null) => void): void {
+    if (this.pool == null) return callback(null);
+
+    this.pool.query('INSERT INTO hosts(host,hash) VALUES($1,$2) ON CONFLICT DO NOTHING;', [host, sha1], (err, _res) => {
+      return callback(err || null);
+    });
+  }
+
+  getHost(sha1: string, callback: (err: Error | null, host: string | null) => void): void {
+    if (this.pool == null) return callback(null, null);
+
+    this.pool.query('SELECT host FROM hosts WHERE hash =$1;', [sha1], (err, res) => {
+      return callback(err || null, res.rows.length > 0 ? res.rows[0].host : null);
+    });
+  }
+
   /* Helper */
 
   isAvailable(): boolean {

@@ -2,12 +2,13 @@ import fs = require('fs');
 import nCache = require('node-cache');
 import path = require('path');
 import request = require('request');
+import net = require('net');
 
 import { Router, Request } from 'express';
 
 import { db } from '../index';
 import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
-import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL } from '../utils';
+import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL, generateHash } from '../utils';
 import { importByTexture, importCapeByURL } from './skindb';
 
 const uuidCache = new nCache({ stdTTL: 59, useClones: false }), /* key:${name_lower};${at||''}, value: { id: string, name: string } | Error | null */
@@ -508,6 +509,105 @@ router.all('/servers/blocked', (req, res, next) => {  // TODO: return object (ke
 
         setCaching(res, true, true, 60 * 2).send(hashes);
       });
+    }
+  });
+});
+
+router.all('/servers/blocked/known', (req, res, next) => {
+  restful(req, res, {
+    get: () => {
+      getBlockedServers((err, hashes) => {
+        if (err) return next(err);
+        if (!hashes) return next(new ErrorBuilder().notFound('List of blocked servers', true));
+
+        const result: { [key: string]: string | null } = {};
+
+        let waiting = 0;
+        for (const hash of hashes) {
+          waiting++;
+          db.getHost(hash, (err, host) => {
+            if (host != null) {
+              result[hash] = host;
+            }
+
+            waiting--;
+
+            if (waiting == 0) {
+              return setCaching(res, true, true, 60 * 30)
+                .send(result);
+            }
+
+            if (err) return next(err);
+          });
+        }
+      });
+    }
+  });
+});
+
+router.all('/servers/blocked/check', (req, res, next) => {
+  restful(req, res, {
+    get: () => {
+      const host: string = (req.query.host as string || '').trim().toLowerCase();
+
+      if (!host) return next(new ErrorBuilder().invalidParams('query', [{ param: 'host', condition: 'host.length > 0' }]));
+
+      const hosts: { [key: string]: string } = {};
+
+      hosts[host] = generateHash(host, 'sha1');
+
+      let tempHost: string = host,
+        tempHostIndex: number;
+      if (net.isIPv4(host)) {
+        while ((tempHostIndex = tempHost.lastIndexOf('.')) >= 0) {
+          tempHost = tempHost.substring(0, tempHostIndex);
+
+          hosts[`${tempHost}.*`] = generateHash(`${tempHost}.*`, 'sha1');
+        }
+      } else if (host.indexOf('.') >= 0) {
+        hosts[`*.${host}`] = generateHash(`*.${host}`, 'sha1');
+
+        while ((tempHostIndex = tempHost.indexOf('.')) >= 0) {
+          tempHost = tempHost.substring(tempHostIndex + 1);
+
+          hosts[`*.${tempHost}`] = generateHash(`*.${tempHost}`, 'sha1');
+        }
+      } else {
+        return next(new ErrorBuilder().invalidParams('query', [{ param: 'host', condition: 'A valid IPv4 or domain' }]));
+      }
+
+      let waiting = 0;
+
+      for (const host in hosts) {
+        if (hosts.hasOwnProperty(host)) {
+          let hash = hosts[host];
+
+          waiting++;
+          db.addHost(host, hash, (err) => {
+            waiting--;
+
+            if (waiting == 0) {
+              getBlockedServers((err, hashes) => {
+                if (err) return next(err);
+                if (!hashes) return next(new ErrorBuilder().notFound('List of blocked servers', true));
+
+                const result: { [key: string]: boolean } = {};
+
+                for (const key in hosts) {
+                  if (hosts.hasOwnProperty(key)) {
+                    result[key] = hashes.includes(hosts[key]);
+                  }
+                }
+
+                return setCaching(res, true, true, 60 * 15)
+                  .send(result);
+              });
+            }
+
+            if (err) return next(err);
+          });
+        }
+      }
     }
   });
 });
