@@ -190,7 +190,7 @@ router.all('/uuid/:name?', (req, res, next) => {
 
       getByUsername(req.params.name, at, (err, apiRes) => {
         if (err) return next(err);
-        if (!apiRes) return next(new ErrorBuilder().notFound('Profile for given user', true));
+        if (!apiRes) return next(new ErrorBuilder().notFound('Profile for given user'));
 
         setCaching(res, true, true, 60).send(apiRes);
       });
