@@ -288,7 +288,7 @@ router.all('/skin/:user?', (req, res, next) => {
           }
         });
       } else {
-        const skinURL: string = req.query.url.toLowerCase().startsWith('http://') ? 'https' + req.query.url.substring(4) : req.query.url;
+        const skinURL: string = MinecraftUser.getSecureURL(req.query.url);
 
         request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
           if (err) return next(err);
@@ -433,7 +433,7 @@ router.all('/skin/:user?/:skinArea?', (req, res, next) => {
           }
         });
       } else {
-        const skinURL: string = req.query.url.toLowerCase().startsWith('http://') ? 'https' + req.query.url.substring(4) : req.query.url;
+        const skinURL: string = MinecraftUser.getSecureURL(req.query.url);
 
         request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
           if (err) return next(err);
@@ -506,7 +506,7 @@ router.all('/servers/blocked', (req, res, next) => {  // TODO: return object (ke
         if (err) return next(err);
         if (!hashes) return next(new ErrorBuilder().notFound('List of blocked servers', true));
 
-        setCaching(res, true, true, 120).send(hashes);
+        setCaching(res, true, true, 60 * 2).send(hashes);
       });
     }
   });
