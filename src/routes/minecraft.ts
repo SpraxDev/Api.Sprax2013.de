@@ -1,13 +1,15 @@
 import fs = require('fs');
 import nCache = require('node-cache');
+import net = require('net');
 import path = require('path');
 import request = require('request');
 
 import { Router, Request } from 'express';
 
 import { db } from '../index';
+import { importByTexture, importCapeByURL } from './skindb';
 import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
-import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL } from '../utils';
+import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL, generateHash } from '../utils';
 
 const uuidCache = new nCache({ stdTTL: 59, useClones: false }), /* key:${name_lower};${at||''}, value: { id: string, name: string } | Error | null */
   userCache = new nCache({ stdTTL: 59, useClones: false }), /* key: profile.id, value: MinecraftUser | Error | null */
@@ -26,30 +28,19 @@ userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) =>
       if (err) return ApiError.log('Could not update user in database', { profile: value.id, stack: err.stack });
 
       /* Skin */
-      const skinURL = value.getSecureSkinURL();
-      if (skinURL) {
-        request.get(skinURL, { encoding: null }, (err, httpRes, httpBody) => {
-          if (err) return ApiError.log(`Could not fetch skinURL`, { skinURL, stack: err.stack });
+      if (value.textureValue) {
+        importByTexture(value.textureValue, value.textureSignature, value.userAgent, (err, skin, cape) => {
+          if (err) return ApiError.log('Could not import skin/cape from profile', { skinURL: value.skinURL, profile: value.id, stack: (err || new Error()).stack });
 
-          if (httpRes.statusCode == 200) {
-            Image.fromImg(httpBody, (err, img) => {
-              if (err || !img) return ApiError.log('Could not create image from skin-Buffer', { skinURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
+          if (skin) {
+            db.addSkinToUserHistory(value, skin, (err) => {
+              if (err) return ApiError.log(`Could not update skin-history in database`, { skin: skin.id, profile: value.id, stack: err.stack });
+            });
+          }
 
-              img.toPngBuffer((err, orgSkin) => {
-                if (err || !orgSkin) return ApiError.log('Could not create png-Buffer from image', { skinURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
-
-                img.toCleanSkinBuffer((err, cleanSkin) => {
-                  if (err || !cleanSkin) return ApiError.log('Could not create cleanSkin-Buffer from image', { skinURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
-
-                  db.addSkin(orgSkin, cleanSkin, skinURL, value.textureValue, value.textureSignature, value.userAgent, (err, skin) => {
-                    if (err || !skin) return ApiError.log('Could not update skin in database', { skinURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
-
-                    db.addSkinToUserHistory(value, skin, (err) => {
-                      if (err) return ApiError.log(`Could not update skin-history in database`, { skin: skin.id, profile: value.id, stack: err.stack });
-                    });
-                  });
-                });
-              });
+          if (cape) {
+            db.addCapeToUserHistory(value, cape, (err) => {
+              if (err) return ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
             });
           }
         });
@@ -57,32 +48,17 @@ userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) =>
 
       const processCape = function (capeURL: string | null, capeType: CapeType) {
         if (capeURL) {
-          request.get(capeURL, { encoding: null }, (err, httpRes, httpBody) => {
-            if (err) return ApiError.log(`Could not fetch capeURL`, { capeURL, stack: err.stack });
+          importCapeByURL(capeURL, capeType, value.userAgent, (err, cape) => {
+            if (err || !cape) return ApiError.log('Could not import cape from profile', { capeURL: value.capeURL, profile: value.id, stack: (err || new Error()).stack });
 
-            if (httpRes.statusCode == 200) {
-              Image.fromImg(httpBody, (err, img) => {
-                if (err || !img) return ApiError.log('Could not create image from cape-Buffer', { capeURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
-
-                img.toPngBuffer((err, capePng) => {
-                  if (err || !capePng) return ApiError.log('Could not create png-Buffer from image', { capeURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
-
-                  db.addCape(capePng, capeType, capeURL, value.textureValue, value.textureSignature, value.userAgent, (err, cape) => {
-                    if (err || !cape) return ApiError.log('Could not update cape in database', { capeURL, textureValue: value.textureValue, textureSignature: value.textureSignature, stack: err ? err.stack : new Error().stack });
-
-                    db.addCapeToUserHistory(value, cape, (err) => {
-                      if (err) return ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
-                    });
-                  });
-                });
-              });
-            }
-          });
+            db.addCapeToUserHistory(value, cape, (err) => {
+              if (err) return ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
+            });
+          }, value.textureValue || undefined, value.textureSignature || undefined);
         }
       };
 
       /* Capes */
-      processCape(value.getSecureCapeURL(), CapeType.MOJANG);
       processCape(value.getOptiFineCapeURL(), CapeType.OPTIFINE);
       processCape(value.getLabyModCapeURL(), CapeType.LABY_MOD);
     });
@@ -102,6 +78,7 @@ export const minecraftExpressRouter = router;
 // Turn :user into uuid (without hyphenes)
 router.param('user', (req, _res, next, value, name) => {
   if (typeof value != 'string') return next(new ErrorBuilder().invalidParams('url', [{ param: 'user', condition: 'Is string' }]));
+  value = value.trim();
 
   if (value.length <= 16) {
     if (req.route.path.startsWith('/skin/:user') && value.toLowerCase() != 'x-url' && req.query.url) return next(new ErrorBuilder().invalidParams('query', [{ param: 'url', condition: `User to equal (ignore case) "X-URL" or no url parameter` }]));
@@ -213,7 +190,7 @@ router.all('/uuid/:name?', (req, res, next) => {
 
       getByUsername(req.params.name, at, (err, apiRes) => {
         if (err) return next(err);
-        if (!apiRes) return next(new ErrorBuilder().notFound('Profile for given user', true));
+        if (!apiRes) return next(new ErrorBuilder().notFound('Profile for given user'));
 
         setCaching(res, true, true, 60).send(apiRes);
       });
@@ -278,7 +255,7 @@ router.all('/skin/:user?', (req, res, next) => {
           const skinURL = mcUser.getSecureSkinURL();
 
           if (skinURL) {
-            request.get(skinURL, { encoding: null }, (err, httpRes, httpBody) => {
+            request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
               if (err) return next(err);
 
               if (httpRes.statusCode == 200) {
@@ -312,9 +289,9 @@ router.all('/skin/:user?', (req, res, next) => {
           }
         });
       } else {
-        const skinURL: string = req.query.url.toLowerCase().startsWith('http://') ? 'https' + req.query.url.substring(4) : req.query.url;
+        const skinURL: string = MinecraftUser.getSecureURL(req.query.url);
 
-        request.get(skinURL, { encoding: null }, (err, httpRes, httpBody) => {
+        request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
           if (err) return next(err);
 
           if (httpRes.statusCode == 200) {
@@ -434,7 +411,7 @@ router.all('/skin/:user?/:skinArea?', (req, res, next) => {
           const skinURL = mcUser.getSecureSkinURL();
 
           if (skinURL) {
-            request.get(skinURL, { encoding: null }, (err, httpRes, httpBody) => {
+            request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
               if (err) return next(err);
 
               if (httpRes.statusCode != 200 && httpRes.statusCode != 404) ApiError.log(`${mcUser.skinURL} returned HTTP-Code ${httpRes.statusCode}`);
@@ -457,9 +434,9 @@ router.all('/skin/:user?/:skinArea?', (req, res, next) => {
           }
         });
       } else {
-        const skinURL: string = req.query.url.toLowerCase().startsWith('http://') ? 'https' + req.query.url.substring(4) : req.query.url;
+        const skinURL: string = MinecraftUser.getSecureURL(req.query.url);
 
-        request.get(skinURL, { encoding: null }, (err, httpRes, httpBody) => {
+        request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
           if (err) return next(err);
 
           if (httpRes.statusCode == 200) {
@@ -498,7 +475,7 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
             capeType == CapeType.LABY_MOD ? mcUser.getLabyModCapeURL() : null;
 
         if (capeURL) {
-          request.get(capeURL, { encoding: null }, (err, httpRes, httpBody) => {
+          request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
             if (err) return next(err);
 
             if (httpRes.statusCode == 200) {
@@ -530,14 +507,113 @@ router.all('/servers/blocked', (req, res, next) => {  // TODO: return object (ke
         if (err) return next(err);
         if (!hashes) return next(new ErrorBuilder().notFound('List of blocked servers', true));
 
-        setCaching(res, true, true, 120).send(hashes);
+        setCaching(res, true, true, 60 * 2).send(hashes);
       });
     }
   });
 });
 
+router.all('/servers/blocked/known', (req, res, next) => {
+  restful(req, res, {
+    get: () => {
+      getBlockedServers((err, hashes) => {
+        if (err) return next(err);
+        if (!hashes) return next(new ErrorBuilder().notFound('List of blocked servers', true));
+
+        const result: { [key: string]: string | null } = {};
+
+        let waiting = 0;
+        for (const hash of hashes) {
+          waiting++;
+          db.getHost(hash, (err, host) => {
+            if (host != null) {
+              result[hash] = host;
+            }
+
+            waiting--;
+
+            if (waiting == 0) {
+              return setCaching(res, true, true, 60 * 30)
+                .send(result);
+            }
+
+            if (err) return next(err);
+          });
+        }
+      });
+    }
+  });
+});
+
+router.all('/servers/blocked/check', (req, res, next) => {
+  restful(req, res, {
+    get: () => {
+      const host: string = (req.query.host as string || '').trim().toLowerCase();
+
+      if (!host) return next(new ErrorBuilder().invalidParams('query', [{ param: 'host', condition: 'host.length > 0' }]));
+
+      const hosts: { [key: string]: string } = {};
+
+      hosts[host] = generateHash(host, 'sha1');
+
+      let tempHost: string = host,
+        tempHostIndex: number;
+      if (net.isIPv4(host)) {
+        while ((tempHostIndex = tempHost.lastIndexOf('.')) >= 0) {
+          tempHost = tempHost.substring(0, tempHostIndex);
+
+          hosts[`${tempHost}.*`] = generateHash(`${tempHost}.*`, 'sha1');
+        }
+      } else if (host.indexOf('.') >= 0) {
+        hosts[`*.${host}`] = generateHash(`*.${host}`, 'sha1');
+
+        while ((tempHostIndex = tempHost.indexOf('.')) >= 0) {
+          tempHost = tempHost.substring(tempHostIndex + 1);
+
+          hosts[`*.${tempHost}`] = generateHash(`*.${tempHost}`, 'sha1');
+        }
+      } else {
+        return next(new ErrorBuilder().invalidParams('query', [{ param: 'host', condition: 'A valid IPv4 or domain' }]));
+      }
+
+      let waiting = 0;
+
+      for (const host in hosts) {
+        if (hosts.hasOwnProperty(host)) {
+          let hash = hosts[host];
+
+          waiting++;
+          db.addHost(host, hash, (err) => {
+            waiting--;
+
+            if (waiting == 0) {
+              getBlockedServers((err, hashes) => {
+                if (err) return next(err);
+                if (!hashes) return next(new ErrorBuilder().notFound('List of blocked servers', true));
+
+                const result: { [key: string]: boolean } = {};
+
+                for (const key in hosts) {
+                  if (hosts.hasOwnProperty(key)) {
+                    result[key] = hashes.includes(hosts[key]);
+                  }
+                }
+
+                return setCaching(res, true, true, 60 * 15)
+                  .send(result);
+              });
+            }
+
+            if (err) return next(err);
+          });
+        }
+      }
+    }
+  });
+});
+
 /* Helper */
-function getByUsername(username: string, at: number | string | null, callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void): void {
+export function getByUsername(username: string, at: number | string | null, callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void): void {
   if (typeof at != 'number' || (typeof at == 'number' && at > Date.now())) {
     at = null;
   }
@@ -547,7 +623,7 @@ function getByUsername(username: string, at: number | string | null, callback: (
   const get = (callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void) => {
     const cacheValue: { id: string, name: string } | Error | null | undefined = uuidCache.get(cacheKey);
     if (cacheValue == undefined) {
-      request.get(`https://api.mojang.com/users/profiles/minecraft/${username}${at != null ? `?at=${at}` : ''}`, {}, (err, httpRes, httpBody) => {
+      request.get(`https://api.mojang.com/users/profiles/minecraft/${username}${at != null ? `?at=${at}` : ''}`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {
         if (err) {
           uuidCache.set(cacheKey, err);
           return callback(err, null);
@@ -560,7 +636,7 @@ function getByUsername(username: string, at: number | string | null, callback: (
 
           // Contact fallback api (should not be necessary but is better than returning an 429 or 500)
           ApiError.log(`Contacting api.ashcon.app for username lookup: ${username}`);
-          request.get(`https://api.ashcon.app/mojang/v1/user/${username}`, {}, (err, httpRes, httpBody) => {
+          request.get(`https://api.ashcon.app/mojang/v1/user/${username}`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {
             if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
               return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`), null);
             }
@@ -612,7 +688,7 @@ function getByUsername(username: string, at: number | string | null, callback: (
   }
 }
 
-function getByUUID(uuid: string, req: Request, callback: (err: Error | null, user: MinecraftUser | null) => void): void {
+export function getByUUID(uuid: string, req: Request, callback: (err: Error | null, user: MinecraftUser | null) => void): void {
   const get = (callback: (err: Error | null, user: MinecraftUser | null) => void) => {
     const cacheValue: MinecraftUser | Error | null | undefined = userCache.get(uuid);
 
@@ -623,7 +699,7 @@ function getByUUID(uuid: string, req: Request, callback: (err: Error | null, use
         // TODO: Reduce duplicate code
         if (rateLimitedNameHistory > 6) {
           // Contact fallback api (should not be necessary but is better than returning an 429 or 500
-          request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, {}, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
+          request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
             if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
               return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`, true), null);
             }
@@ -640,7 +716,7 @@ function getByUUID(uuid: string, req: Request, callback: (err: Error | null, use
             return callback(null, result);
           });
         } else {
-          request.get(`https://api.mojang.com/user/profiles/${mcUser.id}/names`, {}, (err, httpRes, httpBody) => {
+          request.get(`https://api.mojang.com/user/profiles/${mcUser.id}/names`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {
             if (err) return callback(err, null);
 
             if (httpRes.statusCode != 200 && httpRes.statusCode != 204) {
@@ -648,7 +724,7 @@ function getByUUID(uuid: string, req: Request, callback: (err: Error | null, use
               ApiError.log(`Mojang returned ${httpRes.statusCode} on name history lookup for ${mcUser.id}`);
               rateLimitedNameHistory++;
 
-              request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, {}, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
+              request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
                 if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
                   return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`, true), null);
                 }
@@ -682,7 +758,7 @@ function getByUUID(uuid: string, req: Request, callback: (err: Error | null, use
         }
       };
 
-      request.get(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?unsigned=false`, {}, (err, httpRes, httpBody) => {
+      request.get(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?unsigned=false`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {
         if (err) {
           userCache.set(uuid, err);
           return callback(err, null);
@@ -715,7 +791,7 @@ function getByUUID(uuid: string, req: Request, callback: (err: Error | null, use
               ApiError.log(`Contacting api.ashcon.app for profile lookup: ${uuid}`);
 
               // Contact fallback api (should not be necessary but is better than returning an 429 or 500
-              request.get(`https://api.ashcon.app/mojang/v2/user/${uuid}`, {}, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
+              request.get(`https://api.ashcon.app/mojang/v2/user/${uuid}`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
                 if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
                   return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`, true), null);
                 }
@@ -812,7 +888,7 @@ function getByUUID(uuid: string, req: Request, callback: (err: Error | null, use
 }
 
 function getBlockedServers(callback: (err: Error | null, hashes: string[] | null) => void): void {
-  request.get(`https://sessionserver.mojang.com/blockedservers`, {}, (err, httpRes, httpBody) => {
+  request.get(`https://sessionserver.mojang.com/blockedservers`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {
     if (err) return callback(err, null);
     if (httpRes.statusCode != 200) return callback(null, null);
 
@@ -830,7 +906,8 @@ function getBlockedServers(callback: (err: Error | null, hashes: string[] | null
   });
 }
 
-function getUserAgent(req: Request | null, callback: (err: Error | null, userAgent: UserAgent | null) => void): void {
+// TODO put inside global and change the UserAgent-interface to an class
+export function getUserAgent(req: Request | null, callback: (err: Error | null, userAgent: UserAgent | null) => void): void {
   if (!db.isAvailable()) return callback(null, { id: -1, name: 'SpraxAPI', internal: true });
 
   const agentName = req && req.headers['user-agent'] ? req.headers['user-agent'] : 'SpraxAPI',

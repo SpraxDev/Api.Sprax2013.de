@@ -41,7 +41,7 @@ export interface UserAgent {
 export interface Skin {
   readonly id: number;
   readonly duplicateOf?: number;
-  readonly originalURL: string;
+  readonly originalURL?: string;
   readonly textureValue?: string;
   readonly textureSignature?: string;
   readonly added: Date;
@@ -85,6 +85,20 @@ export interface Color {
 }
 
 /* Minecraft */
+export interface CleanMinecraftUser {
+  id: string;
+  id_hyphens: string;
+  name: string;
+  legacy: boolean | null;
+  textures: {
+    skinURL: string | null;
+    capeURL: string | null;
+    texture_value: string | null;
+    texture_signature: string | null
+  };
+  name_history?: MinecraftNameHistoryElement[];
+}
+
 export class MinecraftUser {
   id: string;
   name: string;
@@ -112,7 +126,7 @@ export class MinecraftUser {
         this.textureValue = prop.value;
         this.textureSignature = prop.signature || null;
 
-        const json: MinecraftProfileTextureProperty = JSON.parse(Buffer.from(prop.value, 'base64').toString('utf-8'));
+        const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(prop.value);
         this.skinURL = json.textures.SKIN?.url || null;
         this.capeURL = json.textures.CAPE?.url || null;
         this.modelSlim = json.textures.SKIN?.metadata?.model == 'slim' || false;
@@ -122,9 +136,14 @@ export class MinecraftUser {
 
   getSecureSkinURL(): string | null {
     if (!this.skinURL) return null;
-    if (!this.skinURL.toLowerCase().startsWith('http://')) return this.skinURL;
 
-    return 'https' + this.skinURL.substring(4);
+    return MinecraftUser.getSecureURL(this.skinURL);
+  }
+
+  static getSecureURL(skinURL: string): string {
+    if (!skinURL.toLowerCase().startsWith('http://')) return skinURL;
+
+    return 'https' + skinURL.substring(4);
   }
 
   getSecureCapeURL(): string | null {
@@ -149,7 +168,7 @@ export class MinecraftUser {
     return ((parseInt(this.id[7], 16) ^ parseInt(this.id[15], 16) ^ parseInt(this.id[23], 16) ^ parseInt(this.id[31], 16)) & 1) == 1;
   }
 
-  toCleanJSON(): { id: string, id_hyphens: string, name: string, legacy: boolean | null, textures: { skinURL: string | null, capeURL: string | null, texture_value: string | null, texture_signature: string | null }, name_history?: MinecraftNameHistoryElement[] } {
+  toCleanJSON(): CleanMinecraftUser {
     return {
       id: this.id,
       id_hyphens: addHyphensToUUID(this.id),
@@ -185,6 +204,10 @@ export class MinecraftUser {
       properties,
       legacy: this.legacy ? true : undefined
     };
+  }
+
+  static extractMinecraftProfileTextureProperty(textureValue: string): MinecraftProfileTextureProperty {
+    return JSON.parse(Buffer.from(textureValue, 'base64').toString('utf-8'));
   }
 }
 

@@ -346,8 +346,20 @@ export class ErrorBuilder {
     return new ApiError(`${whatFailed}`, 500, undefined, this.logged);
   }
 
+  serviceUnavailable(description: string = 'Service Unavailable', adminLog?: string | boolean): ApiError {
+    if (adminLog) {
+      this.log(typeof adminLog == 'boolean' ? `This should not have happened: ${description}` : adminLog);
+    }
+
+    return new ApiError(`${description}`, 503, undefined, this.logged);
+  }
+
   invalidParams(paramType: 'url' | 'query', params: { param: string, condition: string }[]): ApiError {
     return new ApiError(`Missing or invalid ${paramType} parameters`, 400, params, this.logged);
+  }
+
+  invalidBody(expected: { param: string, condition: string }[]): ApiError {
+    return new ApiError(`Missing or invalid body`, 400, expected, this.logged);
   }
 }
 
@@ -555,6 +567,10 @@ export function toInt(input: string | number | boolean): number | null {
 /**
  * Defaults to 'sha256' algorithm
  */
-export function generateHash(data: Buffer, algorithm: string = 'sha256', options?: crypto.HashOptions): string {
+export function generateHash(data: Buffer | string, algorithm: string = 'sha256', options?: crypto.HashOptions): string {
+  if (!(data instanceof Buffer)) {
+    data = Buffer.from(data);
+  }
+
   return crypto.createHash(algorithm, options).update(data).digest('hex');
 }

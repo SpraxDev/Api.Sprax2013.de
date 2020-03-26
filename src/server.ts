@@ -2,6 +2,7 @@ import express = require('express');
 import morgan = require('morgan');
 
 import { minecraftExpressRouter } from './routes/minecraft';
+import { skindbExpressRouter } from './routes/skindb';
 import { statusExpressRouter } from './routes/status';
 
 import { cfg, webAccessLogStream } from '.';
@@ -31,12 +32,17 @@ app.use((_req, res, next) => {
   next();
 });
 
+/* Prepare Request */
+app.use(express.raw({ type: ['image/png'], limit: '3MB' }));  // recode to send custom error messages
+app.use(express.json());
+
 /* Webserver routes */
 app.use('/mojang', (_req, _res, next) => next(new ApiError('Please use /mc instead of /mojang', 410)));  // Temporary
 app.use('/hems', (_req, _res, next) => next(new ApiError(`Gone forever or as long as I desire`, 410)));  // Temporary
 
 app.use('/status', statusExpressRouter);
 app.use('/mc', minecraftExpressRouter);
+app.use('/skindb', skindbExpressRouter);
 
 /* Error handling */
 app.use((_req, _res, next) => {
@@ -54,7 +60,7 @@ app.use((err: any, _req: express.Request, res: express.Response, next: express.N
     err = ApiError.fromError(err);
   }
 
-  if (err.httpCode >= 500 && !err.logged) {
+  if (err.httpCode >= 500 && err.httpCode != 503 && !err.logged) {
     ApiError.log(err);
   }
 
