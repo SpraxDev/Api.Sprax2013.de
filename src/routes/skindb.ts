@@ -353,7 +353,7 @@ export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: 
         img.toPngBuffer((err, capePng) => {
           if (err || !capePng) return callback(err, null);
 
-          db.addCape(capePng, capeType, capeURL, textureValue || null, textureSignature || null, userAgent, (err, cape) => {
+          db.addCape(capePng, capeType, capeURL, capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent, (err, cape) => {
             if (err || !cape) return callback(err, null);
 
             return callback(null, cape);
