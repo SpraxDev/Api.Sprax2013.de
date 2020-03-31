@@ -492,18 +492,14 @@ export function restful(req: Request, res: Response, handlers: { [key: string]: 
   }
 }
 
-export function setCaching(res: Response, cacheResource: boolean = true, publicResource: boolean = true, duration?: number | 'immutable', proxyDuration?: number | undefined): Response {
+export function setCaching(res: Response, cacheResource: boolean = true, publicResource: boolean = true, duration?: number, proxyDuration?: number | undefined): Response {
   let value = '';
 
   if (cacheResource) {
     value += publicResource ? 'public' : 'private';
 
     if (duration) {
-      if (duration == 'immutable') {
-        value += ', immutable';
-      } else {
-        value += `, max-age=${duration}`;
-      }
+      value += `, max-age=${duration}`;
     }
 
     if (proxyDuration) {
