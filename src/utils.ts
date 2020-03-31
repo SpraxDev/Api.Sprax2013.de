@@ -21,15 +21,10 @@ export class Image {
     this.img = rgbaArr;
   }
 
-  static empty(width: number, height: number, callback: (err: Error | null, img: Image | null) => void): void {
+  static empty(width: number, height: number, callback: (err: Error | null, img: Image | null) => void, background: { r: number, g: number, b: number, alpha: number } = { r: 0, g: 0, b: 0, alpha: 0 }): void {
     sharp({
       create: {
-        background: {
-          r: 0,
-          g: 0,
-          b: 0,
-          alpha: 0
-        },
+        background,
         channels: 4,
         width,
         height
@@ -40,12 +35,16 @@ export class Image {
       .catch((err) => callback(err, null));
   }
 
-  static fromImg(img: string | Buffer, callback: (err: Error | null, rawImg: Image | null) => void): void {
-    sharp(img)
+  static fromImg(img: string | Buffer, callback: (err: Error | null, rawImg: Image | null) => void, width?: number, height?: number): void {
+    const result = sharp(img)
       .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true })
+      .raw();
 
+    if (width && height) {
+      result.resize(width, height, { kernel: 'nearest', fit: 'outside' });
+    }
+
+    result.toBuffer({ resolveWithObject: true })
       .then((res) => callback(null, new Image(res)))
       .catch((err) => callback(err, null));
   }
@@ -64,6 +63,25 @@ export class Image {
     }
 
     result.toBuffer((err, buffer, _info) => callback(err, buffer));
+  }
+
+  resize(width: number, height: number, callback: (err: Error | null, png: Image | null) => void): void {
+    if (this.img.info.width == width && this.img.info.height == height) return callback(null, this);
+
+    sharp(this.img.data, {
+      raw: {
+        channels: 4,
+        width: this.img.info.width,
+        height: this.img.info.height
+      }
+    })
+      .resize(width, height, { kernel: 'nearest', fit: 'outside' })
+
+      .raw()
+      .toBuffer({ resolveWithObject: true })
+
+      .then((res) => callback(null, new Image(res)))
+      .catch((err) => callback(err, null));
   }
 
   getColor(x: number, y: number): Color {
