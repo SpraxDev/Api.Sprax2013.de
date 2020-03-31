@@ -499,6 +499,113 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
   });
 });
 
+router.all('/capes/:capeType/:user?/render', (req, res, next) => {
+  const sendDownloadHeaders = (mimeType: string, download: boolean, fileIdentifier: string): void => {
+    res.type(mimeType);
+
+    if (download) {
+      res.set('Content-Disposition', `attachment;filename=${fileIdentifier}.png`);
+    }
+  };
+
+  const renderCape = function (cape: Buffer, type: CapeType, size: number, callback: (err: Error | null, png: Buffer | null) => void): void {
+    Image.fromImg(cape, (err, capeImg) => {
+      if (err || !capeImg) return callback(err, null);
+      // if (!capeImg.hasSkinDimensions()) return callback(new ErrorBuilder().invalidParams('query', [{ param: 'url', condition: 'Image has valid skin dimensions (64x32 or 64x64 pixels)' }]), null); //TODO
+
+      const dimensions: { x: number, y: number } =
+        type == CapeType.MOJANG ? { x: 10, y: 16 } :
+          type == CapeType.OPTIFINE ? capeImg.img.info.width == 46 ? { x: 10, y: 16 } : { x: 20, y: 32 }
+            : { x: 10, y: 16 }; // TODO
+
+      Image.empty(dimensions.x, dimensions.y, (err, img) => {
+        if (err || !img) return callback(err, null);
+
+        if (type == CapeType.MOJANG) {
+          img.drawSubImg(capeImg, 1, 1, 10, 16, 0, 0);  // Front
+          // img.drawSubImg(capeImg, 12, 1, 10, 16, 0, 0);  // Back
+        } else if (type == CapeType.OPTIFINE) {
+          if (capeImg.img.info.width == 46 && capeImg.img.info.height == 22) {
+            img.drawSubImg(capeImg, 1, 1, 10, 16, 0, 0);  // Front
+            // img.drawSubImg(capeImg, 12, 1, 10, 16, 0, 0);  // Back
+          } else if (capeImg.img.info.width == 92 && capeImg.img.info.height == 44) {
+            img.drawSubImg(capeImg, 2, 2, 20, 32, 0, 0);  // Front
+            // img.drawSubImg(capeImg, 24, 2, 20, 32, 0, 0);  // Back
+          } else {
+            return callback(new ErrorBuilder().serverErr('Could not render OptiFine-Cape', `Found unknown OptiFine-Cape dimensions(width=${capeImg.img.info.width}, height=${capeImg.img.info.height})`), null);
+          }
+        } else {
+          return callback(new ErrorBuilder().serviceUnavailable('Rendering LabyMod-Capes is currently not supported'), null); // TODO
+        }
+
+        img.toPngBuffer((err, png) => callback(err, png), size, size);
+      }, { r: 0, g: 0, b: 0, alpha: 255 });
+    });
+  };
+
+  restful(req, res, {
+    get: () => {
+      if (!req.params.user) return next(new ErrorBuilder().invalidParams('url', [{ param: 'user', condition: 'user.length > 0' }]));
+
+      // const render3D: boolean = typeof req.query['3d'] == 'string' ? toBoolean(req.query['3d']) : true;
+      const size: number | null = typeof req.query.size == 'string' ? toInt(req.query.size) : 512;
+
+      if (!size || size < 8 || size > 1024) return next(new ErrorBuilder().invalidParams('query', [{ param: 'size', condition: 'size >= 8 and size <= 1024' }]));
+
+      const capeType = req.params.capeType as CapeType;
+      const download: boolean = typeof req.query.download == 'string' ? toBoolean(req.query.download) : false;
+      const mimeType: string = download ? 'application/octet-stream' : 'png';
+
+      if (req.params.user != 'x-url') {
+        getByUUID(req.params.user, req, (err, mcUser) => {
+          if (err) return next(err);
+          if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given user', true));
+
+          const capeURL = capeType == CapeType.MOJANG ? mcUser.getSecureCapeURL() :
+            capeType == CapeType.OPTIFINE ? mcUser.getOptiFineCapeURL() :
+              capeType == CapeType.LABY_MOD ? mcUser.getLabyModCapeURL() : null;
+
+          if (capeURL) {
+            request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
+              if (err) return next(err);
+
+              if (httpRes.statusCode != 200 && httpRes.statusCode != 404) ApiError.log(`${capeURL} returned HTTP-Code ${httpRes.statusCode}`);
+              if (httpRes.statusCode != 200) return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
+
+              renderCape(httpBody, capeType, size, (err, png) => {
+                if (err || !png) return next(err);
+
+                sendDownloadHeaders(mimeType, download, `${mcUser.name}-${capeType.toLowerCase()}`);
+                setCaching(res, true, true, 60).send(png);
+              });
+            });
+          } else {
+            return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
+          }
+        });
+      } else {
+        const capeURL: string = MinecraftUser.getSecureURL(req.query.url);
+
+        request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
+          if (err) return next(err);
+
+          if (httpRes.statusCode == 200) {
+            renderCape(httpBody, capeType, size, (err, png) => {
+              if (err || !png) return next(err);
+
+              sendDownloadHeaders(mimeType, download, `${getFileNameFromURL(capeURL)}-${capeType.toLowerCase()}`);
+              setCaching(res, true, true, 60 * 60).send(png);
+            });
+          } else {
+            setCaching(res, true, true, 15 * 60);
+            next(new ErrorBuilder().notFound('Provided URL returned 404 (Not Found)'));
+          }
+        });
+      }
+    }
+  });
+});
+
 /* Server Routes */
 router.all('/servers/blocked', (req, res, next) => {  // TODO: return object (key: hash, value: 'known host' | null) with query param to only return array
   restful(req, res, {
