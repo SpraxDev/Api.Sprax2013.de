@@ -39,8 +39,8 @@ export interface UserAgent {
 }
 
 export interface Skin {
-  readonly id: number;
-  readonly duplicateOf?: number;
+  readonly id: string;
+  readonly duplicateOf?: string;
   readonly originalURL?: string;
   readonly textureValue?: string;
   readonly textureSignature?: string;
@@ -50,8 +50,8 @@ export interface Skin {
 }
 
 export interface Cape {
-  readonly id: number;
-  readonly duplicateOf?: number;
+  readonly id: string;
+  readonly duplicateOf?: string;
   readonly type: CapeType;
   readonly originalURL: string;
   readonly addedBy: number;

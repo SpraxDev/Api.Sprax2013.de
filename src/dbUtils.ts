@@ -360,6 +360,26 @@ export class dbUtils {
     });
   }
 
+  getSkin(skinID: string, callback: (err: Error | null, skin: Skin | null) => void): void {
+    if (this.pool == null) return callback(null, null);
+
+    this.pool.query(`SELECT * FROM skins WHERE id =$1;`, [skinID], (err, res) => {
+      if (err) return callback(err, null);
+
+      callback(null, res.rows.length == 0 ? null :
+        {
+          id: res.rows[0].id,
+          duplicateOf: res.rows[0].duplicate_of,
+          originalURL: res.rows[0].original_url,
+          textureValue: res.rows[0].texture_value,
+          textureSignature: res.rows[0].texture_signature,
+          added: res.rows[0].added,
+          addedBy: res.rows[0].added_by,
+          cleanHash: res.rows[0].clean_hash
+        });
+    });
+  }
+
   getSkinImage(skinID: string, type: 'clean' | 'original', callback: (err: Error | null, img: Buffer | null) => void): void {
     if (this.pool == null) return callback(null, null);
 
@@ -367,6 +387,37 @@ export class dbUtils {
       if (err) return callback(err, null);
 
       callback(null, res.rows.length > 0 ? res.rows[0].img : null);
+    });
+  }
+
+  getCape(capeID: string, callback: (err: Error | null, cape: Cape | null) => void): void {
+    if (this.pool == null) return callback(null, null);
+
+    this.pool.query(`SELECT * FROM capes WHERE id =$1;`, [capeID], (err, res) => {
+      if (err) return callback(err, null);
+
+      callback(null, res.rows.length == 0 ? null :
+        {
+          id: res.rows[0].id,
+          type: res.rows[0].type as CapeType,
+          duplicateOf: res.rows[0].duplicate_of,
+          originalURL: res.rows[0].original_url,
+          addedBy: res.rows[0].added_by,
+          added: res.rows[0].added,
+          cleanHash: res.rows[0].clean_hash,
+          textureValue: res.rows[0].texture_value,
+          textureSignature: res.rows[0].texture_signature
+        });
+    });
+  }
+
+  getCapeImage(skinID: string, callback: (err: Error | null, img: Buffer | null) => void): void {
+    if (this.pool == null) return callback(null, null);
+
+    this.pool.query(`SELECT original FROM cape_images WHERE cape_id =$1;`, [skinID], (err, res) => {
+      if (err) return callback(err, null);
+
+      callback(null, res.rows.length > 0 ? res.rows[0].original : null);
     });
   }
 

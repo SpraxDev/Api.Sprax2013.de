@@ -92,6 +92,57 @@ router.all('/import', (req, res, next) => {
   });
 });
 
+router.use('/cdn/skins/:id?/:type?', (req, res, next) => {
+  if (req.params.id && req.params.id.endsWith('.png')) {
+    req.params.id = req.params.id.substring(0, req.params.id.length - 4);
+  }
+
+  if (!req.params.id || !isNumber(req.params.id.trim())) return next(new ErrorBuilder().invalidParams('url', [{ param: 'id', condition: 'Is numeric string (0-9)' }]));
+
+  if (req.params.type && (req.params.type.trim().toLowerCase() != 'original.png' || req.params.type.trim().toLowerCase() != 'clean.png')) return next(new ErrorBuilder().invalidParams('url', [{ param: 'type', condition: 'Empty or equal (ignore case) one of the following: original.png, clean.png' }]))
+
+  const id = req.params.id.trim();
+  const originalType = req.params.type && req.params.type.trim().toLowerCase() == 'original.png';
+
+  db.getSkin(id, (err, skin) => {
+    if (err) return next(err);
+    if (!skin) return next(new ErrorBuilder().notFound('Skin for given ID'));
+
+    db.getSkinImage(skin.duplicateOf || skin.id, originalType ? 'original' : 'clean', (err, img) => {
+      if (err) return next(err);
+      if (!img) return next(new ErrorBuilder().serverErr(`Could not find any image in db for skin (id=${skin.id})`, true));
+
+      setCaching(res, true, true, 60 * 60 * 24 * 30 /*30d*/)
+        .type('png')
+        .send(img);
+    });
+  });
+});
+
+router.use('/cdn/capes/:id?', (req, res, next) => {
+  if (req.params.id && req.params.id.endsWith('.png')) {
+    req.params.id = req.params.id.substring(0, req.params.id.length - 4);
+  }
+
+  if (!req.params.id || !isNumber(req.params.id.trim())) return next(new ErrorBuilder().invalidParams('url', [{ param: 'id', condition: 'Is numeric string (0-9)' }]));
+
+  const id = req.params.id.trim();
+
+  db.getCape(id, (err, cape) => {
+    if (err) return next(err);
+    if (!cape) return next(new ErrorBuilder().notFound('Cape for given ID'));
+
+    db.getCapeImage(cape.duplicateOf || cape.id, (err, img) => {
+      if (err) return next(err);
+      if (!img) return next(new ErrorBuilder().serverErr(`Could not find any image in db for cape (id=${cape.id})`, true));
+
+      setCaching(res, true, true, 60 * 60 * 24 * 30 /*30d*/)
+        .type('png')
+        .send(img);
+    });
+  });
+});
+
 // router.all('/search', (req, res, next) => {
 //   // Currently supported: user (uuid, name)
 
