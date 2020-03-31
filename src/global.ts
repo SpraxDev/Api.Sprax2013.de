@@ -158,7 +158,7 @@ export class MinecraftUser {
   }
 
   getLabyModCapeURL(): string {
-    return `https://capes.labymod.net/capes/${addHyphensToUUID(this.id)}`;
+    return `http://capes.labymod.net/capes/${addHyphensToUUID(this.id)}`;
   }
 
   /**
