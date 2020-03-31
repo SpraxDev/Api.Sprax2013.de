@@ -49,7 +49,7 @@ userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) =>
       const processCape = function (capeURL: string | null, capeType: CapeType) {
         if (capeURL) {
           importCapeByURL(capeURL, capeType, value.userAgent, (err, cape) => {
-            if (err || !cape) return ApiError.log('Could not import cape from profile', { capeURL: value.capeURL, profile: value.id, stack: (err || new Error()).stack });
+            if (err || !cape) return ApiError.log(`Could not import cape(type=${capeType}) from profile`, { capeURL: capeURL, profile: value.id, stack: (err || new Error()).stack });
 
             db.addCapeToUserHistory(value, cape, (err) => {
               if (err) return ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
@@ -323,6 +323,7 @@ router.all('/skin/:user?', (req, res, next) => {
 router.all('/skin/:user?/:skinArea?', (req, res, next) => {
   const sendDownloadHeaders = (mimeType: string, download: boolean, fileIdentifier: string): void => {
     res.type(mimeType);
+
     if (download) {
       res.set('Content-Disposition', `attachment;filename=${fileIdentifier}.png`);
     }
@@ -331,7 +332,7 @@ router.all('/skin/:user?/:skinArea?', (req, res, next) => {
   const renderSkin = function (skin: Buffer, area: SkinArea, overlay: boolean, size: number, slim: boolean | null, callback: (err: Error | null, png: Buffer | null) => void): void {
     Image.fromImg(skin, (err, skinImg) => {
       if (err || !skinImg) return callback(err, null);
-      if (!skinImg.hasSkinDimensions()) return callback(new ErrorBuilder().invalidParams('query', [{ param: 'url', condition: 'Image has valid skin dimensions (32x64 or 64x64 pixels)' }]), null);
+      if (!skinImg.hasSkinDimensions()) return callback(new ErrorBuilder().invalidParams('query', [{ param: 'url', condition: 'Image has valid skin dimensions (64x32 or 64x64 pixels)' }]), null);
 
       skinImg.toCleanSkin((err) => {
         if (err) return callback(err, null);
@@ -344,7 +345,6 @@ router.all('/skin/:user?/:skinArea?', (req, res, next) => {
 
         Image.empty(dimensions.x, dimensions.y, (err, img) => {
           if (err || !img) return callback(err, null);
-
 
           const armWidth = slim ? 3 : 4,
             xOffset = slim ? 1 : 0;
@@ -414,7 +414,7 @@ router.all('/skin/:user?/:skinArea?', (req, res, next) => {
             request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
               if (err) return next(err);
 
-              if (httpRes.statusCode != 200 && httpRes.statusCode != 404) ApiError.log(`${mcUser.skinURL} returned HTTP-Code ${httpRes.statusCode}`);
+              if (httpRes.statusCode != 200 && httpRes.statusCode != 404) ApiError.log(`${skinURL} returned HTTP-Code ${httpRes.statusCode}`);
 
               const skinBuffer: Buffer = httpRes.statusCode == 200 ? httpBody : (mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
               renderSkin(skinBuffer, skinArea, overlay, size, typeof slimModel == 'boolean' ? slimModel : mcUser.modelSlim, (err, png) => {
@@ -486,7 +486,7 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
 
               setCaching(res, true, true, 60).send(httpBody);
             } else {
-              if (httpRes.statusCode != 404) ApiError.log(`${mcUser.skinURL} returned HTTP-Code ${httpRes.statusCode}`);
+              if (httpRes.statusCode != 404) ApiError.log(`${capeURL} returned HTTP-Code ${httpRes.statusCode}`);
 
               return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
             }
