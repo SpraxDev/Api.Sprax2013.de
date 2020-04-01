@@ -276,6 +276,8 @@ export class ApiError extends Error {
   readonly details?: { param: string, condition: string }[];
   logged: boolean;
 
+  static discordHookCounter: number = 0;
+
   constructor(message: string, httpCode: number, details?: { param: string, condition: string }[], logged?: boolean) {
     super(message);
 
@@ -298,7 +300,9 @@ export class ApiError extends Error {
     }
 
     // Contact Discord-WebHook
-    if (!skipWebHook && cfg && cfg.logging.discordErrorWebHookURL && cfg.logging.discordErrorWebHookURL.toLowerCase().startsWith('http')) {
+    if (!skipWebHook && ApiError.discordHookCounter < 8 && cfg && cfg.logging.discordErrorWebHookURL && cfg.logging.discordErrorWebHookURL.toLowerCase().startsWith('http')) {
+      ApiError.discordHookCounter++;
+
       request.post(cfg.logging.discordErrorWebHookURL, {
         headers: {
           'Content-Type': 'application/json',
@@ -331,6 +335,7 @@ export class ApiError extends Error {
     }
   }
 }
+setInterval(() => ApiError.discordHookCounter = 0, 60 * 1000);
 
 export class ErrorBuilder {
   logged: boolean = false;
