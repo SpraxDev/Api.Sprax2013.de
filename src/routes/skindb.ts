@@ -69,7 +69,7 @@ router.all('/import', (req, res, next) => {
           });
         });
       } else if (contentType == 'application/json') {
-        const json: { raw?: { value: string, signature?: string } } = req.body;
+        const json: { url?: string, raw?: { value: string, signature?: string } } = req.body;
 
         if (json.raw) {
           if (!json.raw.value) return next(new ErrorBuilder().invalidBody([{ param: 'JSON-Body: json.raw.value', condition: 'Valid skin value from mojang profile' }]));
@@ -89,6 +89,25 @@ router.all('/import', (req, res, next) => {
                   skinID: skin?.id
                 });
             });
+          });
+        } else if (json.url) {
+          if (!MinecraftUser.getSecureURL(json.url).toLowerCase().startsWith('https://textures.minecraft.net/texture/'))
+            return next(new ErrorBuilder().invalidBody([{ param: 'JSON-Body: json.url', condition: 'Valid textures.minecraft.net URL' }]));
+
+          getUserAgent(req, (err, userAgent) => {
+            if (err || !userAgent) return next(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`));
+            if (!json.url) return next(new ErrorBuilder().unknown());  // FIXME: why does TypeScript need this line? o.0
+
+            importSkinByURL(MinecraftUser.getSecureURL(json.url), userAgent, (err, skin, exactMatch) => {
+              if (err || !skin) return next(err || new ErrorBuilder().serverErr(undefined, `Could not import uploaded skin-URL`));
+
+              return setCaching(res, false, false)
+                .status(exactMatch ? 200 : 201)
+                .send({
+                  result: exactMatch ? 'Skin already in database' : 'Skin added to database',
+                  skinID: skin.id
+                });
+            })
           });
         } else {
           return next(new ErrorBuilder().invalidBody([]));  //TODO
@@ -314,9 +333,9 @@ export function importByTexture(textureValue: string, textureSignature: string |
   }
 }
 
-export function importSkinByURL(skinURL: string, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null) => void, textureValue: string | null = null, textureSignature: string | null = null): void {
+export function importSkinByURL(skinURL: string, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void, textureValue: string | null = null, textureSignature: string | null = null): void {
   request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
-    if (err || httpRes.statusCode != 200) return callback(err, null);
+    if (err || httpRes.statusCode != 200) return callback(err, null, false);
 
     return importSkinByBuffer(httpBody, skinURL, userAgent, callback, textureValue, textureSignature);
   });
