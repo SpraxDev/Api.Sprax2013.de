@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@teachablemachine/image": "^0.8.4",
-    "@tensorflow/tfjs-node": "^1.7.1",
+    "@tensorflow/tfjs-node": "^1.7.2",
     "canvas": "^2.6.1",
     "express": "^4.17.1",
     "jsdom": "^16.2.2",
