@@ -70,12 +70,12 @@ setInterval(() => { rateLimitedNameHistory = 0 }, 120 * 1000);
 const SKIN_STEVE = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'steve.png')),
   SKIN_ALEX = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'steve.png'));
 
-const whitelistedSkinURLs = ['//textures.minecraft.net/texture/'];
+const whitelistedSkinURLs = ['//textures.minecraft.net/texture/', '//cdn.skindb.net/'];
 
 const router = Router();
 export const minecraftExpressRouter = router;
 
-// Turn :user into uuid (without hyphenes)
+// Turn :user into uuid (without hyphenes) or if :user == x-url check if query-param url is valid
 router.param('user', (req, _res, next, value, name) => {
   if (typeof value != 'string') return next(new ErrorBuilder().invalidParams('url', [{ param: 'user', condition: 'Is string' }]));
   value = value.trim();
