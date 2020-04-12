@@ -45,6 +45,11 @@ class Model {
     readonly textureHeight: number;
 
     constructor(vdata: Float32Array, idata: Uint16Array, width: number, height: number) {
+        let maxValue = 0;
+        idata.forEach(v=>maxValue=Math.max(v,maxValue));
+        if(maxValue > (Math.pow(2,16)-1)){
+            throw "Model contains to many different vertices"
+        }
         this.textureWidth = width;
         this.textureHeight = height;
         this.texture = gl.createTexture();
@@ -206,7 +211,7 @@ class Camera {
         return shader;
     }
 
-    render(model: Model, texture: Uint8Array) {
+    render(model: Model, texture: Uint8Array, clearBuffer: boolean = true) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.frameBuffer);
         gl.viewport(0, 0, this.width, this.height);
         gl.bindBuffer(gl.ARRAY_BUFFER, model.vertexBuffer);
@@ -230,7 +235,9 @@ class Camera {
         gl.flush();
         gl.finish();
 
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        if(clearBuffer){
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        }
         gl.drawElements(gl.TRIANGLES, model.idata.length, gl.UNSIGNED_SHORT, 0);
 
         gl.flush();
@@ -242,7 +249,7 @@ class Camera {
 
         var error = gl.getError();
         if (error) {
-            console.error("ModelRender WebGLError: " + error);
+            throw "ModelRender WebGLError: " + error;
         }
         return result;
     }
