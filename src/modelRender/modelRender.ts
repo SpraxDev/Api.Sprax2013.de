@@ -299,12 +299,6 @@ class Camera {
             0, -n / t, 0, 0,
             0, 0, (f + n) / (f - n), 1,
             0, 0, -2 * f * n / (f - n), 0
-        ]
-        const identity = [
-            1, 0, 0, 0,
-            0, 1, 0, 0,
-            0, 0, 1, 0,
-            0, 0, 0, 1
         ];
         const scale = [
             this.scale.x, 0, 0, 0,
