@@ -25,6 +25,7 @@
     "@tensorflow/tfjs-node": "^1.7.2",
     "canvas": "^2.6.1",
     "express": "^4.17.1",
+    "gl": "^4.5.0",
     "jsdom": "^16.2.2",
     "morgan": "^1.10.0",
     "node-cache": "^5.1.0",
