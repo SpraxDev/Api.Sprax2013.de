@@ -168,7 +168,7 @@ class Camera {
         this.rotation = { x: 0, y: 0, z: 0 };
         this.scale = { x: 1, y: 1 };
         this.postPosition = { x: 0, y: 0 };
-        this.calcMvp();
+        this.mvp = this.calcMvp();
 
         const vertexShader = this.createShader(vertexShaderSource, gl.VERTEX_SHADER);
         const fragmentShader = this.createShader(fragmentShaderSource, gl.FRAGMENT_SHADER);
@@ -253,7 +253,7 @@ class Camera {
         return result;
     }
 
-    private calcMvp() {
+    private calcMvp(): Float32Array {
         const cx = Math.cos(-this.rotation.x);
         const cy = Math.cos(-this.rotation.y);
         const cz = Math.cos(-this.rotation.z);
@@ -319,27 +319,27 @@ class Camera {
             this.postPosition.x, this.postPosition.y, 0, 1
         ];
         const mvpMatrix = multiplyMatrices(scale, multiplyMatrices(postTranslate, multiplyMatrices(projection, multiplyMatrices(rotateZ, multiplyMatrices(rotateX, multiplyMatrices(rotateY, translate))))));
-        this.mvp = new Float32Array(mvpMatrix);
+        return new Float32Array(mvpMatrix);
     }
 
     setPosition(position: vec3) {
         this.position = position;
-        this.calcMvp();
+        this.mvp = this.calcMvp();
     }
 
     setRotation(rotation: vec3) {
         this.rotation = rotation;
-        this.calcMvp();
+        this.mvp = this.calcMvp();
     }
 
     setScale(scale: vec2) {
         this.scale = scale;
-        this.calcMvp();
+        this.mvp = this.calcMvp();
     }
 
     setPostPosition(pos: vec2) {
         this.postPosition = pos;
-        this.calcMvp();
+        this.mvp = this.calcMvp();
     }
 
 }
@@ -402,19 +402,22 @@ function modelFileToBufferData(filename: string) {
                 }
                 vertices.push(vertexObj);
             }
-            let vertex0: Vertex;
-            let lastVertex: Vertex;
+            let vertex0: Vertex | undefined,
+                lastVertex: Vertex | undefined;
             for (const vertex of vertices) {
-                if (point >= 2) {
+                if (point == 0) {
+                    vertex0 = vertex;
+                } else if (point == 1) {
+                    lastVertex = vertex;
+                } else if (point >= 2) {
+                    if (!vertex0 || !lastVertex) throw new Error(); // TODO: cleanup - They can't be undefinded but TypeScript doesn't recognize this o.0
+
                     vertexBuffer.push(vertex0);
                     vertexBuffer.push(lastVertex);
                     vertexBuffer.push(vertex);
                     lastVertex = vertex;
-                } else if (point == 0) {
-                    vertex0 = vertex;
-                } else if (point == 1) {
-                    lastVertex = vertex;
                 }
+
                 point++;
             }
         }
