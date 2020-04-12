@@ -20,6 +20,27 @@ if (process.env.NODE_ENV == 'production') {
   app.use(morgan('dev'));
 }
 
+// Force the last query param instead of allowing multiple as string[]
+app.use((req, _res, next) => {
+  for (const key in req.query) {
+    if (req.query.hasOwnProperty(key)) {
+      const value = req.query[key];
+
+      if (Array.isArray(value)) {
+        let newValue = value.pop();
+
+        if (typeof newValue != 'undefined') {
+          req.query[key] = newValue;
+        } else {
+          delete req.query[key];
+        }
+      }
+    }
+  }
+
+  next();
+})
+
 // Default response headers
 app.use((_req, res, next) => {
   res.set({
