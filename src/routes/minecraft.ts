@@ -436,6 +436,10 @@ router.all('/skin/:user?/:skinArea?', (req, res, next) => {
       } else {
         const skinURL: string = MinecraftUser.getSecureURL(req.query.url);
 
+        // TODO: Fetch from db instead of url
+        // if (skinURL.toLowerCase().startsWith('https://cdn.skindb.net/skins/')) {
+        // }
+
         request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
           if (err) return next(err);
 
