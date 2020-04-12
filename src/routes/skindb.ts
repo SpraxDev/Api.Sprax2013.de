@@ -245,10 +245,11 @@ router.all('/ai/:model?', async (req, res, next) => {
     get: () => {
       if (!req.params.model || !AI_MODELS.hasOwnProperty(req.params.model.toUpperCase())) return next(new ErrorBuilder().invalidParams('url', [{ param: 'model', condition: `Equal (ignore case) one of the following: ${Object.keys(AI_MODELS).join('", "')}` }]));
 
-      if (!req.query.skin) return next(new ErrorBuilder().invalidParams('query', [{ param: 'skin', condition: 'skin.length > 0' }]));
-      if (!isNumber(req.query.skin)) return next(new ErrorBuilder().invalidParams('query', [{ param: 'skin', condition: 'Is numeric string (0-9)' }]));
+      const querySkinID = req.query.skin;
 
-      const skinID = req.query.skin;
+      if (!req.query.skin) return next(new ErrorBuilder().invalidParams('query', [{ param: 'skin', condition: 'skin.length > 0' }]));
+      if (typeof querySkinID != 'string' || !isNumber(querySkinID)) return next(new ErrorBuilder().invalidParams('query', [{ param: 'skin', condition: 'Is numeric string (0-9)' }]));
+
       const model = AI_MODELS[req.params.model.toUpperCase()];
 
       if (!model) {
@@ -258,9 +259,9 @@ router.all('/ai/:model?', async (req, res, next) => {
         return next(new ErrorBuilder().serviceUnavailable('The requested AI model failed to initialize'));
       }
 
-      db.getSkinImage(skinID, 'clean', (err, skin) => {
+      db.getSkinImage(querySkinID, 'clean', (err, skin) => {
         if (err) return next(err);
-        if (!skin) return next(new ErrorBuilder().serverErr(`Could not find any image in db for skin (id=${skinID})`, true));
+        if (!skin) return next(new ErrorBuilder().serverErr(`Could not find any image in db for skin (id=${querySkinID})`, true));
 
         getPrediction(model, skin, (err, result) => {
           if (err || !result) return next(err);
