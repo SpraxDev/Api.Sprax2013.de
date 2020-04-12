@@ -70,24 +70,26 @@ setInterval(() => { rateLimitedNameHistory = 0 }, 120 * 1000);
 const SKIN_STEVE = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'steve.png')),
   SKIN_ALEX = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'steve.png'));
 
-const whitelistedSkinURLs = ['//textures.minecraft.net/texture/'];
+const whitelistedSkinURLs = ['//textures.minecraft.net/texture/', '//cdn.skindb.net/'];
 
 const router = Router();
 export const minecraftExpressRouter = router;
 
-// Turn :user into uuid (without hyphenes)
+// Turn :user into uuid (without hyphenes) or if :user == x-url check if query-param url is valid
 router.param('user', (req, _res, next, value, name) => {
   if (typeof value != 'string') return next(new ErrorBuilder().invalidParams('url', [{ param: 'user', condition: 'Is string' }]));
   value = value.trim();
 
   if (value.length <= 16) {
-    if (req.route.path.startsWith('/skin/:user') && value.toLowerCase() != 'x-url' && req.query.url) return next(new ErrorBuilder().invalidParams('query', [{ param: 'url', condition: `User to equal (ignore case) "X-URL" or no url parameter` }]));
+    const queryURL = req.query.url;
+
+    if (req.route.path.startsWith('/skin/:user') && value.toLowerCase() != 'x-url' && queryURL) return next(new ErrorBuilder().invalidParams('query', [{ param: 'url', condition: `User to equal (ignore case) "X-URL" or no url parameter` }]));
 
     if (req.route.path.startsWith('/skin/:user') && value.toLowerCase() == 'x-url') { // Skin-Request (uses url-query instead)
-      if (!req.query.url) return next(new ErrorBuilder().invalidParams('query', [{ param: 'url', condition: 'url.length > 0' }]));
-      if (!isHttpURL(req.query.url)) return next(new ErrorBuilder().invalidParams('query', [{ param: 'url', condition: 'url starts with http:// or https://' }]));
+      if (!queryURL || typeof queryURL != 'string') return next(new ErrorBuilder().invalidParams('query', [{ param: 'url', condition: 'url.length > 0' }]));
+      if (!isHttpURL(queryURL)) return next(new ErrorBuilder().invalidParams('query', [{ param: 'url', condition: 'url starts with http:// or https://' }]));
 
-      let qURL: string = req.query.url.toLowerCase();
+      let qURL: string = queryURL.toLowerCase();
 
       if (qURL.startsWith('https')) {
         qURL = qURL.substring(6);
@@ -108,10 +110,11 @@ router.param('user', (req, _res, next, value, name) => {
       req.params[name] = value.toLowerCase();
       next();
     } else {  // Normal request
+      const queryAt = req.query.at;
       let at: string | null = null;
       if (req.query.at) {
-        if (!isNumber(req.query.at)) return next(new ErrorBuilder().invalidParams('query', [{ param: 'at', condition: 'Is numeric string (0-9)' }]));
-        at = req.query.at;
+        if (typeof queryAt != 'string' || !isNumber(queryAt)) return next(new ErrorBuilder().invalidParams('query', [{ param: 'at', condition: 'Is numeric string (0-9)' }]));
+        at = queryAt;
       }
 
       getByUsername(value, at, (err, apiRes) => {
@@ -182,10 +185,11 @@ router.all('/uuid/:name?', (req, res, next) => {
     get: () => {
       if (!req.params.name) return next(new ErrorBuilder().invalidParams('url', [{ param: 'name', condition: 'name.length > 0' }]));
 
+      const queryAt = req.query.at;
       let at;
-      if (req.query.at) {
-        if (!isNumber(req.query.at)) return next(new ErrorBuilder().invalidParams('query', [{ param: 'at', condition: 'Is numeric string (0-9)' }]));
-        at = req.query.at;
+      if (queryAt) {
+        if (typeof queryAt != 'string' || !isNumber(queryAt)) return next(new ErrorBuilder().invalidParams('query', [{ param: 'at', condition: 'Is numeric string (0-9)' }]));
+        at = queryAt;
       }
 
       getByUsername(req.params.name, at, (err, apiRes) => {
@@ -289,7 +293,7 @@ router.all('/skin/:user?', (req, res, next) => {
           }
         });
       } else {
-        const skinURL: string = MinecraftUser.getSecureURL(req.query.url);
+        const skinURL: string = MinecraftUser.getSecureURL(req.query.url as string);
 
         request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
           if (err) return next(err);
@@ -434,7 +438,11 @@ router.all('/skin/:user?/:skinArea?', (req, res, next) => {
           }
         });
       } else {
-        const skinURL: string = MinecraftUser.getSecureURL(req.query.url);
+        const skinURL: string = MinecraftUser.getSecureURL(req.query.url as string);
+
+        // TODO: Fetch from db instead of url
+        // if (skinURL.toLowerCase().startsWith('https://cdn.skindb.net/skins/')) {
+        // }
 
         request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
           if (err) return next(err);
@@ -584,7 +592,7 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
           }
         });
       } else {
-        const capeURL: string = MinecraftUser.getSecureURL(req.query.url);
+        const capeURL: string = MinecraftUser.getSecureURL(req.query.url as string);
 
         request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
           if (err) return next(err);
@@ -720,7 +728,7 @@ router.all('/servers/blocked/check', (req, res, next) => {
 });
 
 /* Helper */
-export function getByUsername(username: string, at: number | string | null, callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void): void {
+export function getByUsername(username: string, at: number | string | null = null, callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void): void {
   if (typeof at != 'number' || (typeof at == 'number' && at > Date.now())) {
     at = null;
   }
