@@ -1,7 +1,5 @@
-var width = 64
-var height = 64
-var gl = require('gl')(width, height, { preserveDrawingBuffer: true })
-const fs = require('fs');
+import fs = require('fs');
+const gl = require('gl')(64, 64, { preserveDrawingBuffer: true });
 
 const vertexShaderSource: string =
     `
@@ -46,9 +44,9 @@ class Model {
 
     constructor(vdata: Float32Array, idata: Uint16Array, width: number, height: number) {
         let maxValue = 0;
-        idata.forEach(v=>maxValue=Math.max(v,maxValue));
-        if(maxValue > (Math.pow(2,16)-1)){
-            throw "Model contains to many different vertices"
+        idata.forEach(v => maxValue = Math.max(v, maxValue));
+        if (maxValue > (Math.pow(2, 16) - 1)) {
+            throw new Error('Model contains to many different vertices');
         }
         this.textureWidth = width;
         this.textureHeight = height;
@@ -131,7 +129,6 @@ function multiplyMatrices(matrixA: number[], matrixB: number[]) {
 }
 
 class Camera {
-
     readonly frameBuffer: WebGLFramebuffer;
     readonly texture: WebGLTexture;
     readonly shader: WebGLProgram;
@@ -171,9 +168,10 @@ class Camera {
         this.rotation = { x: 0, y: 0, z: 0 };
         this.scale = { x: 1, y: 1 };
         this.postPosition = { x: 0, y: 0 };
+        this.calcMvp();
 
-        var vertexShader = this.createShader(vertexShaderSource, gl.VERTEX_SHADER);
-        var fragmentShader = this.createShader(fragmentShaderSource, gl.FRAGMENT_SHADER);
+        const vertexShader = this.createShader(vertexShaderSource, gl.VERTEX_SHADER);
+        const fragmentShader = this.createShader(fragmentShaderSource, gl.FRAGMENT_SHADER);
 
         gl.attachShader(this.shader, vertexShader);
         gl.attachShader(this.shader, fragmentShader);
@@ -182,8 +180,8 @@ class Camera {
 
         gl.validateProgram(this.shader);
         if (!gl.getProgramParameter(this.shader, gl.LINK_STATUS)) {
-            var info = gl.getProgramInfoLog(this.shader);
-            throw 'Could not compile WebGL program. \n\n' + info;
+            const info = gl.getProgramInfoLog(this.shader);
+            throw new Error(`Could not compile WebGL program.\n\n${info}`);
         }
 
         gl.useProgram(this.shader);
@@ -200,13 +198,13 @@ class Camera {
     }
 
     private createShader(sourceCode: string, type: any) {
-        var shader = gl.createShader(type);
+        const shader = gl.createShader(type);
         gl.shaderSource(shader, sourceCode);
         gl.compileShader(shader);
 
         if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            var info = gl.getShaderInfoLog(shader);
-            throw 'Could not compile WebGL shader. \n\n' + info;
+            const info = gl.getShaderInfoLog(shader);
+            throw new Error(`Could not compile WebGL shader.\n\n${info}`);
         }
         return shader;
     }
@@ -226,16 +224,16 @@ class Camera {
         gl.bindTexture(gl.TEXTURE_2D, model.texture);
         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, model.textureWidth, model.textureHeight, gl.RGBA, gl.UNSIGNED_BYTE, texture);
 
-        var textureLocation = gl.getUniformLocation(this.shader, "u_texture");
+        const textureLocation = gl.getUniformLocation(this.shader, 'u_texture');
         gl.uniform1i(textureLocation, 0);
 
-        var mvpLocation = gl.getUniformLocation(this.shader, "u_mvp");
+        const mvpLocation = gl.getUniformLocation(this.shader, 'u_mvp');
         gl.uniformMatrix4fv(mvpLocation, false, this.mvp);
 
         gl.flush();
         gl.finish();
 
-        if(clearBuffer){
+        if (clearBuffer) {
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         }
         gl.drawElements(gl.TRIANGLES, model.idata.length, gl.UNSIGNED_SHORT, 0);
@@ -247,10 +245,11 @@ class Camera {
         gl.readPixels(0, 0, this.width, this.height, gl.RGBA, gl.UNSIGNED_BYTE, result);
         gl.finish();
 
-        var error = gl.getError();
+        const error = gl.getError();
         if (error) {
-            throw "ModelRender WebGLError: " + error;
+            throw new Error(`ModelRender WebGLError: ${error}`);
         }
+
         return result;
     }
 
@@ -358,7 +357,7 @@ function getOfArray(array: any[], index: number) {
 
 function modelFileToBufferData(filename: string) {
     const file: string = fs.readFileSync(filename, 'utf-8');
-    const lines: string[] = file.split('\n');
+    const lines: string[] = file.split(/\r?\n/g);
 
     const positions: vec4[] = [];
     const texCoords: vec2[] = [];
@@ -369,7 +368,7 @@ function modelFileToBufferData(filename: string) {
 
     for (const line of lines) {
         if (line.startsWith('v ')) {
-            const position: string[] = line.substring(2).trim().split(" ");
+            const position: string[] = line.substring(2).trim().split(' ');
             let pos: vec4 = { x: 0, y: 0, z: 0, w: 1 };
             pos.x = (position[0] != null && position[0].length) ? parseFloat(position[0]) : 0;
             pos.y = (position[1] != null && position[1].length) ? parseFloat(position[1]) : 0;
@@ -377,7 +376,7 @@ function modelFileToBufferData(filename: string) {
             pos.w = (position[3] != null && position[3].length) ? parseFloat(position[3]) : 1;
             positions.push(pos);
         } else if (line.startsWith('vn ')) {
-            const normal: string[] = line.substring(3).trim().split(" ");
+            const normal: string[] = line.substring(3).trim().split(' ');
             let norm: vec3 = { x: 0, y: 0, z: 0 };
             norm.x = (normal[0] != null && normal[0].length) ? parseFloat(normal[0]) : 0;
             norm.y = (normal[1] != null && normal[1].length) ? parseFloat(normal[1]) : 0;
@@ -385,7 +384,7 @@ function modelFileToBufferData(filename: string) {
             normals.push(norm);
         }
         else if (line.startsWith('vt ')) {
-            const texCoord: string[] = line.substring(3).trim().split(" ");
+            const texCoord: string[] = line.substring(3).trim().split(' ');
             let tex: vec2 = { x: 0, y: 0 };
             tex.x = (texCoord[0] != null && texCoord[0].length) ? parseFloat(texCoord[0]) : 0;
             tex.y = (texCoord[1] != null && texCoord[1].length) ? parseFloat(texCoord[1]) : 0;
@@ -441,18 +440,19 @@ function modelFileToBufferData(filename: string) {
         }
         indexBuffer.push(indexOfVertex);
     }
-    var max = 0;
-    indexBuffer.forEach(n => max = Math.max(max, n))
-    return { 'indexBuffer': indexBuffer, 'vertexBuffer': resultVertexBuffer };
+    let max = 0;
+    indexBuffer.forEach(n => max = Math.max(max, n));
+    return { indexBuffer, vertexBuffer: resultVertexBuffer };
 }
 
-module.exports.createModel = function (filename: string, textureWidth: number, textureHeight: number) {
+export function createModel(filename: string, textureWidth: number, textureHeight: number) {
     const data = modelFileToBufferData(filename);
     const vertexData = new Float32Array(data.vertexBuffer);
     const indexData = new Uint16Array(data.indexBuffer);
+
     return new Model(vertexData, indexData, textureWidth, textureHeight);
 }
 
-module.exports.createCamera = function (width: number, height: number) {
+export function createCamera(width: number, height: number) {
     return new Camera(width, height);
 }
