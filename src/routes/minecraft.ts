@@ -10,6 +10,8 @@ import { db } from '../index';
 import { importByTexture, importCapeByURL } from './skindb';
 import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
 import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL, generateHash } from '../utils';
+import { createCamera, createModel } from '../modelRender/modelRender';
+import sharp = require('sharp');
 
 const uuidCache = new nCache({ stdTTL: 59, useClones: false }), /* key:${name_lower};${at||''}, value: { id: string, name: string } | Error | null */
   userCache = new nCache({ stdTTL: 59, useClones: false }), /* key: profile.id, value: MinecraftUser | Error | null */
@@ -19,6 +21,57 @@ const profileRequestQueue: { key: string, callback: (err: Error | null, user: Mi
   uuidRequestQueue: { key: string, callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void }[] = [];
 
 let rateLimitedNameHistory = 0;
+
+const rendering = {
+  cams: {
+    body: function () {
+      const cam = createCamera(525, 960);
+      cam.setPosition({ x: -0.75, y: 2.1, z: -1.25 });
+      cam.setRotation({ x: Math.PI / 12, y: Math.PI / 6, z: 0 });
+      cam.setPostPosition({ x: 0.023, y: -0.380625 });
+      cam.setScale({ x: 1.645, y: 1.645 });
+
+      return cam;
+    }(),
+    bodyNoOverlay: function () {
+      const cam = createCamera(510, 960);
+      cam.setPosition({ x: -0.75, y: 2.1, z: -1.25 });
+      cam.setRotation({ x: Math.PI / 12, y: Math.PI / 6, z: 0 });
+      cam.setPostPosition({ x: 0.023, y: -0.39 });
+      cam.setScale({ x: 1.6675, y: 1.6675 });
+
+      return cam;
+    }(),
+
+    head: function () {
+      const cam = createCamera(1040, 960);
+      cam.setPosition({ x: -0.75, y: 2.1, z: -1.25 });
+      cam.setRotation({ x: Math.PI / 12, y: Math.PI / 6, z: 0 });
+      cam.setPostPosition({ x: -0.0335, y: -0.025 });
+      cam.setScale({ x: 3.975, y: 3.975 });
+
+      return cam;
+    }(),
+    headNoOverlay: function () {
+      const cam = createCamera(1035, 960);
+      cam.setPosition({ x: -0.75, y: 2.1, z: -1.25 });
+      cam.setRotation({ x: Math.PI / 12, y: Math.PI / 6, z: 0 });
+      cam.setPostPosition({ x: -0.0295, y: -0.013 });
+      cam.setScale({ x: 4.49, y: 4.49 });
+
+      return cam;
+    }()
+  },
+
+  models: {
+    modelAlex: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'alex.obj'), 64, 64),
+    modelAlexNoOverlay: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'alexNoOverlay.obj'), 64, 64),
+    modelSteve: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'steve.obj'), 64, 64),
+    modelSteveNoOverlay: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'steveNoOverlay.obj'), 64, 64),
+    modelSteveHead: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'steveHead.obj'), 64, 64),
+    modelSteveHeadNoOverlay: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'steveHeadNoOverlay.obj'), 64, 64)
+  }
+};
 
 userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) => {
   if (!db.isAvailable()) return;
@@ -324,7 +377,7 @@ router.all('/skin/:user?', (req, res, next) => {
   });
 });
 
-router.all('/skin/:user?/:skinArea?', (req, res, next) => {
+router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
   const sendDownloadHeaders = (mimeType: string, download: boolean, fileIdentifier: string): void => {
     res.type(mimeType);
 
@@ -333,66 +386,12 @@ router.all('/skin/:user?/:skinArea?', (req, res, next) => {
     }
   };
 
-  const renderSkin = function (skin: Buffer, area: SkinArea, overlay: boolean, size: number, slim: boolean | null, callback: (err: Error | null, png: Buffer | null) => void): void {
-    Image.fromImg(skin, (err, skinImg) => {
-      if (err || !skinImg) return callback(err, null);
-      if (!skinImg.hasSkinDimensions()) return callback(new ErrorBuilder().invalidParams('query', [{ param: 'url', condition: 'Image has valid skin dimensions (64x32 or 64x64 pixels)' }]), null);
-
-      skinImg.toCleanSkin((err) => {
-        if (err) return callback(err, null);
-
-        if (typeof slim != 'boolean') slim = skinImg.isSlimSkinModel();
-
-        const dimensions: { x: number, y: number } =
-          area == SkinArea.HEAD ? { x: 8, y: 8 } :
-            area == SkinArea.BUST ? { x: slim ? 14 : 16, y: 20 } : { x: slim ? 14 : 16, y: 32 };
-
-        Image.empty(dimensions.x, dimensions.y, (err, img) => {
-          if (err || !img) return callback(err, null);
-
-          const armWidth = slim ? 3 : 4,
-            xOffset = slim ? 1 : 0;
-
-          if (area == SkinArea.HEAD) {
-            img.drawSubImg(skinImg, 8, 8, 8, 8, 0, 0);                        // Head
-          } else if (area == SkinArea.BUST || area == SkinArea.BODY) {
-            img.drawSubImg(skinImg, 8, 8, 8, 8, 4 - xOffset, 0);              // Head
-
-            img.drawSubImg(skinImg, 20, 20, 8, 12, 4 - xOffset, 8);           // Body
-            img.drawSubImg(skinImg, 44, 20, armWidth, 12, 0, 8);              // Right arm
-            img.drawSubImg(skinImg, 36, 52, armWidth, 12, 12 - xOffset, 8);   // Left arm
-          }
-
-          if (area == SkinArea.BODY) {
-            img.drawSubImg(skinImg, 4, 20, 4, 12, 4 - xOffset, 20);           // Right leg
-            img.drawSubImg(skinImg, 20, 52, 4, 12, 8 - xOffset, 20);          // Left leg
-          }
-
-          if (overlay) {
-            if (area == SkinArea.HEAD) {
-              img.drawSubImg(skinImg, 40, 8, 8, 8, 0, 0);                     // Head (overlay)
-            } else if (area == SkinArea.BUST || area == SkinArea.BODY) {
-              img.drawSubImg(skinImg, 40, 8, 8, 8, 4 - xOffset, 0);           // Head (overlay)
-
-              img.drawSubImg(skinImg, 20, 36, 8, 12, 4 - xOffset, 8);         // Body (overlay)
-              img.drawSubImg(skinImg, 44, 36, armWidth, 12, 0, 8);            // Right arm (overlay)
-              img.drawSubImg(skinImg, 52, 52, armWidth, 12, 12 - xOffset, 8); // Left arm (overlay)
-            }
-
-            if (area == SkinArea.BODY) {
-              img.drawSubImg(skinImg, 4, 36, 4, 12, 4 - xOffset, 20);         // Right leg (overlay)
-              img.drawSubImg(skinImg, 4, 52, 4, 12, 8 - xOffset, 20);         // Left leg (overlay)
-            }
-          }
-
-          img.toPngBuffer((err, png) => callback(err, png), size, size);
-        });
-      });
-    });
-  };
-
   restful(req, res, {
     get: () => {
+      const is3D = typeof req.params['3d'] == 'string' && req.params['3d'].toLowerCase() == '3d';
+
+      if (req.params['3d'] == 'string' && !is3D && req.params['3d'].length > 0) return next(new ErrorBuilder().invalidParams('url', [{ param: '3d', condition: '3d or empty' }]));
+
       if (!req.params.user) return next(new ErrorBuilder().invalidParams('url', [{ param: 'user', condition: 'user.length > 0' }]));
       if (!req.params.skinArea) return next(new ErrorBuilder().invalidParams('url', [{ param: 'skinArea', condition: `Equal (ignore case) one of the following: ${Object.keys(SkinArea).join('", "')}` }]));
 
@@ -421,19 +420,28 @@ router.all('/skin/:user?/:skinArea?', (req, res, next) => {
               if (httpRes.statusCode != 200 && httpRes.statusCode != 404) ApiError.log(`${skinURL} returned HTTP-Code ${httpRes.statusCode}`);
 
               const skinBuffer: Buffer = httpRes.statusCode == 200 ? httpBody : (mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
-              renderSkin(skinBuffer, skinArea, overlay, size, typeof slimModel == 'boolean' ? slimModel : mcUser.modelSlim, (err, png) => {
-                if (err || !png) return next(err);
+
+              Image.fromImg(skinBuffer, (err, img) => {
+                if (err || !img) return next(err || new Error());
+
+                renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : mcUser.modelSlim, is3D, size, (err, png) => {
+                  if (err || !png) return next(err || new Error());
+
+                  sendDownloadHeaders(mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
+                  setCaching(res, true, true, 60).send(png);
+                });
+              });
+            });
+          } else {
+            Image.fromImg(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE, (err, img) => {
+              if (err || !img) return next(err || new Error());
+
+              renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : 'auto', is3D, size, (err, png) => {
+                if (err || !png) return next(err || new Error());
 
                 sendDownloadHeaders(mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
                 setCaching(res, true, true, 60).send(png);
               });
-            });
-          } else {
-            renderSkin(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE, skinArea, overlay, size, slimModel, (err, png) => {
-              if (err || !png) return next(err);
-
-              sendDownloadHeaders(mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
-              setCaching(res, true, true, 60).send(png);
             });
           }
         });
@@ -448,11 +456,15 @@ router.all('/skin/:user?/:skinArea?', (req, res, next) => {
           if (err) return next(err);
 
           if (httpRes.statusCode == 200) {
-            renderSkin(httpBody, skinArea, overlay, size, slimModel, (err, png) => {
-              if (err || !png) return next(err);
+            Image.fromImg(httpBody, (err, img) => {
+              if (err || !img) return next(err || new Error());
 
-              sendDownloadHeaders(mimeType, download, `${getFileNameFromURL(skinURL)}-${skinArea.toLowerCase()}`);
-              setCaching(res, true, true, 60 * 60).send(png);
+              renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : 'auto', is3D, size, (err, png) => {
+                if (err || !png) return next(err || new Error());
+
+                sendDownloadHeaders(mimeType, download, `${getFileNameFromURL(skinURL)}-${skinArea.toLowerCase()}`);
+                setCaching(res, true, true, 60).send(png);
+              });
             });
           } else {
             setCaching(res, true, true, 15 * 60);
@@ -1044,4 +1056,90 @@ export function getUserAgent(req: Request | null, callback: (err: Error | null, 
 
     return callback(null, cacheValue); // Hit cache
   }
+}
+
+/**
+ * @param skin dirty skin (not Image#toCleanSkin) with valid dimensions
+ */
+function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean | 'auto', is3d: boolean, size: number = 512, callback: (err?: Error, resultImg?: Buffer) => void) {
+  if (!skin.hasSkinDimensions) throw new Error('skin image does not have valid dimensions');
+
+  if (typeof alex != 'boolean')
+    alex = skin.isSlimSkinModel();
+
+  skin.toCleanSkin((err) => {
+    if (err) throw err;
+
+    if (is3d) {
+      let cam;
+      let model;
+
+      if (area == SkinArea.BODY) {
+        if (overlay) {
+          cam = rendering.cams.body;
+          model = alex ? rendering.models.modelAlex : rendering.models.modelSteve;
+        } else {
+          cam = rendering.cams.bodyNoOverlay;
+          model = alex ? rendering.models.modelAlexNoOverlay : rendering.models.modelSteveNoOverlay;
+        }
+      } else {
+        cam = overlay ? rendering.cams.head : rendering.cams.headNoOverlay;
+        model = overlay ? rendering.models.modelSteveHead : rendering.models.modelSteveHeadNoOverlay;
+      }
+
+      if (!cam || !model) return callback(new Error(`This combination of SkinArea(=${area}), overlay(=${overlay}), alex(=${alex}) and is3d(=${is3d}) is not supported (please create an issue on GitHub)`));
+
+      return Image.fromRaw(Buffer.from(cam.render(model, skin.img.data)), cam.width, cam.height, 4, (err, img) => {
+        if (err || !img) return callback(err || new Error());
+
+        img.toPngBuffer((err, png) => {
+          return callback(err || undefined, png || undefined);
+        }, size, size);
+      });
+    } else if (!is3d) {
+      const dimensions: { x: number, y: number } =
+        area == SkinArea.HEAD ? { x: 8, y: 8 } : { x: alex ? 14 : 16, y: 32 };
+
+      Image.empty(dimensions.x, dimensions.y, (err, img) => {
+        if (err || !img) throw err || new Error();
+
+        const armWidth = alex ? 3 : 4,
+          xOffset = alex ? 1 : 0;
+
+        if (area == SkinArea.HEAD) {
+          img.drawSubImg(skin, 8, 8, 8, 8, 0, 0);                        // Head
+        } else if (area == SkinArea.BODY) {
+          img.drawSubImg(skin, 8, 8, 8, 8, 4 - xOffset, 0);              // Head
+
+          img.drawSubImg(skin, 20, 20, 8, 12, 4 - xOffset, 8);           // Body
+          img.drawSubImg(skin, 44, 20, armWidth, 12, 0, 8);              // Right arm
+          img.drawSubImg(skin, 36, 52, armWidth, 12, 12 - xOffset, 8);   // Left arm
+        }
+
+        if (area == SkinArea.BODY) {
+          img.drawSubImg(skin, 4, 20, 4, 12, 4 - xOffset, 20);           // Right leg
+          img.drawSubImg(skin, 20, 52, 4, 12, 8 - xOffset, 20);          // Left leg
+        }
+
+        if (overlay) {
+          if (area == SkinArea.HEAD) {
+            img.drawSubImg(skin, 40, 8, 8, 8, 0, 0);                     // Head (overlay)
+          } else if (area == SkinArea.BODY) {
+            img.drawSubImg(skin, 40, 8, 8, 8, 4 - xOffset, 0);           // Head (overlay)
+
+            img.drawSubImg(skin, 20, 36, 8, 12, 4 - xOffset, 8);         // Body (overlay)
+            img.drawSubImg(skin, 44, 36, armWidth, 12, 0, 8);            // Right arm (overlay)
+            img.drawSubImg(skin, 52, 52, armWidth, 12, 12 - xOffset, 8); // Left arm (overlay)
+          }
+
+          if (area == SkinArea.BODY) {
+            img.drawSubImg(skin, 4, 36, 4, 12, 4 - xOffset, 20);         // Right leg (overlay)
+            img.drawSubImg(skin, 4, 52, 4, 12, 8 - xOffset, 20);         // Left leg (overlay)
+          }
+        }
+
+        return img.toPngBuffer((err, png) => callback(err || undefined, png || undefined), size, size);
+      });
+    }
+  });
 }
