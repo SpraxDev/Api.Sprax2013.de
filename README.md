@@ -38,14 +38,51 @@ This API provides data in JSON format. I can't even display an ad in some corner
 4. Configure all files inside `./storage` (automatically generated)
 6. Type `rs` into the console or restart the process
 
-<!--
-## Contributors ✨
+## Thanks To... ✨
 <table>
   <tr>
-    <td align="center"><a href="https://github.com/JonasAlpha"><img src="https://avatars1.githubusercontent.com/u/35976079?s=460&v=4" width="100px" alt=""><br><sub><b>Jonas</b></sub></a><br>🎨 Logo and Banner</td>
+    <td>
+      <a href="https://github.com/JNSAPH" title="Made and helped with design related stuff">
+        <img src="https://avatars3.githubusercontent.com/u/35976079?s=460&u=8396273e500a483dcc85c05eb596d828f3b1252d&v=4" width="100px" alt="JNSAPH GitHub-Logo"><!--
+        --><br><!--
+        --><sub>🎨<b>JonasAlpha</b></sub>
+      </a>
+    </td>
+    <td>
+      <a href="https://github.com/NudelErde" title="Made 3D rendering possible">
+        <img src="https://avatars3.githubusercontent.com/u/37987062?s=460&u=7e054b47133d5cf44f1c9d31a7eb289a380a526b&v=4" width="100px" alt="NudelErde GitHub-Logo"><!--
+        --><br><!--
+        --><sub>💻<b>NudelErde</b></sub>
+      </a>
+    </td>
+    <td>
+      <a href="https://github.com/InventivetalentDev" title="MineSkin-API and dev-version of the Front-End">
+        <img src="https://avatars1.githubusercontent.com/u/6525296?s=460&u=ffafe7393d83f3a026dee14141fdcea8962c4d16&v=4" width="100px" alt="InventivetalentDev GitHub-Logo"><!--
+        --><br><!--
+        --><sub>🔧<b>InventivetalentDev</b></sub>
+      </a>
+    </td>
   </tr>
 </table>
--->
+
+<table>
+  <tr>
+    <td>
+      <a href="https://www.cloudflare.com/" title="Improve API Performance and Security">
+        <img src="https://www.cloudflare.com/img/logo-cloudflare-dark.svg" width="100px" alt="CloudFlare branding"><!--
+        --><br><!--
+        --><sub><b>CloudFlare Free</b></sub>
+      </a>
+    </td>
+    <td>
+      <a href="https://www.jetbrains.com/" title="Provide greate Tools/IDEs to use">
+        <img src="https://i.imgur.com/RISnfij.png" width="100px"  alt="JetBrains branding"><!--
+        --><br><!--
+        --><sub><b>JetBrains OS License</b></sub>
+      </a>
+    </td>
+  </tr>
+</table>
 
 ## License
 [MIT License](./LICENSE)
