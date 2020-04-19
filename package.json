@@ -1,6 +1,6 @@
 {
   "name": "api.sprax2013.de",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "",
   "homepage": "https://github.com/Sprax2013/Api.Sprax2013.de#readme",
   "main": "build/index.js",
@@ -8,6 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "compile": "tsc",
     "start": "cross-env NODE_ENV=production nodemon build/index.js",
+    "start-headless": "xvfb-run -s \"-ac -screen 0 1280x1024x24\" cross-env NODE_ENV=production nodemon build/index.js",
     "devStart": "cross-env NODE_ENV=development ts-node src/index.ts",
     "dev": "nodemon --ext ts --watch ./src --exec \"npm run devStart\""
   },
