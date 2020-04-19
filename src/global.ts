@@ -72,7 +72,6 @@ export enum CapeType {
 
 export enum SkinArea {
   HEAD = 'HEAD',
-  BUST = 'BUST',
   BODY = 'BODY'
 }
 

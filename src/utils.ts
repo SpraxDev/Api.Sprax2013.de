@@ -35,6 +35,15 @@ export class Image {
       .catch((err) => callback(err, null));
   }
 
+  static fromRaw(rgba: Buffer, width: number, height: number, channels: 1 | 2 | 3 | 4, callback: (err?: Error, img?: Image) => void): void {
+    const result = sharp(rgba, { raw: { width, height, channels } })
+      .ensureAlpha();
+
+    result.toBuffer({ resolveWithObject: true })
+      .then((res) => callback(undefined, new Image(res)))
+      .catch((err) => callback(err));
+  }
+
   static fromImg(img: string | Buffer, callback: (err: Error | null, rawImg: Image | null) => void, width?: number, height?: number): void {
     const result = sharp(img)
       .ensureAlpha()
@@ -156,6 +165,86 @@ export class Image {
         this.setColor(x + i, y + j, color);
       }
     }
+  }
+
+  trimTransparency(callback: (err?: Error, newImage?: Image) => void) {
+    let startingX = 0, endingX = this.img.info.width,
+      startingY = 0, endingY = this.img.info.height;
+
+    // Top
+    for (let y = 0; y < this.img.info.height; y++) {
+      let rowIsTransparent = true;
+
+      for (let x = 0; x < this.img.info.width; x++) {
+        if (this.getColor(x, y).alpha != 0) {
+          rowIsTransparent = false;
+          break;
+        }
+      }
+
+      if (!rowIsTransparent) {
+        startingY = y;
+        break;
+      }
+    }
+
+    // Right
+    for (let x = this.img.info.width - 1; x >= 0; x--) {
+      let colIsTransparent = true;
+
+      for (let y = startingY; y < this.img.info.height; y++) {
+        if (this.getColor(x, y).alpha != 0) {
+          colIsTransparent = false;
+          break;
+        }
+      }
+
+      if (!colIsTransparent) {
+        endingX = x;
+        break;
+      }
+    }
+
+    // Bottom
+    for (let y = this.img.info.height - 1; y >= 0; y--) {
+      let rowIsTransparent = true;
+
+      for (let x = startingX; x < this.img.info.width; x++) {
+        if (this.getColor(x, y).alpha != 0) {
+          rowIsTransparent = false;
+          break;
+        }
+      }
+
+      if (!rowIsTransparent) {
+        endingY = y;
+        break;
+      }
+    }
+
+    // Left
+    for (let x = startingX; x < this.img.info.width; x++) {
+      let colIsTransparent = true;
+
+      for (let y = startingY; y < this.img.info.height; y++) {
+        if (this.getColor(x, y).alpha != 0) {
+          colIsTransparent = false;
+          break;
+        }
+      }
+
+      if (!colIsTransparent) {
+        startingX = x;
+        break;
+      }
+    }
+
+    Image.empty(endingX - startingX, endingY - startingY, (err, img) => {
+      if (err || !img) return callback(err || new Error());
+
+      img.drawSubImg(this, startingX, startingY, endingX - startingX, endingY - startingY, 0, 0);
+      return callback(undefined, img);
+    });
   }
 
   /* Skin */
