@@ -68,7 +68,7 @@ userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) =>
 setInterval(() => { rateLimitedNameHistory = 0 }, 120 * 1000);
 
 const SKIN_STEVE = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'steve.png')),
-  SKIN_ALEX = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'steve.png'));
+  SKIN_ALEX = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'alex.png'));
 
 const whitelistedSkinURLs = ['//textures.minecraft.net/texture/', '//cdn.skindb.net/'];
 
