@@ -88,5 +88,3 @@ This API provides data in JSON format. I can't even display an ad in some corner
 
 ## License
 [MIT License](./LICENSE)
-
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FSprax2013%2FApi.Sprax2013.de.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FSprax2013%2FApi.Sprax2013.de?ref=badge_large)
