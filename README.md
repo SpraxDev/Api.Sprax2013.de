@@ -33,8 +33,8 @@ This API provides data in JSON format. I can't even display an ad in some corner
 
 1. ~~Prepare your PostgreSQL server by running the commands inside `./tables.sql`~~ (coming soon)
 2. `npm install`
-3. `npm run compile`
-4. `npm run start` or  `npm run start-headless` on machines without GPU
+3. `npm run build`
+4. `npm run start` or `npm run start-headless` on machines without GPU
 4. Configure all files inside `./storage` (automatically generated)
 6. Type `rs` into the console or restart the process
 
