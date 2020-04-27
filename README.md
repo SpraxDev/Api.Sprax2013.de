@@ -35,7 +35,7 @@ This API provides data in JSON format. I can't even display an ad in some corner
 2. `npm install`
 3. `npm run build`
 4. `npm run start` or `npm run start-headless` on machines without GPU
-4. Configure all files inside `./storage` (automatically generated)
+4. Configure all files inside `./storage/` (automatically generated)
 6. Type `rs` into the console or restart the process
 
 <b>Can't run?</b> You might need to install some dependencies found [here](https://github.com/stackgl/headless-gl#system-dependencies) and [here too](https://github.com/stackgl/headless-gl#how-can-headless-gl-be-used-on-a-headless-linux-machine)
