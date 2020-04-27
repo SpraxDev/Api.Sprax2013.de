@@ -40,6 +40,10 @@ This API provides data in JSON format. I can't even display an ad in some corner
 
 <b>Can't run?</b> You might need to install some dependencies found [here](https://github.com/stackgl/headless-gl#system-dependencies) and [here too](https://github.com/stackgl/headless-gl#how-can-headless-gl-be-used-on-a-headless-linux-machine)
 
+## Setup for development
+1. Follow the [Setup](#setup) section until 2nd step.
+2. Use `npm run dev` to run without creating an output dir (autorestart on file changes)
+
 ## Thanks To... ✨
 <table>
   <tr>
