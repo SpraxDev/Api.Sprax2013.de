@@ -40,28 +40,25 @@ This API provides data in JSON format. I can't even display an ad in some corner
 
 <b>Can't run?</b> You might need to install some dependencies found [here](https://github.com/stackgl/headless-gl#system-dependencies) and [here too](https://github.com/stackgl/headless-gl#how-can-headless-gl-be-used-on-a-headless-linux-machine)
 
+## Setup for development
+1. Follow the [Setup](#setup) section until 2nd step.
+2. Use `npm run dev` to run without creating an output dir (autorestart on file changes)
+
 ## Thanks To... ✨
 <table>
   <tr>
     <td>
       <a href="https://github.com/JNSAPH" title="Made and helped with design related stuff">
-        <img src="https://avatars3.githubusercontent.com/u/35976079?s=460&u=8396273e500a483dcc85c05eb596d828f3b1252d&v=4" width="100px" alt="JNSAPH GitHub-Logo"><!--
+        <img src="https://avatars3.githubusercontent.com/u/35976079" width="100px" alt="JNSAPH GitHub-Logo"><!--
         --><br><!--
         --><sub>🎨<b>JonasAlpha</b></sub>
       </a>
     </td>
     <td>
       <a href="https://github.com/NudelErde" title="Made 3D rendering possible">
-        <img src="https://avatars3.githubusercontent.com/u/37987062?s=460&u=7e054b47133d5cf44f1c9d31a7eb289a380a526b&v=4" width="100px" alt="NudelErde GitHub-Logo"><!--
+        <img src="https://avatars3.githubusercontent.com/u/37987062" width="100px" alt="NudelErde GitHub-Logo"><!--
         --><br><!--
         --><sub>💻<b>NudelErde</b></sub>
-      </a>
-    </td>
-    <td>
-      <a href="https://github.com/InventivetalentDev" title="MineSkin-API and dev-version of the Front-End">
-        <img src="https://avatars1.githubusercontent.com/u/6525296?s=460&u=ffafe7393d83f3a026dee14141fdcea8962c4d16&v=4" width="100px" alt="InventivetalentDev GitHub-Logo"><!--
-        --><br><!--
-        --><sub>🔧<b>InventivetalentDev</b></sub>
       </a>
     </td>
   </tr>
