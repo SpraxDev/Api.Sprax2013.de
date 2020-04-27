@@ -39,7 +39,7 @@ app.use((req, _res, next) => {
   }
 
   next();
-})
+});
 
 // Default response headers
 app.use((_req, res, next) => {
