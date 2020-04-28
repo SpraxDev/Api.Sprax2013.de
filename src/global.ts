@@ -61,6 +61,19 @@ export interface Cape {
   readonly textureSignature?: string;
 }
 
+/* SkinDB */
+export interface SkinDBAccount {
+  readonly user: CleanMinecraftUser;
+  readonly skinHistory: {
+    readonly lastTen: number[];
+    readonly total: number;
+  }
+}
+
+export interface SkinDBSkin {
+  readonly skin: Skin;
+}
+
 /**
  * value equals remote database enum
 */

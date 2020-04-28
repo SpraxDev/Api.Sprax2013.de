@@ -8,13 +8,15 @@ import { Router, Request } from 'express';
 
 import { db } from '../index';
 import { importByTexture, importCapeByURL } from './skindb';
-import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
+import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea, Cape, Skin } from '../global';
 import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL, generateHash } from '../utils';
 import { createCamera, createModel } from '../modelRender';
 
 const uuidCache = new nCache({ stdTTL: 59, useClones: false }), /* key:${name_lower};${at||''}, value: { id: string, name: string } | Error | null */
   userCache = new nCache({ stdTTL: 59, useClones: false }), /* key: profile.id, value: MinecraftUser | Error | null */
   userAgentCache = new nCache({ stdTTL: 10 * 60, useClones: false }) /* key: ${userAgent};${internal(boolean)}, value: UserAgent */;
+
+const userCacheWaitingForImportQueue: { key: string, callback: (err: Error | null, user: MinecraftUser | null) => void }[] = [];
 
 const profileRequestQueue: { key: string, callback: (err: Error | null, user: MinecraftUser | null) => void }[] = [],
   uuidRequestQueue: { key: string, callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void }[] = [];
@@ -72,49 +74,82 @@ const rendering = {
   }
 };
 
-userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) => {
-  if (!db.isAvailable()) return;
+userCache.on('set', async (key: string, value: MinecraftUser | Error | null) => {
+  const done = () => {
+    let i: number;
+    do {
+      i = userCacheWaitingForImportQueue.findIndex((value) => value.key == key);
 
-  if (value instanceof MinecraftUser) {
-    db.updateUser(value, (err) => {
-      if (err) return ApiError.log('Could not update user in database', { profile: value.id, stack: err.stack });
+      if (i != -1) {
+        const err = value instanceof Error ? value : null;
+        const user = err || value == null ? null : value as MinecraftUser;
 
+        userCacheWaitingForImportQueue[i].callback(err, user);
+        userCacheWaitingForImportQueue.splice(i, 1);
+      }
+    } while (i != -1);
+  };
+
+  if (!db.isAvailable() || !(value instanceof MinecraftUser)) return done();
+
+  db.updateUser(value)
+    .then(async () => {
       /* Skin */
       if (value.textureValue) {
-        importByTexture(value.textureValue, value.textureSignature, value.userAgent, (err, skin, cape) => {
-          if (err) return ApiError.log('Could not import skin/cape from profile', { skinURL: value.skinURL, profile: value.id, stack: (err || new Error()).stack });
+        try {
+          const importedTextures = await importByTexture(value.textureValue, value.textureSignature, value.userAgent);
 
-          if (skin) {
-            db.addSkinToUserHistory(value, skin, (err) => {
-              if (err) return ApiError.log(`Could not update skin-history in database`, { skin: skin.id, profile: value.id, stack: err.stack });
-            });
+          if (importedTextures.skin) {
+            try {
+              await db.addSkinToUserHistory(value, importedTextures.skin);
+            } catch (err) {
+              ApiError.log(`Could not update skin-history in database`, { skin: importedTextures.skin.id, profile: value.id, stack: err.stack });
+            }
           }
 
-          if (cape) {
-            db.addCapeToUserHistory(value, cape, (err) => {
-              if (err) return ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
-            });
+          if (importedTextures.cape) {
+            try {
+              await db.addCapeToUserHistory(value, importedTextures.cape);
+            } catch (err) {
+              ApiError.log(`Could not update cape-history in database`, { cape: importedTextures.cape.id, profile: value.id, stack: err.stack });
+            }
           }
-        });
+        } catch (err) {
+          ApiError.log('Could not import skin/cape from profile', { skinURL: value.skinURL, profile: value.id, stack: (err || new Error()).stack });
+        }
       }
 
-      const processCape = function (capeURL: string | null, capeType: CapeType) {
-        if (capeURL) {
-          importCapeByURL(capeURL, capeType, value.userAgent, (err, cape) => {
-            if (err || !cape) return ApiError.log(`Could not import cape(type=${capeType}) from profile`, { capeURL: capeURL, profile: value.id, stack: (err || new Error()).stack });
+      /* Capes */
+      const processCape = (capeURL: string | null, capeType: CapeType): Promise<void> => {
+        return new Promise((resolve, reject) => {
+          if (!capeURL) return resolve();
 
-            db.addCapeToUserHistory(value, cape, (err) => {
-              if (err) return ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
+          importCapeByURL(capeURL, capeType, value.userAgent, value.textureValue || undefined, value.textureSignature || undefined)
+            .then((cape) => {
+              if (!cape) return resolve();
+
+              db.addCapeToUserHistory(value, cape)
+                .then(resolve)
+                .catch((err) => {
+                  ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
+                  reject(err);
+                });
+            })
+            .catch((err) => {
+              ApiError.log(`Could not import cape(type=${capeType}) from profile`, { capeURL: capeURL, profile: value.id, stack: err.stack });
+              reject(err);
             });
-          }, value.textureValue || undefined, value.textureSignature || undefined);
-        }
+        });
       };
 
-      /* Capes */
-      processCape(value.getOptiFineCapeURL(), CapeType.OPTIFINE);
-      processCape(value.getLabyModCapeURL(), CapeType.LABY_MOD);
+      await processCape(value.getOptiFineCapeURL(), CapeType.OPTIFINE);
+      await processCape(value.getLabyModCapeURL(), CapeType.LABY_MOD);
+
+      done();
+    })
+    .catch((err) => {
+      ApiError.log('Could not update user in database', { profile: value.id, stack: err.stack })
     });
-  }
 });
 
 setInterval(() => { rateLimitedNameHistory = 0 }, 120 * 1000);
@@ -814,7 +849,7 @@ export function getByUsername(username: string, at: number | string | null = nul
   }
 }
 
-export function getByUUID(uuid: string, req: Request, callback: (err: Error | null, user: MinecraftUser | null) => void): void {
+export function getByUUID(uuid: string, req: Request, callback: (err: Error | null, user: MinecraftUser | null) => void, waitForImport: boolean = false): void {
   const get = (callback: (err: Error | null, user: MinecraftUser | null) => void) => {
     const cacheValue: MinecraftUser | Error | null | undefined = userCache.get(uuid);
 
@@ -909,8 +944,13 @@ export function getByUUID(uuid: string, req: Request, callback: (err: Error | nu
                     uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
                   }
 
+                  if (waitForImport) {
+                    userCacheWaitingForImportQueue.push({ key: uuid, callback }); // Error, Not Found or Success
+                  }
+
                   userCache.set(uuid, err || mcUser);
-                  return callback(err || null, mcUser); // Error, Not Found or Success
+
+                  if (!waitForImport) return callback(err || null, mcUser); // Error, Not Found or Success
                 });
               });
             } else {
@@ -950,9 +990,14 @@ export function getByUUID(uuid: string, req: Request, callback: (err: Error | nu
 
                   // TODO cache 404 and err
                   uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
+
+                  if (waitForImport) {
+                    userCacheWaitingForImportQueue.push({ key: uuid, callback }); // Success
+                  }
+
                   userCache.set(uuid, mcUser);
 
-                  return callback(null, mcUser); // Success
+                  if (!waitForImport) return callback(null, mcUser); // Success
                 });
               });
             }
@@ -972,8 +1017,13 @@ export function getByUUID(uuid: string, req: Request, callback: (err: Error | nu
                 uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
               }
 
+              if (waitForImport) {
+                userCacheWaitingForImportQueue.push({ key: uuid, callback }); // Error, Not Found or Success
+              }
+
               userCache.set(uuid, err || mcUser);
-              return callback(err || null, mcUser); // Error, Not Found or Success
+
+              if (!waitForImport) return callback(err || null, mcUser); // Error, Not Found or Success
             });
           });
         }

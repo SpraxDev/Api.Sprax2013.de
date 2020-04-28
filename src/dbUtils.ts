@@ -24,50 +24,52 @@ export class dbUtils {
     }
   }
 
-  updateUser(mcUser: MinecraftUser, callback: (err: Error | null) => void): void {
-    if (this.pool == null) return callback(null);
+  async updateUser(mcUser: MinecraftUser): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
 
-    if (mcUser.nameHistory.length <= 0) return callback(new Error('apiRes may not be an empty array'));
+      if (mcUser.nameHistory.length <= 0) return reject(new Error('nameHistory may not be an empty array'));
 
-    this.pool.connect((err, client, done) => {
-      if (err) return callback(err);
+      this.pool.connect((err, client, done) => {
+        if (err) return reject(err);
 
-      client.query('BEGIN', (err) => {
-        if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+        client.query('BEGIN', (err) => {
+          if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-        // Store latest profile
-        client.query('INSERT INTO profiles(id,name_lower,raw_json) VALUES($1,$2,$3) ON CONFLICT(id) DO UPDATE SET name_lower =$2, raw_json =$3, last_update =CURRENT_TIMESTAMP;',
-          [mcUser.id.toLowerCase(), mcUser.name.toLowerCase(), mcUser.toOriginal()], (err, _res) => {
-            if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+          // Store latest profile
+          client.query('INSERT INTO profiles(id,name_lower,raw_json) VALUES($1,$2,$3) ON CONFLICT(id) DO UPDATE SET name_lower =$2, raw_json =$3, last_update =CURRENT_TIMESTAMP;',
+            [mcUser.id.toLowerCase(), mcUser.name.toLowerCase(), mcUser.toOriginal()], (err, _res) => {
+              if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-            let queryStr = 'INSERT INTO name_history(profile_id,name,changed_to_at) VALUES';
-            const queryArgs: (string | Date)[] = [mcUser.id];
+              let queryStr = 'INSERT INTO name_history(profile_id,name,changed_to_at) VALUES';
+              const queryArgs: (string | Date)[] = [mcUser.id];
 
-            let counter = 2;
-            for (const elem of mcUser.nameHistory) {
-              if (counter > 2) queryStr += ', ';
+              let counter = 2;
+              for (const elem of mcUser.nameHistory) {
+                if (counter > 2) queryStr += ', ';
 
-              queryStr += `($1,$${counter++},${typeof elem.changedToAt == 'number' ? `$${counter++}` : `'-infinity'`})`;
+                queryStr += `($1,$${counter++},${typeof elem.changedToAt == 'number' ? `$${counter++}` : `'-infinity'`})`;
 
-              queryArgs.push(elem.name);
+                queryArgs.push(elem.name);
 
-              if (typeof elem.changedToAt == 'number') {
-                queryArgs.push(new Date(elem.changedToAt));
+                if (typeof elem.changedToAt == 'number') {
+                  queryArgs.push(new Date(elem.changedToAt));
+                }
               }
-            }
 
-            // Store Name-History
-            client.query(`${queryStr} ON CONFLICT DO NOTHING;`, queryArgs, (err, _res) => {
-              if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+              // Store Name-History
+              client.query(`${queryStr} ON CONFLICT DO NOTHING;`, queryArgs, (err, _res) => {
+                if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-              client.query('COMMIT', (err) => {
-                done();
-                if (err) return callback(err);
+                client.query('COMMIT', (err) => {
+                  done();
+                  if (err) return reject(err);
 
-                callback(null);
+                  resolve();
+                });
               });
             });
-          });
+        });
       });
     });
   }
@@ -205,39 +207,70 @@ export class dbUtils {
     });
   }
 
-  addSkinToUserHistory(mcUser: MinecraftUser, skin: Skin, callback: (err: Error | null) => void): void {
-    if (this.pool == null) return callback(null);
+  async addSkinToUserHistory(mcUser: MinecraftUser, skin: Skin): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
 
-    this.pool.connect((err, client, done) => {
-      if (err) return callback(err);
+      this.pool.connect((err, client, done) => {
+        if (err) return reject(err);
 
-      client.query('BEGIN', (err) => {
-        if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+        client.query('BEGIN', (err) => {
+          if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-        client.query(`SELECT EXISTS(SELECT * FROM (SELECT skin_id FROM skin_history WHERE profile_id =$1 ORDER BY added DESC LIMIT 1)x WHERE skin_id =$2);`, [mcUser.id, skin.id], (err, res) => {
-          if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+          client.query(`SELECT EXISTS(SELECT * FROM (SELECT skin_id FROM skin_history WHERE profile_id =$1 ORDER BY added DESC LIMIT 1)x WHERE skin_id =$2);`, [mcUser.id, skin.duplicateOf || skin.id], (err, res) => {
+            if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-          if (res.rows[0].exists) { // Skin hasn't changed
-            client.query('COMMIT', (err) => {
-              done();
-              if (err) return callback(err);
+            if (res.rows[0].exists) { // Skin hasn't changed
+              client.query('COMMIT', (err) => {
+                done();
+                if (err) return reject(err);
 
-              callback(null);
-            });
-          } else {
-            client.query(`INSERT INTO skin_history(profile_id,skin_id) VALUES($1,$2);`,
-              [mcUser.id, skin.id], (err, _res) => {
-                if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+                resolve();
+              });
+            } else {
+              client.query(`INSERT INTO skin_history(profile_id,skin_id) VALUES($1,$2);`, [mcUser.id, skin.duplicateOf || skin.id], (err, _res) => {
+                if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
                 client.query('COMMIT', (err) => {
                   done();
-                  if (err) return callback(err);
+                  if (err) return reject(err);
 
-                  callback(null);
+                  resolve();
                 });
               });
-          }
+            }
+          });
         });
+      });
+    });
+  }
+
+  async getSkinHistory(uuid: string, amount: number, offset: number): Promise<number[]> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query(`SELECT skin_id FROM skin_history WHERE profile_id =$1 ORDER BY added DESC LIMIT $2 OFFSET $3;`, [uuid, amount, offset], (err, res) => {
+        if (err) return reject(err);
+
+        const skinIDs = [];
+
+        for (const row of res.rows) {
+          skinIDs.push(row.skin_id);
+        }
+
+        resolve(skinIDs);
+      });
+    });
+  }
+
+  async getSkinHistorySize(uuid: string): Promise<number> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query(`SELECT COUNT(*) as count FROM skin_history WHERE profile_id =$1;`, [uuid], (err, res) => {
+        if (err) return reject(err);
+
+        resolve(res.rows.length == 0 ? 0 : res.rows[0].count);
       });
     });
   }
@@ -324,61 +357,65 @@ export class dbUtils {
     });
   }
 
-  addCapeToUserHistory(mcUser: MinecraftUser, cape: Cape, callback: (err: Error | null) => void): void {
-    if (this.pool == null) return callback(null);
+  async addCapeToUserHistory(mcUser: MinecraftUser, cape: Cape): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
 
-    this.pool.connect((err, client, done) => {
-      if (err) return callback(err);
+      this.pool.connect((err, client, done) => {
+        if (err) return reject(err);
 
-      client.query('BEGIN', (err) => {
-        if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+        client.query('BEGIN', (err) => {
+          if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-        client.query(`SELECT EXISTS(SELECT cape_id FROM (SELECT cape_id FROM(SELECT cape_id,added FROM cape_history WHERE profile_id =$1)x JOIN capes ON x.cape_id = capes.id AND capes.type =$2 ORDER BY x.added DESC LIMIT 1)x WHERE x.cape_id =$3);`,
-          [mcUser.id, cape.type, cape.id], (err, res) => {
-            if (this.shouldAbortTransaction(client, done, err)) return callback(err);
+          client.query(`SELECT EXISTS(SELECT cape_id FROM (SELECT cape_id FROM(SELECT cape_id,added FROM cape_history WHERE profile_id =$1)x JOIN capes ON x.cape_id = capes.id AND capes.type =$2 ORDER BY x.added DESC LIMIT 1)x WHERE x.cape_id =$3);`,
+            [mcUser.id, cape.type, cape.duplicateOf || cape.id], (err, res) => {
+              if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-            if (res.rows[0].exists) { // Skin hasn't changed
-              client.query('COMMIT', (err) => {
-                done();
-                if (err) return callback(err);
+              if (res.rows[0].exists) { // Skin hasn't changed
+                client.query('COMMIT', (err) => {
+                  done();
+                  if (err) return reject(err);
 
-                callback(null);
-              });
-            } else {
-              client.query(`INSERT INTO cape_history(profile_id,cape_id) VALUES($1,$2);`,
-                [mcUser.id, cape.id], (err, _res) => {
-                  if (this.shouldAbortTransaction(client, done, err)) return callback(err);
-
-                  client.query('COMMIT', (err) => {
-                    done();
-                    if (err) return callback(err);
-
-                    callback(null);
-                  });
+                  resolve();
                 });
-            }
-          });
+              } else {
+                client.query(`INSERT INTO cape_history(profile_id,cape_id) VALUES($1,$2);`,
+                  [mcUser.id, cape.duplicateOf || cape.id], (err, _res) => {
+                    if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+
+                    client.query('COMMIT', (err) => {
+                      done();
+                      if (err) return reject(err);
+
+                      resolve();
+                    });
+                  });
+              }
+            });
+        });
       });
     });
   }
 
-  getSkin(skinID: string, callback: (err: Error | null, skin: Skin | null) => void): void {
-    if (this.pool == null) return callback(null, null);
+  async getSkin(skinID: string): Promise<Skin | null> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
 
-    this.pool.query(`SELECT * FROM skins WHERE id =$1;`, [skinID], (err, res) => {
-      if (err) return callback(err, null);
+      this.pool.query(`SELECT * FROM skins WHERE id =$1;`, [skinID], (err, res) => {
+        if (err) return reject(err);
 
-      callback(null, res.rows.length == 0 ? null :
-        {
-          id: res.rows[0].id,
-          duplicateOf: res.rows[0].duplicate_of,
-          originalURL: res.rows[0].original_url,
-          textureValue: res.rows[0].texture_value,
-          textureSignature: res.rows[0].texture_signature,
-          added: res.rows[0].added,
-          addedBy: res.rows[0].added_by,
-          cleanHash: res.rows[0].clean_hash
-        });
+        resolve(res.rows.length == 0 ? null :
+          {
+            id: res.rows[0].id,
+            duplicateOf: res.rows[0].duplicate_of,
+            originalURL: res.rows[0].original_url,
+            textureValue: res.rows[0].texture_value,
+            textureSignature: res.rows[0].texture_signature,
+            added: res.rows[0].added,
+            addedBy: res.rows[0].added_by,
+            cleanHash: res.rows[0].clean_hash
+          });
+      });
     });
   }
 
