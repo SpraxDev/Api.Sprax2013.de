@@ -137,10 +137,12 @@ export class dbUtils {
         client.query(`SELECT * FROM skins WHERE ${fieldName} =$1 LIMIT 1;`, args, (err, res) => {
           if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
 
-          if (res.rows.length > 0) { // Exact same Skin-URL already in db
+          if (res.rows.length > 0) { // Exact same Skin-URL/Hash already in db
             client.query('COMMIT', (err) => {
               done();
               if (err) return callback(err, null, false);
+
+              // TODO: Check if texture-value and signature should be updated
 
               callback(null, {
                 id: res.rows[0].id,
