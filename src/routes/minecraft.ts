@@ -143,7 +143,7 @@ userCache.on('set', async (key: string, value: MinecraftUser | Error | null) => 
       };
 
       await processCape(value.getOptiFineCapeURL(), CapeType.OPTIFINE);
-      await processCape(value.getLabyModCapeURL(), CapeType.LABY_MOD);
+      await processCape(value.getLabyModCapeURL(), CapeType.LABYMOD);
 
       done();
     })
@@ -526,7 +526,7 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
         const capeType = req.params.capeType as CapeType;
         const capeURL = capeType == CapeType.MOJANG ? mcUser.getSecureCapeURL() :
           capeType == CapeType.OPTIFINE ? mcUser.getOptiFineCapeURL() :
-            capeType == CapeType.LABY_MOD ? mcUser.getLabyModCapeURL() : null;
+            capeType == CapeType.LABYMOD ? mcUser.getLabyModCapeURL() : null;
 
         if (capeURL) {
           request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
@@ -617,7 +617,7 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
 
           const capeURL = capeType == CapeType.MOJANG ? mcUser.getSecureCapeURL() :
             capeType == CapeType.OPTIFINE ? mcUser.getOptiFineCapeURL() :
-              capeType == CapeType.LABY_MOD ? mcUser.getLabyModCapeURL() : null;
+              capeType == CapeType.LABYMOD ? mcUser.getLabyModCapeURL() : null;
 
           if (capeURL) {
             request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {

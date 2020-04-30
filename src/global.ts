@@ -80,7 +80,7 @@ export interface SkinDBSkin {
 export enum CapeType {
   MOJANG = 'MOJANG',
   OPTIFINE = 'OPTIFINE',
-  LABY_MOD = 'LABY_MOD'
+  LABYMOD = 'LABYMOD'
 }
 
 export enum SkinArea {
