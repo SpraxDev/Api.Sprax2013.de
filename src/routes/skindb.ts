@@ -302,10 +302,13 @@ export async function importByTexture(textureValue: string, textureSignature: st
     const skinURL: string | undefined = texture.textures.SKIN?.url,
       capeURL: string | undefined = texture.textures.CAPE?.url;
 
+    if (textureSignature && !isFromYggdrasil(textureValue, textureSignature)) {
+      textureSignature = null;
+    }
+
     let resultSkin: Skin | null = null,
       resultCape: Cape | null = null;
 
-    // TODO signature invalid? Set null!
     // TODO add skin to SkinHistory if valid signature and previous skin (use timestamp from texture!) is not the same
 
     let waitingFor = 0;
