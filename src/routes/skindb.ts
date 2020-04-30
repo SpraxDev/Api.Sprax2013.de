@@ -12,7 +12,7 @@ import { Router } from 'express';
 import { db } from '..';
 import { MinecraftUser, UserAgent, Skin, Cape, CapeType } from '../global';
 import { ErrorBuilder, restful, Image, setCaching, isNumber, ApiError } from '../utils';
-import { getUserAgent } from './minecraft';
+import { getUserAgent, getByUUID, isUUIDCached } from './minecraft';
 
 const yggdrasilPublicKey = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));
 
@@ -306,7 +306,6 @@ export async function importByTexture(textureValue: string, textureSignature: st
       resultCape: Cape | null = null;
 
     // TODO signature invalid? Set null!
-    // TODO request textures profile in case it is not in the db already (hits memory cache anyways if originated from profile look up)
     // TODO add skin to SkinHistory if valid signature and previous skin (use timestamp from texture!) is not the same
 
     let waitingFor = 0;
@@ -315,6 +314,12 @@ export async function importByTexture(textureValue: string, textureSignature: st
 
       if (waitingFor == 0) {
         resolve({ skin: resultSkin, cape: resultCape });
+
+        // Request profile and insert latest version into db
+        // If it is already cached, it is in the database for sure! We don't want any recursive endless-loop!
+        if (db.isAvailable() && !isUUIDCached(texture.profileId)) {
+          getByUUID(texture.profileId, null, () => { });  // TODO: preserve User-Agent
+        }
       }
     };
 

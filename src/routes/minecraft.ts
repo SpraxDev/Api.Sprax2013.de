@@ -849,7 +849,7 @@ export function getByUsername(username: string, at: number | string | null = nul
   }
 }
 
-export function getByUUID(uuid: string, req: Request, callback: (err: Error | null, user: MinecraftUser | null) => void, waitForImport: boolean = false): void {
+export function getByUUID(uuid: string, req: Request | null, callback: (err: Error | null, user: MinecraftUser | null) => void, waitForImport: boolean = false): void {
   const get = (callback: (err: Error | null, user: MinecraftUser | null) => void) => {
     const cacheValue: MinecraftUser | Error | null | undefined = userCache.get(uuid);
 
@@ -1061,6 +1061,10 @@ export function getByUUID(uuid: string, req: Request, callback: (err: Error | nu
       } while (i != -1);
     });
   }
+}
+
+export function isUUIDCached(uuid: string): boolean {
+  return userCache.has(uuid.replace(/-/g, '').toLowerCase());
 }
 
 function getBlockedServers(callback: (err: Error | null, hashes: string[] | null) => void): void {
