@@ -497,7 +497,7 @@ router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
                 if (err || !png) return next(err || new Error());
 
                 sendDownloadHeaders(mimeType, download, `${getFileNameFromURL(skinURL)}-${skinArea.toLowerCase()}`);
-                setCaching(res, true, true, 60).send(png);
+                setCaching(res, true, true, 60 * 60 * 24 * 30 /*30d*/).send(png);
               });
             });
           } else {
