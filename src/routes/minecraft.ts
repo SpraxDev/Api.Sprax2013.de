@@ -8,7 +8,7 @@ import { Router, Request } from 'express';
 
 import { db } from '../index';
 import { importByTexture, importCapeByURL } from './skindb';
-import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea, Cape, Skin } from '../global';
+import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
 import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL, generateHash } from '../utils';
 import { createCamera, createModel } from '../modelRender';
 
