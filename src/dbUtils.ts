@@ -1,6 +1,6 @@
 import { Pool, PoolClient } from 'pg';
 
-import { generateHash, ApiError } from './utils';
+import { ApiError } from './utils';  // TODO: Don't use ./utils.ts because of ./index-debug.ts
 import { SpraxAPIdbCfg, UserAgent, Skin, MinecraftUser, Cape, CapeType, MinecraftProfile } from './global';
 
 export class dbUtils {
@@ -121,11 +121,11 @@ export class dbUtils {
     });
   }
 
-  addSkin(originalPng: Buffer, cleanPng: Buffer, originalURL: string | null, textureValue: string | null, textureSignature: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void): void {
+  addSkin(originalPng: Buffer, cleanPng: Buffer, cleanPngHash: string, originalURL: string | null, textureValue: string | null,
+    textureSignature: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void): void {
     if (this.pool == null) return callback(null, null, false);
     if (originalURL && !originalURL.toLowerCase().startsWith('https://textures.minecraft.net/texture/')) return callback(new Error(`The provided originalURL(=${originalURL}) does not start with 'https://textures.minecraft.net/texture/'`), null, false);
-
-    const cleanHash = generateHash(cleanPng);
+    if (!textureValue && textureSignature) return callback(new Error('Only provide textureSignature with its textureValue!'), null, false);
 
     this.pool.connect((err, client, done) => {
       if (err) return callback(err, null, false);
@@ -279,10 +279,10 @@ export class dbUtils {
     });
   }
 
-  addCape(capePng: Buffer, type: CapeType, originalURL: string, textureValue: string | null, textureSignature: string | null, userAgent: UserAgent, callback: (err: Error | null, cape: Cape | null) => void): void {
+  addCape(capePng: Buffer, pngHash: string, type: CapeType, originalURL: string, textureValue: string | null, textureSignature: string | null, userAgent: UserAgent, callback: (err: Error | null, cape: Cape | null) => void): void {
     if (this.pool == null) return callback(null, null);
-
-    const cleanHash = generateHash(capePng);
+    if (type == CapeType.MOJANG && (textureValue || textureSignature)) return callback(new Error('Only provide textureValue and -Signature for Mojang-Capes!'), null);
+    if (!textureValue && textureSignature) return callback(new Error('Only provide textureSignature with its textureValue!'), null);
 
     this.pool.connect((err, client, done) => {
       if (err) return callback(err, null);

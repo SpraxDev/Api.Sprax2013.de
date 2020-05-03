@@ -11,7 +11,7 @@ import { Router } from 'express';
 
 import { db } from '..';
 import { MinecraftUser, UserAgent, Skin, Cape, CapeType } from '../global';
-import { ErrorBuilder, restful, Image, setCaching, isNumber, ApiError } from '../utils';
+import { ErrorBuilder, restful, Image, setCaching, isNumber, ApiError, generateHash } from '../utils';
 import { getUserAgent, getByUUID, isUUIDCached } from './minecraft';
 
 const yggdrasilPublicKey = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));
@@ -370,7 +370,7 @@ export function importSkinByBuffer(skin: Buffer, skinURL: string | null, userAge
       img.toCleanSkinBuffer((err, cleanSkin) => {
         if (err || !cleanSkin) return callback(err, null, false);
 
-        db.addSkin(orgSkin, cleanSkin, skinURL, textureValue, textureSignature, userAgent, (err, skin, exactMatch) => {
+        db.addSkin(orgSkin, cleanSkin, generateHash(cleanSkin), skinURL, textureValue, textureSignature, userAgent, (err, skin, exactMatch) => {
           if (err || !skin) return callback(err, null, false);
 
           return callback(null, skin, exactMatch);
@@ -392,7 +392,7 @@ export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: 
           img.toPngBuffer((err, capePng) => {
             if (err || !capePng) return reject(err);
 
-            db.addCape(capePng, capeType, capeURL, capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent, (err, cape) => {
+            db.addCape(capePng, generateHash(capePng), capeType, capeURL, capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent, (err, cape) => {
               if (err || !cape) return reject(err);
 
               return resolve(cape);
