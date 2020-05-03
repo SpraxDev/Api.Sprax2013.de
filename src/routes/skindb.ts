@@ -11,7 +11,7 @@ import { Router } from 'express';
 
 import { db } from '..';
 import { MinecraftUser, UserAgent, Skin, Cape, CapeType } from '../global';
-import { ErrorBuilder, restful, Image, setCaching, isNumber, ApiError, generateHash } from '../utils';
+import { ErrorBuilder, restful, Image, setCaching, isNumber, generateHash } from '../utils';
 import { getUserAgent, getByUUID, isUUIDCached } from './minecraft';
 
 const yggdrasilPublicKey = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));

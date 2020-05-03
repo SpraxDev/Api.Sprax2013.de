@@ -78,7 +78,7 @@ userCache.on('set', async (key: string, value: MinecraftUser | Error | null) => 
   const done = () => {
     let i: number;
     do {
-      i = userCacheWaitingForImportQueue.findIndex((value) => value.key == key);
+      i = userCacheWaitingForImportQueue.findIndex((val) => val.key == key);
 
       if (i != -1) {
         const err = value instanceof Error ? value : null;
