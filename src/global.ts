@@ -72,6 +72,14 @@ export interface SkinDBAccount {
 
 export interface SkinDBSkin {
   readonly skin: Skin;
+  readonly seen_on: { name: string, id: string }[];
+}
+
+export interface SkinDBSearch {
+  profiles: {
+    direct: { name: string, id: string } | null,
+    indirect: { name: string, id: string }[]
+  }
 }
 
 /**

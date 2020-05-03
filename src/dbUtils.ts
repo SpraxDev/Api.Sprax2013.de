@@ -84,6 +84,29 @@ export class dbUtils {
     });
   }
 
+  async searchProfile(name: string, mode: 'equal' | 'start' | 'end' | 'contains' = 'contains', limit: number | 'ALL' = 'ALL', offset: number = 0): Promise<MinecraftProfile[]> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+      if (!name) return reject(new Error('name may not be empty'));
+
+      name = name.toLowerCase();
+
+      const query = 'SELECT raw_json FROM profiles WHERE name_lower ' + (mode == 'equal' ? '=' : 'LIKE ') + '$1 ORDER BY name_lower LIMIT $2 OFFSET $3;',
+        queryArgs = [mode == 'equal' ? name : (mode == 'start' ? name + '%' : (mode == 'end' ? '%' + name : '%' + name + '%')), limit, offset];
+      this.pool.query(query, queryArgs)
+        .then((res) => {
+          let result: MinecraftProfile[] = [];
+
+          for (const row of res.rows) {
+            result.push(row.raw_json);
+          }
+
+          resolve(result);
+        })
+        .catch(reject);
+    });
+  }
+
   getUserAgent(name: string, internal: boolean, callback: (err: Error | null, userAgent: UserAgent | null) => void): void {
     if (this.pool == null) return callback(null, null);
 
@@ -446,6 +469,29 @@ export class dbUtils {
             cleanHash: res.rows[0].clean_hash
           });
       });
+    });
+  }
+
+  // TODO: Make sure that not too many are returned at once using LIMIT and OFFSET
+  async getSkinSeenOn(skinID: string): Promise<{ name: string, id: string }[]> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('SELECT DISTINCT ON (id) profiles.raw_json->>\'name\' as name, profiles.id,(' +
+        'SELECT EXISTS(SELECT * FROM (SELECT * FROM skin_history as inner_skin_history WHERE inner_skin_history.profile_id =id ORDER BY added DESC LIMIT 1)x WHERE skin_id =$1)' +
+        ') as exists FROM skin_history JOIN profiles ON id =profile_id WHERE skin_id =$1 ORDER BY name,exists DESC;', [skinID], (err, res) => {
+          if (err) return reject(err);
+
+          let result = [];
+          for (const row of res.rows) {
+            result.push({
+              name: row.name,
+              id: row.id
+            });
+          }
+
+          resolve(result);
+        });
     });
   }
 
