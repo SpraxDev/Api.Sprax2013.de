@@ -154,9 +154,9 @@ export class dbUtils {
                   commit = true;
                 } catch (ex) {
                   err = ex;
-                } finally {
-                  if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
                 }
+
+                if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
               }
 
               client.query(commit ? 'COMMIT' : 'ROLLBACK', (err) => {
