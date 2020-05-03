@@ -299,7 +299,7 @@ export class dbUtils {
 
   addCape(capePng: Buffer, pngHash: string, type: CapeType, originalURL: string, textureValue: string | null, textureSignature: string | null, userAgent: UserAgent, callback: (err: Error | null, cape: Cape | null) => void): void {
     if (this.pool == null) return callback(null, null);
-    if (type == CapeType.MOJANG && (textureValue || textureSignature)) return callback(new Error('Only provide textureValue and -Signature for Mojang-Capes!'), null);
+    if (type != CapeType.MOJANG && (textureValue || textureSignature)) return callback(new Error('Only provide textureValue and -Signature for Mojang-Capes!'), null);
     if (!textureValue && textureSignature) return callback(new Error('Only provide textureSignature with its textureValue!'), null);
 
     this.pool.connect((err, client, done) => {
