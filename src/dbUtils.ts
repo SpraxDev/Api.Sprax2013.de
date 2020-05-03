@@ -518,6 +518,13 @@ export class dbUtils {
     this.pool.query('SELECT NOW();', (err, _res) => callback(err));
   }
 
+  /**
+   * This function should only be used for debugging purpose!
+   */
+  getPool(): Pool | null {
+    return this.pool;
+  }
+
   shutdown(): Promise<void> {
     if (this.pool == null) return new Promise((resolve, _reject) => { resolve(); });
 
