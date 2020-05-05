@@ -1061,7 +1061,7 @@ export function getUserAgent(req: Request | null, callback: (err: Error | null, 
  * @param skin dirty skin (not Image#toCleanSkin) with valid dimensions
  */
 function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean | 'auto', is3d: boolean, size: number = 512, callback: (err?: Error, resultImg?: Buffer) => void) {
-  if (!skin.hasSkinDimensions) throw new Error('skin image does not have valid dimensions');
+  if (!skin.hasSkinDimensions()) throw new Error('skin image does not have valid dimensions');
 
   if (typeof alex != 'boolean')
     alex = skin.isSlimSkinModel();
