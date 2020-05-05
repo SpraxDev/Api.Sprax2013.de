@@ -1066,7 +1066,7 @@ function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean
   if (typeof alex != 'boolean')
     alex = skin.isSlimSkinModel();
 
-  skin.toCleanSkin((err) => {
+  skin.prepareForRender((err) => {
     if (err) throw err;
 
     if (is3d) {

@@ -167,6 +167,9 @@ export class Image {
     }
   }
 
+  /**
+   * Very time consuming!
+   */
   trimTransparency(callback: (err?: Error, newImage?: Image) => void) {
     let startingX = 0, endingX = this.img.info.width,
       startingY = 0, endingY = this.img.info.height;
@@ -276,6 +279,38 @@ export class Image {
       this.removeUnusedSkinParts();
 
       callback(null);
+    });
+  }
+
+  prepareForRender(callback: (err: Error | null) => void): void {
+    this.toCleanSkin((err) => {
+      if (err) return callback(err);
+      const areas = [
+        { x: 8, y: 0, w: 16, h: 8 },
+        { x: 0, y: 8, w: 32, h: 8 },
+
+        { x: 0, y: 20, w: 56, h: 12 },
+        { x: 4, y: 16, w: 8, h: 4 },
+        { x: 20, y: 16, w: 16, h: 4 },
+        { x: 44, y: 16, w: 8, h: 4 },
+
+        { x: 16, y: 52, w: 32, h: 12 },
+        { x: 20, y: 48, w: 8, h: 4 },
+        { x: 36, y: 48, w: 8, h: 4 }];
+
+      for (const area of areas) {
+        for (let i = 0; i < area.w; i++) {
+          for (let j = 0; j < area.h; j++) {
+            const x = area.x + i,
+              y = area.y + j;
+            const color: Color = this.getColor(x, y);
+
+            this.setColor(x, y, { r: color.r, g: color.g, b: color.b, alpha: 255 });
+          }
+        }
+      }
+
+      return callback(null);
     });
   }
 
