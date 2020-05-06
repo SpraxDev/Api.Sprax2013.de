@@ -97,9 +97,9 @@ router.all('/search', (req, res, next) => {
   restful(req, res, {
     get: async () => {
       if (!db.isAvailable()) return next(new ErrorBuilder().serviceUnavailable('SkinDB-Frontend route can only work while using a database'));
-      if (!req.body || !req.body.query) return next(new ErrorBuilder().invalidBody([{ param: 'query', condition: 'Valid string' }]));
+      if (!req.query.q) return next(new ErrorBuilder().invalidParams('query', [{ param: 'q', condition: 'Valid string' }]));
 
-      const query: string = req.body.query,
+      const query = req.query.q as string,
         queryArgs = query.split(' ');
 
       let directProfileHit: { name: string, id: string } | null = null,
@@ -111,8 +111,8 @@ router.all('/search', (req, res, next) => {
             getByUUID(query, req, (err, user) => {
               if (err || !user) return reject(err || new Error('WTF just happened? This should be dead-code'));
 
-              resolve({ name: user.name, id: user.id });
-            }, true);
+              resolve({ id: user.id, name: user.name });
+            });
           });
         } else if (query.length <= 16) {
           directProfileHit = await new Promise<{ name: string, id: string }>((resolve, reject) => {
@@ -122,8 +122,8 @@ router.all('/search', (req, res, next) => {
               getByUUID(apiRes.id, req, (err, user) => {
                 if (err || !user) return reject(err || new Error('WTF just happened? This should be dead-code'));
 
-                resolve({ name: user.name, id: user.id });
-              }, true);
+                resolve({ id: user.id, name: user.name });
+              });
             });
           });
         }
@@ -131,26 +131,28 @@ router.all('/search', (req, res, next) => {
         ApiError.log('Could not search for profiles (direct)', err);
       }
 
-      try {
-        if (queryArgs[0].length <= 16) {
-          const indirectHits = await db.searchProfile(queryArgs[0], 'start', 5, 0);
+      if (queryArgs[0].length <= 16) {
+        try {
+          const indirectHits = await db.searchProfile(queryArgs[0], 'start', 3, 0);
 
           for (const hit of indirectHits) {
+            if (directProfileHit && directProfileHit.id == hit.id) continue;
+
             const profile = await new Promise<MinecraftUser>((resolve, reject) => {
               getByUUID(hit.id, req, (err, user) => {
                 if (err || !user) return reject(err || new Error('WTF just happened? This should be dead-code'));
 
                 resolve(user);
-              }, true);
+              });
             });
 
             if (profile.name.toLowerCase().indexOf(queryArgs[0].toLowerCase()) != -1) {
               indirectProfileHits.push({ id: profile.id, name: profile.name });
             }
           }
+        } catch (err) {
+          ApiError.log('Could not search for profiles (indirect)', err);
         }
-      } catch (err) {
-        ApiError.log('Could not search for profiles (indirect)', err);
       }
 
       const result: SkinDBSearch = {

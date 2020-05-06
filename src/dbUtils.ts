@@ -84,7 +84,7 @@ export class dbUtils {
     });
   }
 
-  async searchProfile(name: string, mode: 'equal' | 'start' | 'end' | 'contains' = 'contains', limit: number | 'ALL' = 'ALL', offset: number = 0): Promise<MinecraftProfile[]> {
+  async searchProfile(name: string, mode: 'equal' | 'start' | 'end' | 'contains' = 'start', limit: number | 'ALL' = 12, offset: number = 0): Promise<MinecraftProfile[]> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
       if (!name) return reject(new Error('name may not be empty'));
@@ -93,6 +93,7 @@ export class dbUtils {
 
       const query = 'SELECT raw_json FROM profiles WHERE name_lower ' + (mode == 'equal' ? '=' : 'LIKE ') + '$1 ORDER BY name_lower LIMIT $2 OFFSET $3;',
         queryArgs = [mode == 'equal' ? name : (mode == 'start' ? name + '%' : (mode == 'end' ? '%' + name : '%' + name + '%')), limit, offset];
+
       this.pool.query(query, queryArgs)
         .then((res) => {
           let result: MinecraftProfile[] = [];
