@@ -477,21 +477,39 @@ export class dbUtils {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
 
-      this.pool.query('SELECT DISTINCT ON (id) profiles.raw_json->>\'name\' as name, profiles.id,(' +
-        'SELECT EXISTS(SELECT * FROM (SELECT * FROM skin_history as inner_skin_history WHERE inner_skin_history.profile_id =id ORDER BY added DESC LIMIT 1)x WHERE skin_id =$1)' +
-        ') as exists FROM skin_history JOIN profiles ON id =profile_id WHERE skin_id =$1 ORDER BY name,exists DESC;', [skinID], (err, res) => {
-          if (err) return reject(err);
+      this.pool.query('SELECT * FROM(SELECT DISTINCT ON(id) profiles.raw_json->>\'name\' as name, profiles.id,(SELECT EXISTS(SELECT * FROM (SELECT * FROM skin_history as inner_skin_history WHERE inner_skin_history.profile_id =id ORDER BY added DESC LIMIT 1)x WHERE skin_id =$1)) as exists FROM skin_history JOIN profiles ON id =profile_id WHERE skin_id =$1)x2 ORDER BY name,exists DESC LIMIT 600;', [skinID], (err, res) => {
+        if (err) return reject(err);
 
-          let result = [];
-          for (const row of res.rows) {
-            result.push({
-              name: row.name,
-              id: row.id
-            });
-          }
+        let result = [];
+        for (const row of res.rows) {
+          result.push({
+            name: row.name,
+            id: row.id
+          });
+        }
 
-          resolve(result);
-        });
+        resolve(result);
+      });
+    });
+  }
+
+  async getMostUsedSkinsLast7Days(): Promise<{ id: string, count: number }[]> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('SELECT skin_id, COUNT(*) as count FROM skin_history JOIN skins ON skin_history.skin_id = skins.id WHERE duplicate_of IS NULL AND skins.added >= CURRENT_TIMESTAMP - interval \'7 DAYS\' GROUP BY skin_id ORDER BY count DESC LIMIT 10;', [], (err, res) => {
+        if (err) return reject(err);
+
+        let result = [];
+        for (const row of res.rows) {
+          result.push({
+            id: row.skin_id,
+            count: row.count
+          });
+        }
+
+        resolve(result);
+      });
     });
   }
 

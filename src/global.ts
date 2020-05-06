@@ -76,10 +76,14 @@ export interface SkinDBSkin {
 }
 
 export interface SkinDBSearch {
-  profiles: {
-    direct: { name: string, id: string } | null,
-    indirect: { name: string, id: string }[]
+  readonly profiles: {
+    readonly direct: { name: string, id: string } | null,
+    readonly indirect: { name: string, id: string }[]
   }
+}
+
+export interface SkinDBIndex {
+  top_ten: { id: string, count: number }[]
 }
 
 /**

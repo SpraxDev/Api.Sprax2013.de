@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 import { restful, isUUID, ErrorBuilder, isNumber, setCaching, ApiError } from '../utils';
 import { db } from '..';
-import { SkinDBAccount, SkinDBSkin, MinecraftUser, SkinDBSearch } from '../global';
+import { SkinDBAccount, SkinDBSkin, MinecraftUser, SkinDBSearch, SkinDBIndex } from '../global';
 import { getByUUID, getByUsername } from './minecraft';
 
 /* Routes */
@@ -15,6 +15,27 @@ export const skindbFrontendExpressRouter = router;
 //
 // next(); // valid API-Token
 // });
+
+router.all('/index', (req, res, next) => {
+  restful(req, res, {
+    get: () => {
+      if (!db.isAvailable()) return next(new ErrorBuilder().serviceUnavailable('SkinDB-Frontend route can only work while using a database'));
+
+      db.getMostUsedSkinsLast7Days()
+        .then((skins) => {
+          if (!skins) return next(new ErrorBuilder().notFound('skin for that id'));
+
+          const result: SkinDBIndex = {
+            top_ten: skins
+          };
+
+          setCaching(res, true, false, 60, 60)
+            .send(result);
+        })
+        .catch(next);
+    }
+  });
+});
 
 router.all('/account/:uuid', (req, res, next) => {
   restful(req, res, {
