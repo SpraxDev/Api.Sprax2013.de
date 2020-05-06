@@ -1151,7 +1151,7 @@ function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean
       });
     } else if (!is3d) {
       const dimensions: { x: number, y: number } =
-        area == SkinArea.HEAD ? { x: 8, y: 8 } : { x: alex ? 14 : 16, y: 32 };
+        area == SkinArea.HEAD ? { x: 8, y: 8 } : { x: 16, y: 32 };
 
       Image.empty(dimensions.x, dimensions.y, (err, img) => {
         if (err || !img) throw err || new Error();
@@ -1160,34 +1160,34 @@ function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean
           xOffset = alex ? 1 : 0;
 
         if (area == SkinArea.HEAD) {
-          img.drawSubImg(skin, 8, 8, 8, 8, 0, 0);                        // Head
+          img.drawSubImg(skin, 8, 8, 8, 8, 0, 0);                       // Head
         } else if (area == SkinArea.BODY) {
-          img.drawSubImg(skin, 8, 8, 8, 8, 4 - xOffset, 0);              // Head
+          img.drawSubImg(skin, 8, 8, 8, 8, 4, 0);                       // Head
 
-          img.drawSubImg(skin, 20, 20, 8, 12, 4 - xOffset, 8);           // Body
-          img.drawSubImg(skin, 44, 20, armWidth, 12, 0, 8);              // Right arm
-          img.drawSubImg(skin, 36, 52, armWidth, 12, 12 - xOffset, 8);   // Left arm
+          img.drawSubImg(skin, 20, 20, 8, 12, 4, 8);                    // Body
+          img.drawSubImg(skin, 44, 20, armWidth, 12, 0 + xOffset, 8);   // Right arm
+          img.drawSubImg(skin, 36, 52, armWidth, 12, 12, 8);            // Left arm
         }
 
         if (area == SkinArea.BODY) {
-          img.drawSubImg(skin, 4, 20, 4, 12, 4 - xOffset, 20);           // Right leg
-          img.drawSubImg(skin, 20, 52, 4, 12, 8 - xOffset, 20);          // Left leg
+          img.drawSubImg(skin, 4, 20, 4, 12, 4, 20);                    // Right leg
+          img.drawSubImg(skin, 20, 52, 4, 12, 8, 20);                   // Left leg
         }
 
         if (overlay) {
           if (area == SkinArea.HEAD) {
-            img.drawSubImg(skin, 40, 8, 8, 8, 0, 0);                     // Head (overlay)
+            img.drawSubImg(skin, 40, 8, 8, 8, 0, 0);                    // Head (overlay)
           } else if (area == SkinArea.BODY) {
-            img.drawSubImg(skin, 40, 8, 8, 8, 4 - xOffset, 0);           // Head (overlay)
+            img.drawSubImg(skin, 40, 8, 8, 8, 4, 0);                    // Head (overlay)
 
-            img.drawSubImg(skin, 20, 36, 8, 12, 4 - xOffset, 8);         // Body (overlay)
-            img.drawSubImg(skin, 44, 36, armWidth, 12, 0, 8);            // Right arm (overlay)
-            img.drawSubImg(skin, 52, 52, armWidth, 12, 12 - xOffset, 8); // Left arm (overlay)
+            img.drawSubImg(skin, 20, 36, 8, 12, 4, 8);                  // Body (overlay)
+            img.drawSubImg(skin, 44, 36, armWidth, 12, 0 + xOffset, 8); // Right arm (overlay)
+            img.drawSubImg(skin, 52, 52, armWidth, 12, 12, 8);          // Left arm (overlay)
           }
 
           if (area == SkinArea.BODY) {
-            img.drawSubImg(skin, 4, 36, 4, 12, 4 - xOffset, 20);         // Right leg (overlay)
-            img.drawSubImg(skin, 4, 52, 4, 12, 8 - xOffset, 20);         // Left leg (overlay)
+            img.drawSubImg(skin, 4, 36, 4, 12, 4, 20);                  // Right leg (overlay)
+            img.drawSubImg(skin, 4, 52, 4, 12, 8, 20);                  // Left leg (overlay)
           }
         }
 
