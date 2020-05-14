@@ -90,66 +90,77 @@ userCache.on('set', async (key: string, value: MinecraftUser | Error | null) => 
     } while (i != -1);
   };
 
-  if (!db.isAvailable() || !(value instanceof MinecraftUser)) return done();
+  if (!db.isAvailable() || (!(value instanceof MinecraftUser) && value != null)) return done();
 
-  db.updateUser(value)
-    .then(async () => {
-      /* Skin */
-      if (value.textureValue) {
-        try {
-          const importedTextures = await importByTexture(value.textureValue, value.textureSignature, value.userAgent);
+  if (value == null) {
+    // We don't care about the result as the profile does not exist anymore (or never did)
+    db.markUserDeleted(key)
+      .catch((err) => {
+        // Just log errors that occured
+        ApiError.log('Could not mark user as deleted in database', { key: key, stack: err.stack });
+      });
 
-          if (importedTextures.skin) {
-            try {
-              await db.addSkinToUserHistory(value, importedTextures.skin);
-            } catch (err) {
-              ApiError.log(`Could not update skin-history in database`, { skin: importedTextures.skin.id, profile: value.id, stack: err.stack });
+    done();
+  } else {
+    db.updateUser(value)
+      .then(async () => {
+        /* Skin */
+        if (value.textureValue) {
+          try {
+            const importedTextures = await importByTexture(value.textureValue, value.textureSignature, value.userAgent);
+
+            if (importedTextures.skin) {
+              try {
+                await db.addSkinToUserHistory(value, importedTextures.skin);
+              } catch (err) {
+                ApiError.log(`Could not update skin-history in database`, { skin: importedTextures.skin.id, profile: value.id, stack: err.stack });
+              }
             }
-          }
 
-          if (importedTextures.cape) {
-            try {
-              await db.addCapeToUserHistory(value, importedTextures.cape);
-            } catch (err) {
-              ApiError.log(`Could not update cape-history in database`, { cape: importedTextures.cape.id, profile: value.id, stack: err.stack });
+            if (importedTextures.cape) {
+              try {
+                await db.addCapeToUserHistory(value, importedTextures.cape);
+              } catch (err) {
+                ApiError.log(`Could not update cape-history in database`, { cape: importedTextures.cape.id, profile: value.id, stack: err.stack });
+              }
             }
+          } catch (err) {
+            ApiError.log('Could not import skin/cape from profile', { skinURL: value.skinURL, profile: value.id, stack: (err || new Error()).stack });
           }
-        } catch (err) {
-          ApiError.log('Could not import skin/cape from profile', { skinURL: value.skinURL, profile: value.id, stack: (err || new Error()).stack });
         }
-      }
 
-      /* Capes */
-      const processCape = (capeURL: string | null, capeType: CapeType): Promise<void> => {
-        return new Promise((resolve, reject) => {
-          if (!capeURL) return resolve();
+        /* Capes */
+        const processCape = (capeURL: string | null, capeType: CapeType): Promise<void> => {
+          return new Promise((resolve, reject) => {
+            if (!capeURL) return resolve();
 
-          importCapeByURL(capeURL, capeType, value.userAgent, value.textureValue || undefined, value.textureSignature || undefined)
-            .then((cape) => {
-              if (!cape) return resolve();
+            importCapeByURL(capeURL, capeType, value.userAgent, value.textureValue || undefined, value.textureSignature || undefined)
+              .then((cape) => {
+                if (!cape) return resolve();
 
-              db.addCapeToUserHistory(value, cape)
-                .then(resolve)
-                .catch((err) => {
-                  ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
-                  reject(err);
-                });
-            })
-            .catch((err) => {
-              ApiError.log(`Could not import cape(type=${capeType}) from profile`, { capeURL: capeURL, profile: value.id, stack: err.stack });
-              reject(err);
-            });
-        });
-      };
+                db.addCapeToUserHistory(value, cape)
+                  .then(resolve)
+                  .catch((err) => {
+                    ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
+                    reject(err);
+                  });
+              })
+              .catch((err) => {
+                ApiError.log(`Could not import cape(type=${capeType}) from profile`, { capeURL: capeURL, profile: value.id, stack: err.stack });
+                reject(err);
+              });
+          });
+        };
 
-      await processCape(value.getOptiFineCapeURL(), CapeType.OPTIFINE);
-      await processCape(value.getLabyModCapeURL(), CapeType.LABYMOD);
+        await processCape(value.getOptiFineCapeURL(), CapeType.OPTIFINE);
+        await processCape(value.getLabyModCapeURL(), CapeType.LABYMOD);
 
-      done();
-    })
-    .catch((err) => {
-      ApiError.log('Could not update user in database', { profile: value.id, stack: err.stack })
-    });
+        done();
+      })
+      .catch((err) => {
+        ApiError.log('Could not update user in database', { profile: value.id, stack: err.stack })
+      });
+  }
 });
 
 setInterval(() => { rateLimitedNameHistory = 0 }, 120 * 1000);

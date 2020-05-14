@@ -37,8 +37,8 @@ export class dbUtils {
           if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
           // Store latest profile
-          client.query('INSERT INTO profiles(id,name_lower,raw_json) VALUES($1,$2,$3) ON CONFLICT(id) DO UPDATE SET name_lower =$2, raw_json =$3, last_update =CURRENT_TIMESTAMP;',
-            [mcUser.id.toLowerCase(), mcUser.name.toLowerCase(), mcUser.toOriginal()], (err, _res) => {
+          client.query('INSERT INTO profiles(id,name_lower,raw_json,deleted) VALUES($1,$2,$3,$4) ON CONFLICT(id) DO UPDATE SET name_lower =$2, raw_json =$3, last_update =CURRENT_TIMESTAMP;',
+            [mcUser.id.toLowerCase(), mcUser.name.toLowerCase(), mcUser.toOriginal(), false], (err, _res) => {
               if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
               let queryStr = 'INSERT INTO name_history(profile_id,name,changed_to_at) VALUES';
@@ -71,6 +71,19 @@ export class dbUtils {
             });
         });
       });
+    });
+  }
+
+  async markUserDeleted(id: string, deleted: boolean = true): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('UPDATE profiles SET deleted =$2,last_update =CURRENT_TIMESTAMP WHERE id =$1;',
+        [id.toLowerCase(), deleted], (err, _res) => {
+          if (err) return reject(err);
+
+          resolve();
+        });
     });
   }
 
