@@ -76,15 +76,20 @@ router.all('/skin/:skinID', (req, res, next) => {
         .then((skin) => {
           if (!skin) return next(new ErrorBuilder().notFound('skin for that id'));
 
-          db.getSkinSeenOn(skin.id)
-            .then((seenOn) => {
-              const result: SkinDBSkin = {
-                skin,
-                seen_on: seenOn
-              };
+          db.getSkinTags(skin.id)
+            .then((tags) => {
+              db.getSkinSeenOn(skin.id)
+                .then((seenOn) => {
+                  const result: SkinDBSkin = {
+                    skin,
+                    tags,
+                    seen_on: seenOn
+                  };
 
-              setCaching(res, true, false, 60, 60)
-                .send(result);
+                  setCaching(res, true, false, 60, 60)
+                    .send(result);
+                })
+                .catch(next);
             })
             .catch(next);
         })
@@ -104,6 +109,10 @@ router.all('/search', (req, res, next) => {
 
       let directProfileHit: { name: string, id: string } | null = null,
         indirectProfileHits: { name: string, id: string }[] = [];
+
+      // TODO: name->uuid schlägt bei scheinbar ungültigen Namen fehl. Zusätzlich die Datenbank für direct-hits nutzen
+      // TODO: Ergänzung zu oben: 'z' gibt nen indirect match zu 'Z' aber 'Z' nen direct zu 'Z'
+      // TODO: name_history ebenfalls für indirect hits nutzen
 
       try {
         if (isUUID(query)) {
@@ -131,29 +140,29 @@ router.all('/search', (req, res, next) => {
         ApiError.log('Could not search for profiles (direct)', err);
       }
 
-      if (queryArgs[0].length <= 16) {
-        try {
-          const indirectHits = await db.searchProfile(queryArgs[0], 'start', 3, 0);
+      // if (queryArgs[0].length <= 16) {
+      //   try {
+      //     const indirectHits = await db.searchProfile(queryArgs[0], 'start', 4, 0);
 
-          for (const hit of indirectHits) {
-            if (directProfileHit && directProfileHit.id == hit.id) continue;
+      //     for (const hit of indirectHits) {
+      //       if (directProfileHit && directProfileHit.id == hit.id) continue;
 
-            const profile = await new Promise<MinecraftUser>((resolve, reject) => {
-              getByUUID(hit.id, req, (err, user) => {
-                if (err || !user) return reject(err || new Error('WTF just happened? This should be dead-code'));
+      //       const profile = await new Promise<MinecraftUser>((resolve, reject) => {
+      //         getByUUID(hit.id, req, (err, user) => {
+      //           if (err || !user) return reject(err || new Error('WTF just happened? This should be dead-code'));
 
-                resolve(user);
-              });
-            });
+      //           resolve(user);
+      //         });
+      //       });
 
-            if (profile.name.toLowerCase().indexOf(queryArgs[0].toLowerCase()) != -1) {
-              indirectProfileHits.push({ id: profile.id, name: profile.name });
-            }
-          }
-        } catch (err) {
-          ApiError.log('Could not search for profiles (indirect)', err);
-        }
-      }
+      //       if (profile.name.toLowerCase().indexOf(queryArgs[0].toLowerCase()) != -1) {
+      //         indirectProfileHits.push({ id: profile.id, name: profile.name });
+      //       }
+      //     }
+      //   } catch (err) {
+      //     ApiError.log('Could not search for profiles (indirect)', err);
+      //   }
+      // }
 
       const result: SkinDBSearch = {
         profiles: {

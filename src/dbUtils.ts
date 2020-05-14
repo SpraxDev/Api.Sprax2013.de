@@ -486,6 +486,26 @@ export class dbUtils {
     });
   }
 
+  async getSkinTags(skinID: string): Promise<{ id: string, name: string }[]> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('SELECT tag_id,name FROM skin_tags JOIN tags ON skin_tags.tag_id =tags.id WHERE skin_id =$1;', [skinID], (err, res) => {
+        if (err) return reject(err);
+
+        const tags = [];
+        for (const row of res.rows) {
+          tags.push({
+            id: row.tag_id,
+            name: row.name
+          });
+        }
+
+        resolve(tags);
+      });
+    });
+  }
+
   // TODO: Make sure that not too many are returned at once using LIMIT and OFFSET
   async getSkinSeenOn(skinID: string): Promise<{ name: string, id: string }[]> {
     return new Promise((resolve, reject) => {

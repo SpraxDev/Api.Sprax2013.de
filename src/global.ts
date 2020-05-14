@@ -72,6 +72,7 @@ export interface SkinDBAccount {
 
 export interface SkinDBSkin {
   readonly skin: Skin;
+  readonly tags: { id: string, name: string }[];
   readonly seen_on: { name: string, id: string }[];
 }
 
