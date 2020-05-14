@@ -1,0 +1,1 @@
+<!-- TODO: Explain how the directory structure needs to be, for models to be loaded correctly -->
