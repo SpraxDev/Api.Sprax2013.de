@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 import { restful, isUUID, ErrorBuilder, isNumber, setCaching, ApiError } from '../utils';
 import { db } from '..';
-import { SkinDBAccount, SkinDBSkin, MinecraftUser, SkinDBSearch, SkinDBIndex } from '../global';
+import { SkinDBAccount, SkinDBSkin, SkinDBSearch, SkinDBIndex } from '../global';
 import { getByUUID, getByUsername } from './minecraft';
 
 /* Routes */
@@ -104,8 +104,8 @@ router.all('/search', (req, res, next) => {
       if (!db.isAvailable()) return next(new ErrorBuilder().serviceUnavailable('SkinDB-Frontend route can only work while using a database'));
       if (!req.query.q) return next(new ErrorBuilder().invalidParams('query', [{ param: 'q', condition: 'Valid string' }]));
 
-      const query = req.query.q as string,
-        queryArgs = query.split(' ');
+      const query = req.query.q as string;
+        // ,queryArgs = query.split(' ');
 
       let directProfileHit: { name: string, id: string } | null = null,
         indirectProfileHits: { name: string, id: string }[] = [];
