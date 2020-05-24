@@ -1,11 +1,9 @@
-import { JSDOM } from 'jsdom';
-import canvas = require('canvas');
 import crypto = require('crypto');
 import fs = require('fs');
 import path = require('path');
 import request = require('request');
 
-import tmImage = require('@teachablemachine/image');
+import { AiModel } from './../ai_predict';
 
 import { Router } from 'express';
 
@@ -17,23 +15,53 @@ import { getUserAgent, getByUUID, isUUIDCached } from './minecraft';
 const yggdrasilPublicKey = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));
 
 /* AI */
-(global as any).document = new JSDOM(`<body><script>document.body.appendChild(document.createElement('hr'));</script></body>`).window.document;
-(global as any).fetch = require('node-fetch');
-(global as any).document = new JSDOM('<body></body>').window.document;
-(global as any).fetch = require('node-fetch');
 
-const AI_MODELS: { [key: string]: null | tmImage.CustomMobileNet | Error } = {
-  GENDER: null,
-  HUMAN: null
-};
-(async () => {
-  tmImage.load('https://internal.skindb.net/ai-models/gender/model.json', 'https://internal.skindb.net/ai-models/gender/metadata.json')
-    .then(obj => AI_MODELS.GENDER = obj)
-    .catch(err => { AI_MODELS.GENDER = err; console.error(err); });
-  tmImage.load('https://internal.skindb.net/ai-models/human/model.json', 'https://internal.skindb.net/ai-models/human/metadata.json')
-    .then(obj => AI_MODELS.HUMAN = obj)
-    .catch(err => { AI_MODELS.HUMAN = err; console.error(err); });
-})();
+const AI_MODELS: { [key: string]: null | AiModel | Error } = {};
+
+async function initAiModels() {
+  const baseDir = path.join(__dirname, '..', '..', 'resources', 'ai_models');
+
+  const aiModelDirs = fs.readdirSync(baseDir, { withFileTypes: true })
+    .filter(dirent => dirent.isDirectory())
+    .map(dirent => dirent.name.toUpperCase());
+
+  // Set to null as soon as possible, so when a requst comes in it does not responde with an 'unknown model'
+  for (const dirName of aiModelDirs) {
+    AI_MODELS[dirName] = null;
+  }
+
+  new Promise((resolve) => {
+    let i = 0;
+
+    for (const dirName of aiModelDirs) {
+      const dirPath = path.join(baseDir, dirName);
+
+      if (AI_MODELS[dirName] != null) {
+        console.log('Found another AI-Model directory that has already been loaded:', dirPath);
+        continue;
+      }
+
+      try {
+        const model = new AiModel(dirPath);
+
+        i++;
+        model.init()
+          .then(() => AI_MODELS[dirName] = model)
+          .catch((err) => { throw err; })
+          .finally(() => {
+            if (--i == 0) {
+              resolve();
+            }
+          });
+      } catch (err) {
+        AI_MODELS[dirName] = err;
+
+        console.error(`Could not load AI-Model '${dirName}': ${err instanceof Error ? err.message : err}`);
+      }
+    }
+  });
+}
+initAiModels();
 
 /* Routes */
 const router = Router();
@@ -268,34 +296,17 @@ router.all('/ai/:model?', async (req, res, next) => {
         if (err) return next(err);
         if (!skin) return next(new ErrorBuilder().serverErr(`Could not find any image in db for skin (id=${querySkinID})`, true));
 
-        getPrediction(model, skin, (err, result) => {
-          if (err || !result) return next(err);
-
-          return res.send(result);
-        });
+        model.predict(skin)
+          .then((result) => {
+            return res.send(result);
+          })
+          .catch(next);
       });
     }
   });
 });
 
 /* Helper */
-function getPrediction(model: tmImage.CustomMobileNet, data: Buffer, callback: (err: Error | null, result: null | { className: string, probability: number }[]) => void): void {
-  const can = canvas.createCanvas(64, 64);
-  const ctx = can.getContext('2d');
-
-  const img = new canvas.Image();
-  img.onerror = err => callback(err, null);
-  img.onload = async () => {
-    ctx.drawImage(img, 0, 0, 64, 64);
-
-    model.predict(can as any)
-      .then(res => callback(null, res))
-      .catch(err => callback(err, null));
-  }
-
-  img.src = data;
-}
-
 export async function importByTexture(textureValue: string, textureSignature: string | null, userAgent: UserAgent): Promise<{ skin: Skin | null, cape: Cape | null }> {
   return new Promise((resolve, reject) => {
     const texture = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
