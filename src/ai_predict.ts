@@ -54,8 +54,6 @@ export class AiModel {
    */
   async predict(image: Image | Buffer): Promise<{ className: string, probability: number }[]> {
     return new Promise(async (resolve, reject): Promise<void> => {
-      console.log('numTensors (start): ' + tf.memory().numTensors);
-
       const model = this.model;
       if (!model) return reject(new Error('AiModel has not been initialized correctly!'));
 

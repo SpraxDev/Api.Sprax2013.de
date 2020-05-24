@@ -23,11 +23,11 @@ async function initAiModels() {
 
   const aiModelDirs = fs.readdirSync(baseDir, { withFileTypes: true })
     .filter(dirent => dirent.isDirectory())
-    .map(dirent => dirent.name.toUpperCase());
+    .map(dirent => dirent.name);
 
   // Set to null as soon as possible, so when a requst comes in it does not responde with an 'unknown model'
   for (const dirName of aiModelDirs) {
-    AI_MODELS[dirName] = null;
+    AI_MODELS[dirName.toUpperCase()] = null;
   }
 
   new Promise((resolve) => {
@@ -35,8 +35,9 @@ async function initAiModels() {
 
     for (const dirName of aiModelDirs) {
       const dirPath = path.join(baseDir, dirName);
+      const aiKey = dirName.toUpperCase();
 
-      if (AI_MODELS[dirName] != null) {
+      if (AI_MODELS[aiKey] != null) {
         console.log('Found another AI-Model directory that has already been loaded:', dirPath);
         continue;
       }
@@ -46,7 +47,7 @@ async function initAiModels() {
 
         i++;
         model.init()
-          .then(() => AI_MODELS[dirName] = model)
+          .then(() => AI_MODELS[aiKey] = model)
           .catch((err) => { throw err; })
           .finally(() => {
             if (--i == 0) {
@@ -54,7 +55,7 @@ async function initAiModels() {
             }
           });
       } catch (err) {
-        AI_MODELS[dirName] = err;
+        AI_MODELS[aiKey] = err;
 
         console.error(`Could not load AI-Model '${dirName}': ${err instanceof Error ? err.message : err}`);
       }
