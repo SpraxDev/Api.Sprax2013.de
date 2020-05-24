@@ -63,15 +63,6 @@ async function initAiModels() {
 }
 initAiModels();
 
-// (async () => {
-//   tmImage.load('https://internal.skindb.net/ai-models/gender/model.json', 'https://internal.skindb.net/ai-models/gender/metadata.json')
-//     .then(obj => AI_MODELS.GENDER = obj)
-//     .catch(err => { AI_MODELS.GENDER = err; console.error(err); });
-//   tmImage.load('https://internal.skindb.net/ai-models/human/model.json', 'https://internal.skindb.net/ai-models/human/metadata.json')
-//     .then(obj => AI_MODELS.HUMAN = obj)
-//     .catch(err => { AI_MODELS.HUMAN = err; console.error(err); });
-// })();
-
 /* Routes */
 const router = Router();
 export const skindbExpressRouter = router;

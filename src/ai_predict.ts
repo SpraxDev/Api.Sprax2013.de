@@ -106,7 +106,7 @@ class Camera {
   capture(): tf.Tensor<tf.Rank> {
     return tf.tidy(() => {
       // Reads the image as a Tensor from the webcam <video> element.
-      const inputImage = tf.browser.fromPixels(this.webcamElement as HTMLCanvasElement);  //TODO: use tf.node.decode instead
+      const inputImage = tf.browser.fromPixels(this.webcamElement);  //TODO: use tf.node.decode instead
 
       // Crop the image so we're using the center square of the rectangular
       // webcam.
