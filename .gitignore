@@ -2,3 +2,5 @@
 /storage/
 /build/
 /logs/
+/resources/ai_models/*
+!/resources/ai_models/README.md
