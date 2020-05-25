@@ -5,7 +5,7 @@ import rfs = require('rotating-file-stream');
 
 import { Server, createServer } from 'http';
 
-import { dbUtils } from './utils/dbUtils';
+import { dbUtils } from './utils/database';
 import { SpraxAPIcfg, SpraxAPIdbCfg } from './global';
 
 let server: Server | null;
