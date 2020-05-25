@@ -1,9 +1,9 @@
 import { Router } from 'express';
 
-import { restful, isUUID, ErrorBuilder, isNumber, setCaching, ApiError } from '../utils';
 import { db } from '..';
-import { SkinDBAccount, SkinDBSkin, SkinDBSearch, SkinDBIndex } from '../global';
 import { getByUUID, getByUsername } from './minecraft';
+import { restful, isUUID, ErrorBuilder, isNumber, setCaching, ApiError } from '../utils';
+import { SkinDBAccount, SkinDBSkin, SkinDBSearch, SkinDBIndex } from '../global';
 
 /* Routes */
 const router = Router();

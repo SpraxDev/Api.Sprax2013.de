@@ -3,14 +3,13 @@ import fs = require('fs');
 import path = require('path');
 import request = require('request');
 
-import { AiModel } from './../ai_predict';
-
 import { Router } from 'express';
 
+import { AiModel } from './../ai_predict';
 import { db } from '..';
-import { MinecraftUser, UserAgent, Skin, Cape, CapeType } from '../global';
 import { ErrorBuilder, restful, Image, setCaching, isNumber, generateHash } from '../utils';
 import { getUserAgent, getByUUID, isUUIDCached } from './minecraft';
+import { MinecraftUser, UserAgent, Skin, Cape, CapeType } from '../global';
 
 const yggdrasilPublicKey = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));
 
