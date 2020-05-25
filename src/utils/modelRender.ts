@@ -355,7 +355,7 @@ function modelFileToBufferData(filename: string) {
 
     const positions: vec4[] = [];
     const texCoords: vec2[] = [];
-    const normals: vec3[] = [];
+    // const normals: vec3[] = [];
 
     const vertexBuffer: Vertex[] = [];
     const indexBuffer: number[] = [];
@@ -369,14 +369,15 @@ function modelFileToBufferData(filename: string) {
             pos.z = (position[2] != null && position[2].length) ? parseFloat(position[2]) : 0;
             pos.w = (position[3] != null && position[3].length) ? parseFloat(position[3]) : 1;
             positions.push(pos);
-        } else if (line.startsWith('vn ')) {
-            const normal: string[] = line.substring(3).trim().split(' ');
-            let norm: vec3 = { x: 0, y: 0, z: 0 };
-            norm.x = (normal[0] != null && normal[0].length) ? parseFloat(normal[0]) : 0;
-            norm.y = (normal[1] != null && normal[1].length) ? parseFloat(normal[1]) : 0;
-            norm.z = (normal[2] != null && normal[2].length) ? parseFloat(normal[2]) : 0;
-            normals.push(norm);
         }
+        // else if (line.startsWith('vn ')) {
+        // const normal: string[] = line.substring(3).trim().split(' ');
+        // let norm: vec3 = { x: 0, y: 0, z: 0 };
+        // norm.x = (normal[0] != null && normal[0].length) ? parseFloat(normal[0]) : 0;
+        // norm.y = (normal[1] != null && normal[1].length) ? parseFloat(normal[1]) : 0;
+        // norm.z = (normal[2] != null && normal[2].length) ? parseFloat(normal[2]) : 0;
+        // normals.push(norm);
+        //}
         else if (line.startsWith('vt ')) {
             const texCoord: string[] = line.substring(3).trim().split(' ');
             let tex: vec2 = { x: 0, y: 0 };
