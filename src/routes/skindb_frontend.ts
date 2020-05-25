@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 import { db } from '..';
 import { getByUUID, getByUsername } from './minecraft';
-import { restful, isUUID, ErrorBuilder, isNumber, setCaching, ApiError } from '../utils';
+import { restful, isUUID, ErrorBuilder, isNumber, setCaching, ApiError } from '../utils/utils';
 import { SkinDBAccount, SkinDBSkin, SkinDBSearch, SkinDBIndex } from '../global';
 
 /* Routes */

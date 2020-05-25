@@ -5,8 +5,8 @@ import sharp = require('sharp');
 import { EOL } from 'os';
 import { Request, Response } from 'express';
 
-import { Color } from './global';
-import { errorLogStream, cfg, appVersion } from '.';
+import { Color } from '../global';
+import { errorLogStream, cfg, appVersion } from '..';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   UUID_PATTERN_ADD_DASH = /(.{8})(.{4})(.{4})(.{4})(.{12})/;

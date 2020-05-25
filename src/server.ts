@@ -6,7 +6,7 @@ import { skindbExpressRouter } from './routes/skindb';
 import { statusExpressRouter } from './routes/status';
 
 import { cfg, webAccessLogStream } from '.';
-import { ErrorBuilder, ApiError, HttpError } from './utils';
+import { ErrorBuilder, ApiError, HttpError } from './utils/utils';
 import { skindbFrontendExpressRouter } from './routes/skindb_frontend';
 
 export const app = express();

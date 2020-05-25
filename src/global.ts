@@ -1,4 +1,4 @@
-import { addHyphensToUUID } from './utils';
+import { addHyphensToUUID } from './utils/utils';
 
 /* SpraxAPI */
 export interface SpraxAPIcfg {

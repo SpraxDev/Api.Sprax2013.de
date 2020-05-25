@@ -5,9 +5,9 @@ import request = require('request');
 
 import { Router } from 'express';
 
-import { AiModel } from './../ai_predict';
+import { AiModel } from '../utils/ai_predict';
 import { db } from '..';
-import { ErrorBuilder, restful, Image, setCaching, isNumber, generateHash } from '../utils';
+import { ErrorBuilder, restful, Image, setCaching, isNumber, generateHash } from '../utils/utils';
 import { getUserAgent, getByUUID, isUUIDCached } from './minecraft';
 import { MinecraftUser, UserAgent, Skin, Cape, CapeType } from '../global';
 
