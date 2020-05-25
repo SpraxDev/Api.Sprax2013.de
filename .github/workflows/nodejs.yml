@@ -23,6 +23,11 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
+    - name: 'init Cache: Maven-Repository'
+      uses: actions/cache@v1
+      with:
+        path: ./node_modules/
+        key: ${{ runner.os }}-npm-${{ hashFiles('./package-lock.json') }}
     - run: npm ci
     - run: npm run build
     #- run: npm test
