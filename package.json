@@ -22,7 +22,7 @@
     "url": "https://github.com/Sprax2013/Api.Sprax2013.de/issues"
   },
   "dependencies": {
-    "@tensorflow/tfjs-node": "^1.7.4",
+    "@tensorflow/tfjs-node": "^2.0.0",
     "canvas": "^2.6.1",
     "express": "^4.17.1",
     "gl": "^4.5.0",
