@@ -23,7 +23,7 @@
     "url": "https://github.com/Sprax2013/Api.Sprax2013.de/issues"
   },
   "dependencies": {
-    "@tensorflow/tfjs-node": "^1.7.4",
+    "@tensorflow/tfjs-node": "^2.0.0",
     "canvas": "^2.6.1",
     "express": "^4.17.1",
     "gl": "^4.5.0",
@@ -44,7 +44,7 @@
     "@types/request": "^2.48.5",
     "@types/sharp": "^0.25.0",
     "cross-env": "^7.0.2",
-    "ts-node": "^8.10.1",
+    "ts-node": "^8.10.2",
     "typescript": "^3.9.3"
   },
   "nodemonConfig": {
