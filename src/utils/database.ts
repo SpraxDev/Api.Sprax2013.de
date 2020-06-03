@@ -486,11 +486,81 @@ export class dbUtils {
     });
   }
 
+  async getSkins(tags: string[], limit: number | 'ALL' = 6, offset: number = 0): Promise<{ skins: Skin[], moreAvailable: boolean }> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+      if (tags.length == 0) return resolve({ skins: [], moreAvailable: false });
+
+      // alter Codeteil der jetzt fehlt: SELECT skins.*,COUNT(*) OVER() AS total FROM
+      const queryStart = 'SELECT skins.* FROM (WITH tagIDs AS (SELECT id FROM tags WHERE ',
+        queryEnd = ') SELECT skin_id,tag_id FROM skin_tags WHERE tag_id IN (SELECT * FROM tagIDs) UNION ' +
+          'SELECT skin_id,tag_id FROM tag_votes_ai WHERE tag_id IN (SELECT * FROM tagIDs)) ' +
+          `as outerT JOIN skins ON skins.id = outerT.skin_id LIMIT $${tags.length + 1} OFFSET $${tags.length + 2};`;
+
+      let queryTagFilter = '';
+
+      for (let i = 0; i < tags.length; i++) {
+        if (i != 0) {
+          queryTagFilter += ' OR ';
+        }
+
+        queryTagFilter += `lower(name) =lower($${i + 1})`;
+      }
+
+      this.pool.query(queryStart + queryTagFilter + queryEnd, [...tags, typeof limit == 'number' ? limit + 1 : limit, offset], (err, res) => {
+        if (err) return reject(err);
+
+        const result = [];
+
+        for (const row of res.rows) {
+          result.push({
+            id: row.id,
+            duplicateOf: row.duplicate_of,
+            originalURL: row.original_url,
+            textureValue: row.texture_value,
+            textureSignature: row.texture_signature,
+            added: row.added,
+            addedBy: row.added_by,
+            cleanHash: row.clean_hash
+          });
+        }
+
+        let moreAvailable = limit == 'ALL';
+        if (!moreAvailable && result.length > limit) {
+          result.pop();
+          moreAvailable = true;
+        }
+
+        resolve({ skins: result, moreAvailable });
+      });
+    });
+  }
+
   async getSkinTags(skinID: string): Promise<{ id: string, name: string }[]> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
 
       this.pool.query('SELECT tag_id,name FROM skin_tags JOIN tags ON skin_tags.tag_id =tags.id WHERE skin_id =$1;', [skinID], (err, res) => {
+        if (err) return reject(err);
+
+        const tags = [];
+        for (const row of res.rows) {
+          tags.push({
+            id: row.tag_id,
+            name: row.name
+          });
+        }
+
+        resolve(tags);
+      });
+    });
+  }
+
+  async getSkinAiTags(skinID: string): Promise<{ id: string, name: string }[]> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('SELECT tag_id,name FROM tag_votes_ai JOIN tags ON tag_votes_ai.tag_id =tags.id WHERE skin_id =$1 AND vote =true;', [skinID], (err, res) => {
         if (err) return reject(err);
 
         const tags = [];

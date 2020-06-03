@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { db } from '..';
 import { getByUUID, getByUsername } from './minecraft';
 import { restful, isUUID, ErrorBuilder, isNumber, setCaching, ApiError } from '../utils/utils';
-import { SkinDBAccount, SkinDBSkin, SkinDBSearch, SkinDBIndex } from '../global';
+import { SkinDBAccount, SkinDBSkin, SkinDBSearch, SkinDBIndex, Skin } from '../global';
 
 /* Routes */
 const router = Router();
@@ -78,16 +78,21 @@ router.all('/skin/:skinID', (req, res, next) => {
 
           db.getSkinTags(skin.id)
             .then((tags) => {
-              db.getSkinSeenOn(skin.id)
-                .then((seenOn) => {
-                  const result: SkinDBSkin = {
-                    skin,
-                    tags,
-                    seen_on: seenOn
-                  };
+              db.getSkinAiTags(skin.id)
+                .then((aiTags) => {
+                  db.getSkinSeenOn(skin.id)
+                    .then((seenOn) => {
+                      const result: SkinDBSkin = {
+                        skin,
+                        tags,
+                        aiTags,
+                        seen_on: seenOn
+                      };
 
-                  setCaching(res, true, false, 60, 60)
-                    .send(result);
+                      setCaching(res, true, false, 60, 60)
+                        .send(result);
+                    })
+                    .catch(next);
                 })
                 .catch(next);
             })
@@ -103,17 +108,23 @@ router.all('/search', (req, res, next) => {
     get: async () => {
       if (!db.isAvailable()) return next(new ErrorBuilder().serviceUnavailable('SkinDB-Frontend route can only work while using a database'));
       if (!req.query.q) return next(new ErrorBuilder().invalidParams('query', [{ param: 'q', condition: 'Valid string' }]));
+      if (req.query.page && !isNumber(req.query.page as string)) return next(new ErrorBuilder().invalidParams('query', [{ param: 'page', condition: 'Valid number > 0' }]));
 
       const query = req.query.q as string;
-        // ,queryArgs = query.split(' ');
+      const page = typeof req.query.page == 'string' ? parseInt(req.query.page) : 1;
+
+      if (page < 1) return next(new ErrorBuilder().invalidParams('query', [{ param: 'page', condition: 'Valid number > 0' }]));
 
       let directProfileHit: { name: string, id: string } | null = null,
         indirectProfileHits: { name: string, id: string }[] = [];
+
+      let skinHits: { skins: Skin[], moreAvailable: boolean } = { skins: [], moreAvailable: false };
 
       // TODO: name->uuid schlägt bei scheinbar ungültigen Namen fehl. Zusätzlich die Datenbank für direct-hits nutzen
       // TODO: Ergänzung zu oben: 'z' gibt nen indirect match zu 'Z' aber 'Z' nen direct zu 'Z'
       // TODO: name_history ebenfalls für indirect hits nutzen
 
+      // Search for direct profile hits
       try {
         if (isUUID(query)) {
           directProfileHit = await new Promise((resolve, reject) => {
@@ -137,7 +148,14 @@ router.all('/search', (req, res, next) => {
           });
         }
       } catch (err) {
-        ApiError.log('Could not search for profiles (direct)', err);
+        ApiError.log('Could not search for profiles (direct)', { err, query });
+      }
+
+      // Search for Tagged Skins
+      try {
+        skinHits = await db.getSkins(query.split(' '), 12, page * 12);
+      } catch (err) {
+        ApiError.log('Could not search for skins', { err, query });
       }
 
       // if (queryArgs[0].length <= 16) {
@@ -168,6 +186,11 @@ router.all('/search', (req, res, next) => {
         profiles: {
           direct: directProfileHit,
           indirect: indirectProfileHits
+        },
+        skins: {
+          hits: skinHits.skins,
+          page,
+          hasNextPage: skinHits.moreAvailable
         }
       };
 
