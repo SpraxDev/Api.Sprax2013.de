@@ -1131,10 +1131,10 @@ function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean
   if (typeof alex != 'boolean')
     alex = skin.isSlimSkinModel();
 
-  skin.prepareForRender((err) => {
-    if (err) throw err;
+  if (is3d) {
+    skin.prepareForRender((err) => {
+      if (err) throw err;
 
-    if (is3d) {
       let cam;
       let model;
 
@@ -1160,7 +1160,10 @@ function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean
           return callback(err || undefined, png || undefined);
         }, size, size);
       });
-    } else if (!is3d) {
+    });
+  } else if (!is3d) {
+    skin.toCleanSkin((err) => {
+      if (err) throw err;
       const dimensions: { x: number, y: number } =
         area == SkinArea.HEAD ? { x: 8, y: 8 } : { x: 16, y: 32 };
 
@@ -1171,18 +1174,18 @@ function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean
           xOffset = alex ? 1 : 0;
 
         if (area == SkinArea.HEAD) {
-          img.drawSubImg(skin, 8, 8, 8, 8, 0, 0);                       // Head
+          img.drawSubImg(skin, 8, 8, 8, 8, 0, 0, true);                       // Head
         } else if (area == SkinArea.BODY) {
-          img.drawSubImg(skin, 8, 8, 8, 8, 4, 0);                       // Head
+          img.drawSubImg(skin, 8, 8, 8, 8, 4, 0, true);                       // Head
 
-          img.drawSubImg(skin, 20, 20, 8, 12, 4, 8);                    // Body
-          img.drawSubImg(skin, 44, 20, armWidth, 12, 0 + xOffset, 8);   // Right arm
-          img.drawSubImg(skin, 36, 52, armWidth, 12, 12, 8);            // Left arm
+          img.drawSubImg(skin, 20, 20, 8, 12, 4, 8, true);                    // Body
+          img.drawSubImg(skin, 44, 20, armWidth, 12, 0 + xOffset, 8, true);   // Right arm
+          img.drawSubImg(skin, 36, 52, armWidth, 12, 12, 8, true);            // Left arm
         }
 
         if (area == SkinArea.BODY) {
-          img.drawSubImg(skin, 4, 20, 4, 12, 4, 20);                    // Right leg
-          img.drawSubImg(skin, 20, 52, 4, 12, 8, 20);                   // Left leg
+          img.drawSubImg(skin, 4, 20, 4, 12, 4, 20, true);                    // Right leg
+          img.drawSubImg(skin, 20, 52, 4, 12, 8, 20, true);                   // Left leg
         }
 
         if (overlay) {
@@ -1204,6 +1207,6 @@ function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean
 
         return img.toPngBuffer((err, png) => callback(err || undefined, png || undefined), size, size);
       });
-    }
-  });
+    });
+  }
 }
