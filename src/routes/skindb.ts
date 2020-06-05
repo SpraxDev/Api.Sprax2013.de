@@ -156,7 +156,7 @@ router.use('/cdn/skins/:id?/:type?', (req, res, next) => {
 
   if (!req.params.id || !isNumber(req.params.id.trim())) return next(new ErrorBuilder().invalidParams('url', [{ param: 'id', condition: 'Is numeric string (0-9)' }]));
 
-  if (req.params.type && (req.params.type.trim().toLowerCase() != 'original.png' || req.params.type.trim().toLowerCase() != 'clean.png')) return next(new ErrorBuilder().invalidParams('url', [{ param: 'type', condition: 'Empty or equal (ignore case) one of the following: original.png, clean.png' }]))
+  if (req.params.type && req.params.type.trim().toLowerCase() != 'original.png' && req.params.type.trim().toLowerCase() != 'clean.png') return next(new ErrorBuilder().invalidParams('url', [{ param: 'type', condition: 'Empty or equal (ignore case) one of the following: original.png, clean.png' }]))
 
   const id = req.params.id.trim();
   const originalType = req.params.type && req.params.type.trim().toLowerCase() == 'original.png';
