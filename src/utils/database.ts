@@ -138,7 +138,7 @@ export class dbUtils {
               done();
               if (err) return callback(err, null);
 
-              callback(null, { id: res.rows[0].id, name: res.rows[0].name, internal: res.rows[0].internal });
+              callback(null, RowUtils.toUserAgent(res.rows[0]));
             });
           } else {
             client.query(`INSERT INTO user_agents(name,internal) VALUES($1,$2) RETURNING *;`,
@@ -149,7 +149,7 @@ export class dbUtils {
                   done();
                   if (err) return callback(err, null);
 
-                  callback(null, { id: res.rows[0].id, name: res.rows[0].name, internal: res.rows[0].internal });
+                  callback(null, RowUtils.toUserAgent(res.rows[0]));
                 });
               });
           }
@@ -200,16 +200,7 @@ export class dbUtils {
                 done();
                 if (err) return callback(err, null, false);
 
-                callback(null, {
-                  id: res.rows[0].id,
-                  duplicateOf: res.rows[0].duplicate_of,
-                  originalURL: res.rows[0].original_url,
-                  textureValue: res.rows[0].texture_value,
-                  textureSignature: res.rows[0].texture_signature,
-                  added: res.rows[0].added,
-                  addedBy: res.rows[0].added_by,
-                  cleanHash: res.rows[0].clean_hash
-                }, true);
+                callback(null, RowUtils.toSkin(res.rows[0]), true);
               });
             } else {
               client.query(`SELECT * FROM skins WHERE clean_hash =$1 AND duplicate_of IS NULL LIMIT 1;`, [cleanPngHash], (err, res) => {
@@ -222,16 +213,7 @@ export class dbUtils {
                   [duplicateID, originalURL, textureValue, textureSignature, (isDuplicate ? null : cleanPngHash), userAgent.id], (err, res) => {
                     if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
 
-                    const resultSkin: Skin = {
-                      id: res.rows[0].id,
-                      duplicateOf: res.rows[0].duplicate_of,
-                      originalURL: res.rows[0].original_url,
-                      textureValue: res.rows[0].texture_value,
-                      textureSignature: res.rows[0].texture_signature,
-                      added: res.rows[0].added,
-                      addedBy: res.rows[0].added_by,
-                      cleanHash: res.rows[0].clean_hash
-                    };
+                    const resultSkin: Skin = RowUtils.toSkin(res.rows[0]);
 
                     if (!isDuplicate) {
                       client.query(`INSERT INTO skin_images(skin_id,original,clean)VALUES($1,$2,$3);`,
@@ -356,17 +338,7 @@ export class dbUtils {
                 done();
                 if (err) return callback(err, null);
 
-                callback(null, {
-                  id: res.rows[0].id,
-                  type: res.rows[0].type as CapeType,
-                  duplicateOf: res.rows[0].duplicate_of,
-                  originalURL: res.rows[0].original_url,
-                  addedBy: res.rows[0].added_by,
-                  added: res.rows[0].added,
-                  cleanHash: res.rows[0].clean_hash,
-                  textureValue: res.rows[0].texture_value,
-                  textureSignature: res.rows[0].texture_signature
-                });
+                callback(null, RowUtils.toCape(res.rows[0]));
               });
             } else {
               client.query(`SELECT * FROM capes WHERE clean_hash =$1 AND duplicate_of IS NULL LIMIT 1;`, [pngHash], (err, res) => {
@@ -379,17 +351,7 @@ export class dbUtils {
                   [type, duplicateID, originalURL, userAgent.id, (isDuplicate ? null : pngHash), textureValue, textureSignature], (err, res) => {
                     if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
 
-                    const resultCape: Cape = {
-                      id: res.rows[0].id,
-                      type: res.rows[0].type as CapeType,
-                      duplicateOf: res.rows[0].duplicate_of,
-                      originalURL: res.rows[0].original_url,
-                      addedBy: res.rows[0].added_by,
-                      added: res.rows[0].added,
-                      cleanHash: res.rows[0].clean_hash,
-                      textureValue: res.rows[0].texture_value,
-                      textureSignature: res.rows[0].texture_signature
-                    };
+                    const resultCape: Cape = RowUtils.toCape(res.rows[0]);
 
                     if (!isDuplicate) {
                       client.query(`INSERT INTO cape_images(cape_id,original)VALUES($1,$2);`,
@@ -471,17 +433,7 @@ export class dbUtils {
       this.pool.query(`SELECT * FROM skins WHERE id =$1;`, [skinID], (err, res) => {
         if (err) return reject(err);
 
-        resolve(res.rows.length == 0 ? null :
-          {
-            id: res.rows[0].id,
-            duplicateOf: res.rows[0].duplicate_of,
-            originalURL: res.rows[0].original_url,
-            textureValue: res.rows[0].texture_value,
-            textureSignature: res.rows[0].texture_signature,
-            added: res.rows[0].added,
-            addedBy: res.rows[0].added_by,
-            cleanHash: res.rows[0].clean_hash
-          });
+        resolve(res.rows.length == 0 ? null : RowUtils.toSkin(res.rows[0]));
       });
     });
   }
@@ -513,16 +465,7 @@ export class dbUtils {
         const result = [];
 
         for (const row of res.rows) {
-          result.push({
-            id: row.id,
-            duplicateOf: row.duplicate_of,
-            originalURL: row.original_url,
-            textureValue: row.texture_value,
-            textureSignature: row.texture_signature,
-            added: row.added,
-            addedBy: row.added_by,
-            cleanHash: row.clean_hash
-          });
+          result.push(RowUtils.toSkin(row));
         }
 
         let moreAvailable = limit == 'ALL';
@@ -633,18 +576,7 @@ export class dbUtils {
     this.pool.query(`SELECT * FROM capes WHERE id =$1;`, [capeID], (err, res) => {
       if (err) return callback(err, null);
 
-      callback(null, res.rows.length == 0 ? null :
-        {
-          id: res.rows[0].id,
-          type: res.rows[0].type as CapeType,
-          duplicateOf: res.rows[0].duplicate_of,
-          originalURL: res.rows[0].original_url,
-          addedBy: res.rows[0].added_by,
-          added: res.rows[0].added,
-          cleanHash: res.rows[0].clean_hash,
-          textureValue: res.rows[0].texture_value,
-          textureSignature: res.rows[0].texture_signature
-        });
+      callback(null, res.rows.length == 0 ? null : RowUtils.toCape(res.rows[0]));
     });
   }
 
@@ -711,5 +643,42 @@ export class dbUtils {
     }
 
     return !!err;
+  }
+}
+
+class RowUtils {
+  static toSkin(row: any): Skin {
+    return {
+      id: row.id,
+      duplicateOf: row.duplicate_of,
+      originalURL: row.original_url,
+      textureValue: row.texture_value,
+      textureSignature: row.texture_signature,
+      added: row.added,
+      addedBy: row.added_by,
+      cleanHash: row.clean_hash
+    };
+  }
+
+  static toCape(row: any): Cape {
+    return {
+      id: row.id,
+      type: row.type as CapeType,
+      duplicateOf: row.duplicate_of,
+      originalURL: row.original_url,
+      addedBy: row.added_by,
+      added: row.added,
+      cleanHash: row.clean_hash,
+      textureValue: row.texture_value,
+      textureSignature: row.texture_signature
+    };
+  }
+
+  static toUserAgent(row: any): UserAgent {
+    return {
+      id: row.id,
+      name: row.name,
+      internal: row.internal
+    };
   }
 }
