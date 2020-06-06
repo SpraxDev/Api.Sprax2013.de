@@ -1,7 +1,15 @@
 {
   "name": "api.sprax2013.de",
   "version": "0.5.0",
-  "description": "",
+  "description": "Public Minecraft related API",
+  "keywords": [
+    "minecraft",
+    "api",
+    "rest-api",
+    "restful-api",
+    "mojang-api",
+    "skindb"
+  ],
   "homepage": "https://github.com/Sprax2013/Api.Sprax2013.de#readme",
   "main": "build/index.js",
   "private": false,
