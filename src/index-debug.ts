@@ -2,7 +2,7 @@ import fs = require('fs');
 import path = require('path');
 import readline = require('readline');
 
-import { dbUtils } from './dbUtils';
+import { dbUtils } from './utils/database';
 import { Pool } from 'pg';
 
 let db: dbUtils;

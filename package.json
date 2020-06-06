@@ -4,6 +4,7 @@
   "description": "",
   "homepage": "https://github.com/Sprax2013/Api.Sprax2013.de#readme",
   "main": "build/index.js",
+  "private": false,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
@@ -13,14 +14,26 @@
     "dev": "nodemon --ext ts --watch ./src --exec \"npm run devStart\"",
     "debug": "ts-node src/index-debug.ts"
   },
-  "author": "Sprax2013",
+  "author": {
+    "name": "Sprax2013",
+    "url": "https://Sprax2013.de"
+  },
+  "contributors": [
+    {
+      "name": "NudelErde",
+      "url": "https://github.com/NudelErde"
+    }
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Sprax2013/Api.Sprax2013.de.git"
+    "url": "https://github.com/Sprax2013/Api.Sprax2013.de.git"
   },
   "bugs": {
     "url": "https://github.com/Sprax2013/Api.Sprax2013.de/issues"
+  },
+  "engines": {
+    "node": ">=10.0.0"
   },
   "dependencies": {
     "@tensorflow/tfjs-node": "^2.0.0",
