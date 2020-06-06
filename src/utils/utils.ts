@@ -58,6 +58,31 @@ export class Image {
       .catch((err) => callback(err, null));
   }
 
+  /**
+   * Combine (additive) two RGBA colors
+   *
+   * **Having alpha 0 will return the other color or a color with all 0**
+   */
+  static mergeColors(col1: Color, col2: Color): Color {
+    const col1Alpha = col1.alpha / 255,
+      col2Alpha = col2.alpha / 255;
+
+    if (col1Alpha <= 0 && col2Alpha <= 0) {
+      return { r: 0, g: 0, b: 0, alpha: 0 };
+    } else if (col1Alpha <= 0) {
+      return { r: col2.r, g: col2.g, b: col2.b, alpha: col2.alpha };
+    } else if (col2Alpha <= 0) {
+      return { r: col1.r, g: col1.g, b: col1.b, alpha: col1.alpha };
+    }
+
+    const alpha = 1 - (1 - col2Alpha) * (1 - col1Alpha),
+      r = Math.round((col2.r * col2Alpha / alpha) + (col1.r * col1Alpha * (1 - col2Alpha) / alpha)),
+      g = Math.round((col2.g * col2Alpha / alpha) + (col1.g * col1Alpha * (1 - col2Alpha) / alpha)),
+      b = Math.round((col2.b * col2Alpha / alpha) + (col1.b * col1Alpha * (1 - col2Alpha) / alpha));
+
+    return { r, g, b, alpha: alpha * 255 };
+  }
+
   toPngBuffer(callback: (err: Error | null, png: Buffer | null) => void, width?: number, height?: number): void {
     const result = sharp(this.img.data, {
       raw: {
@@ -128,7 +153,7 @@ export class Image {
     }
   }
 
-  drawSubImg(imgToDraw: Image, subX: number, subY: number, width: number, height: number, targetX: number, targetY: number, ignoreAlpha: boolean = false): void {
+  drawSubImg(imgToDraw: Image, subX: number, subY: number, width: number, height: number, targetX: number, targetY: number, ignoreAlpha: boolean = false, mode: 'replace' | 'add' = 'replace'): void {
     for (let i = 0; i < width; i++) {
       for (let j = 0; j < height; j++) {
         const newTargetX = targetX + i,
@@ -136,7 +161,13 @@ export class Image {
 
         const color: Color = imgToDraw.getColor(subX + i, subY + j);
         if (newTargetX <= this.img.info.width && newTargetY <= this.img.info.height && color.alpha > 0) {
-          this.setColor(newTargetX, newTargetY, { r: color.r, g: color.g, b: color.b, alpha: ignoreAlpha ? 255 : color.alpha });
+          let newColor = { r: color.r, g: color.g, b: color.b, alpha: ignoreAlpha ? 255 : color.alpha };
+
+          if (mode == 'add') {
+            newColor = Image.mergeColors(this.getColor(newTargetX, newTargetY), newColor);
+          }
+
+          this.setColor(newTargetX, newTargetY, newColor);
         }
       }
     }
@@ -277,40 +308,9 @@ export class Image {
       if (err) return callback(err);
 
       this.removeUnusedSkinParts();
+      this.ensureSkinAlpha();
 
       callback(null);
-    });
-  }
-
-  prepareForRender(callback: (err: Error | null) => void): void {
-    this.toCleanSkin((err) => {
-      if (err) return callback(err);
-      const areas = [
-        { x: 8, y: 0, w: 16, h: 8 },
-        { x: 0, y: 8, w: 32, h: 8 },
-
-        { x: 0, y: 20, w: 56, h: 12 },
-        { x: 4, y: 16, w: 8, h: 4 },
-        { x: 20, y: 16, w: 16, h: 4 },
-        { x: 44, y: 16, w: 8, h: 4 },
-
-        { x: 16, y: 52, w: 32, h: 12 },
-        { x: 20, y: 48, w: 8, h: 4 },
-        { x: 36, y: 48, w: 8, h: 4 }];
-
-      for (const area of areas) {
-        for (let i = 0; i < area.w; i++) {
-          for (let j = 0; j < area.h; j++) {
-            const x = area.x + i,
-              y = area.y + j;
-            const color: Color = this.getColor(x, y);
-
-            this.setColor(x, y, { r: color.r, g: color.g, b: color.b, alpha: 255 });
-          }
-        }
-      }
-
-      return callback(null);
     });
   }
 
@@ -371,27 +371,69 @@ export class Image {
     if (!this.hasSkinDimensions()) throw new Error('Image does not have valid skin dimensions');
     if (this.img.info.height != 64) throw new Error('Legacy skin dimensions are not supported');
 
-    const color: Color = { r: 0, g: 0, b: 0, alpha: 0 };
+    const noColor: Color = { r: 0, g: 0, b: 0, alpha: 0 };
 
-    this.drawRect(0, 0, 8, 8, color);
-    this.drawRect(24, 0, 16, 8, color);
-    this.drawRect(56, 0, 8, 8, color);
-    this.drawRect(0, 16, 4, 4, color);
-    this.drawRect(12, 16, 8, 4, color);
-    this.drawRect(36, 16, 8, 4, color);
-    this.drawRect(56, 16, 8, 16, color);
-    this.drawRect(52, 16, 4, 4, color);
+    this.drawRect(0, 0, 8, 8, noColor);
+    this.drawRect(24, 0, 16, 8, noColor);
+    this.drawRect(56, 0, 8, 8, noColor);
+    this.drawRect(0, 16, 4, 4, noColor);
+    this.drawRect(12, 16, 8, 4, noColor);
+    this.drawRect(36, 16, 8, 4, noColor);
+    this.drawRect(56, 16, 8, 16, noColor);
+    this.drawRect(52, 16, 4, 4, noColor);
 
-    this.drawRect(0, 32, 4, 4, color);
-    this.drawRect(0, 48, 4, 4, color);
-    this.drawRect(12, 32, 8, 4, color);
-    this.drawRect(12, 48, 8, 4, color);
-    this.drawRect(28, 48, 8, 4, color);
-    this.drawRect(36, 32, 8, 4, color);
-    this.drawRect(44, 48, 8, 4, color);
-    this.drawRect(52, 32, 4, 4, color);
-    this.drawRect(60, 48, 4, 4, color);
-    this.drawRect(56, 32, 8, 16, color);
+    this.drawRect(0, 32, 4, 4, noColor);
+    this.drawRect(0, 48, 4, 4, noColor);
+    this.drawRect(12, 32, 8, 4, noColor);
+    this.drawRect(12, 48, 8, 4, noColor);
+    this.drawRect(28, 48, 8, 4, noColor);
+    this.drawRect(36, 32, 8, 4, noColor);
+    this.drawRect(44, 48, 8, 4, noColor);
+    this.drawRect(52, 32, 4, 4, noColor);
+    this.drawRect(60, 48, 4, 4, noColor);
+    this.drawRect(56, 32, 8, 16, noColor);
+
+    for (let x = 0; x < this.img.info.width; x++) {
+      for (let y = 0; y < this.img.info.height; y++) {
+        const col = this.getColor(x, y);
+
+        if (col.alpha == 0 && (col.r != 0 || col.g != 0 || col.b != 0)) {
+          this.setColor(x, y, noColor);
+        }
+      }
+    }
+  }
+
+  ensureSkinAlpha() {
+    if (!this.hasSkinDimensions()) throw new Error('Image does not have valid skin dimensions');
+    if (this.img.info.height != 64) throw new Error('Legacy skin dimensions are not supported');
+
+    const areas = [
+      { x: 8, y: 0, w: 16, h: 8 },
+      { x: 0, y: 8, w: 32, h: 8 },
+
+      { x: 0, y: 20, w: 56, h: 12 },
+      { x: 4, y: 16, w: 8, h: 4 },
+      { x: 20, y: 16, w: 16, h: 4 },
+      { x: 44, y: 16, w: 8, h: 4 },
+
+      { x: 16, y: 52, w: 32, h: 12 },
+      { x: 20, y: 48, w: 8, h: 4 },
+      { x: 36, y: 48, w: 8, h: 4 }];
+
+    const black = { r: 0, g: 0, b: 0, alpha: 255 };
+
+    for (const area of areas) {
+      for (let i = 0; i < area.w; i++) {
+        for (let j = 0; j < area.h; j++) {
+          const x = area.x + i,
+            y = area.y + j;
+          const color: Color = this.getColor(x, y);
+
+          this.setColor(x, y, color.alpha > 0 ? { r: color.r, g: color.g, b: color.b, alpha: 255 } : black);
+        }
+      }
+    }
   }
 }
 
