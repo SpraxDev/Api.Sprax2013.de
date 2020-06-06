@@ -28,7 +28,7 @@
     "express": "^4.17.1",
     "gl": "^4.5.2",
     "morgan": "^1.10.0",
-    "node-cache": "^5.1.0",
+    "node-cache": "^5.1.1",
     "nodemon": "^2.0.4",
     "object-assign-deep": "^0.4.0",
     "pg": "^8.2.1",
