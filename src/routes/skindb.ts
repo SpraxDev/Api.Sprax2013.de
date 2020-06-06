@@ -3,14 +3,13 @@ import fs = require('fs');
 import path = require('path');
 import request = require('request');
 
-import { AiModel } from './../ai_predict';
-
 import { Router } from 'express';
 
+import { AiModel } from '../utils/ai_predict';
 import { db } from '..';
+import { ErrorBuilder, restful, Image, setCaching, isNumber, generateHash } from '../utils/utils';
+import { getUserAgent, getByUUID, isUUIDCached } from './minecraft';
 import { MinecraftUser, UserAgent, Skin, Cape, CapeType } from '../global';
-import { ErrorBuilder, restful, Image, setCaching, isNumber } from '../utils';
-import { getUserAgent } from './minecraft';
 
 const yggdrasilPublicKey = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));
 
@@ -108,16 +107,18 @@ router.all('/import', (req, res, next) => {
             if (err || !userAgent) return next(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`));
             if (!json.raw) return next(new ErrorBuilder().unknown());  // FIXME: why does TypeScript need this line? o.0
 
-            importByTexture(json.raw.value, json.raw.signature || null, userAgent, (err, skin, cape) => {
-              if (err) return next(err);
-
-              return setCaching(res, false, false)
-                .status(202) // TODO report if skin added to db or already was in db
-                .send({
-                  result: null, // TODO report if skin added to db or already was in db
-                  skinID: skin?.id
-                });
-            });
+            importByTexture(json.raw.value, json.raw.signature || null, userAgent)
+              .then((result) => {
+                return setCaching(res, false, false)
+                  .status(202) // TODO report if skin added to db or already was in db
+                  .send({
+                    result: null, // TODO report if skin added to db or already was in db
+                    skinID: result.skin?.id
+                  });
+              })
+              .catch((err) => {
+                next(err)
+              });
           });
         } else if (json.url) {
           if (!MinecraftUser.getSecureURL(json.url).toLowerCase().startsWith('https://textures.minecraft.net/texture/'))
@@ -155,24 +156,27 @@ router.use('/cdn/skins/:id?/:type?', (req, res, next) => {
 
   if (!req.params.id || !isNumber(req.params.id.trim())) return next(new ErrorBuilder().invalidParams('url', [{ param: 'id', condition: 'Is numeric string (0-9)' }]));
 
-  if (req.params.type && (req.params.type.trim().toLowerCase() != 'original.png' || req.params.type.trim().toLowerCase() != 'clean.png')) return next(new ErrorBuilder().invalidParams('url', [{ param: 'type', condition: 'Empty or equal (ignore case) one of the following: original.png, clean.png' }]))
+  if (req.params.type && req.params.type.trim().toLowerCase() != 'original.png' && req.params.type.trim().toLowerCase() != 'clean.png') return next(new ErrorBuilder().invalidParams('url', [{ param: 'type', condition: 'Empty or equal (ignore case) one of the following: original.png, clean.png' }]))
 
   const id = req.params.id.trim();
   const originalType = req.params.type && req.params.type.trim().toLowerCase() == 'original.png';
 
-  db.getSkin(id, (err, skin) => {
-    if (err) return next(err);
-    if (!skin) return next(new ErrorBuilder().notFound('Skin for given ID'));
+  db.getSkin(id)
+    .then((skin) => {
+      if (!skin) return next(new ErrorBuilder().notFound('Skin for given ID'));
 
-    db.getSkinImage(skin.duplicateOf || skin.id, originalType ? 'original' : 'clean', (err, img) => {
-      if (err) return next(err);
-      if (!img) return next(new ErrorBuilder().serverErr(`Could not find any image in db for skin (id=${skin.id})`, true));
+      db.getSkinImage(skin.duplicateOf || skin.id, originalType ? 'original' : 'clean', (err, img) => {
+        if (err) return next(err);
+        if (!img) return next(new ErrorBuilder().serverErr(`Could not find any image in db for skin (id=${skin.id})`, true));
 
-      setCaching(res, true, true, 60 * 60 * 24 * 30 /*30d*/)
-        .type('png')
-        .send(img);
+        setCaching(res, true, true, 60 * 60 * 24 * 30 /*30d*/)
+          .type('png')
+          .send(img);
+      });
+    })
+    .catch((err) => {
+      next(err);
     });
-  });
 });
 
 router.use('/cdn/capes/:id?', (req, res, next) => {
@@ -303,47 +307,60 @@ router.all('/ai/:model?', async (req, res, next) => {
 });
 
 /* Helper */
-export function importByTexture(textureValue: string, textureSignature: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, cape: Cape | null) => void): void {
-  const texture = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
-  const skinURL: string | undefined = texture.textures.SKIN?.url,
-    capeURL: string | undefined = texture.textures.CAPE?.url;
+export async function importByTexture(textureValue: string, textureSignature: string | null, userAgent: UserAgent): Promise<{ skin: Skin | null, cape: Cape | null }> {
+  return new Promise((resolve, reject) => {
+    const texture = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
+    const skinURL: string | undefined = texture.textures.SKIN?.url,
+      capeURL: string | undefined = texture.textures.CAPE?.url;
 
-  let resultSkin: Skin | null = null,
-    resultCape: Cape | null = null;
-
-  // TODO signature invalid? Set null!
-  // TODO request textures profile in case it is not in the db already (hits memory cache anyways if originated from profile look up)
-
-  let waitingFor = 0;
-  const done = () => {
-    waitingFor--;
-
-    if (waitingFor == 0) {
-      callback(null, resultSkin, resultCape);
+    if (textureSignature && !isFromYggdrasil(textureValue, textureSignature)) {
+      textureSignature = null;
     }
-  };
 
-  if (skinURL) {
-    waitingFor++;
+    let resultSkin: Skin | null = null,
+      resultCape: Cape | null = null;
 
-    importSkinByURL(MinecraftUser.getSecureURL(skinURL), userAgent, (err, skin) => {
-      if (err || !skin) return callback(err, null, null);
+    // TODO add skin to SkinHistory if valid signature and previous skin (use timestamp from texture!) is not the same
 
-      resultSkin = skin;
-      done();
-    }, textureValue, textureSignature);
-  }
+    let waitingFor = 0;
+    const done = () => {
+      waitingFor--;
 
-  if (capeURL) {
-    waitingFor++;
+      if (waitingFor == 0) {
+        resolve({ skin: resultSkin, cape: resultCape });
 
-    importCapeByURL(MinecraftUser.getSecureURL(capeURL), CapeType.MOJANG, userAgent, (err, cape) => {
-      if (err || !cape) return callback(err, null, null);
+        // Request profile and insert latest version into db
+        // If it is already cached, it is in the database for sure! We don't want any recursive endless-loop!
+        if (db.isAvailable() && !isUUIDCached(texture.profileId)) {
+          getByUUID(texture.profileId, null, () => { });  // TODO: preserve User-Agent
+        }
+      }
+    };
 
-      resultCape = cape;
-      done();
-    }, textureValue, textureSignature || undefined);
-  }
+    if (skinURL) {
+      waitingFor++;
+
+      importSkinByURL(MinecraftUser.getSecureURL(skinURL), userAgent, (err, skin) => {
+        if (err || !skin) return reject(err);
+
+        resultSkin = skin;
+        done();
+      }, textureValue, textureSignature);
+    }
+
+    if (capeURL) {
+      waitingFor++;
+
+      importCapeByURL(MinecraftUser.getSecureURL(capeURL), CapeType.MOJANG, userAgent, textureValue, textureSignature || undefined)
+        .then((cape) => {
+          resultCape = cape;
+          done();
+        })
+        .catch((err) => {
+          return reject(err);
+        });
+    }
+  });
 }
 
 export function importSkinByURL(skinURL: string, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void, textureValue: string | null = null, textureSignature: string | null = null): void {
@@ -364,7 +381,7 @@ export function importSkinByBuffer(skin: Buffer, skinURL: string | null, userAge
       img.toCleanSkinBuffer((err, cleanSkin) => {
         if (err || !cleanSkin) return callback(err, null, false);
 
-        db.addSkin(orgSkin, cleanSkin, skinURL, textureValue, textureSignature, userAgent, (err, skin, exactMatch) => {
+        db.addSkin(orgSkin, cleanSkin, generateHash(cleanSkin), skinURL, textureValue, textureSignature, userAgent, (err, skin, exactMatch) => {
           if (err || !skin) return callback(err, null, false);
 
           return callback(null, skin, exactMatch);
@@ -374,25 +391,31 @@ export function importSkinByBuffer(skin: Buffer, skinURL: string | null, userAge
   });
 }
 
-export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: UserAgent, callback: (err: Error | null, cape: Cape | null) => void, textureValue?: string, textureSignature?: string): void {
-  request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
-    if (err) return callback(err, null);
+export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: UserAgent, textureValue?: string, textureSignature?: string): Promise<Cape | null> {
+  return new Promise((resolve, reject) => {
+    request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
+      if (err) return reject(err);
 
-    if (httpRes.statusCode == 200) {
-      Image.fromImg(httpBody, (err, img) => {
-        if (err || !img) return callback(err, null);
+      if (httpRes.statusCode == 200) {
+        Image.fromImg(httpBody, (err, img) => {
+          if (err || !img) return reject(err);
 
-        img.toPngBuffer((err, capePng) => {
-          if (err || !capePng) return callback(err, null);
+          img.toPngBuffer((err, capePng) => {
+            if (err || !capePng) return reject(err);
 
-          db.addCape(capePng, capeType, capeURL, capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent, (err, cape) => {
-            if (err || !cape) return callback(err, null);
+            db.addCape(capePng, generateHash(capePng), capeType, capeURL, capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent, (err, cape) => {
+              if (err || !cape) return reject(err);
 
-            return callback(null, cape);
+              return resolve(cape);
+            });
           });
         });
-      });
-    }
+      } else if (httpRes.statusCode != 404) {
+        reject(new Error(`Importing cape by URL returned status ${httpRes.statusCode}`));
+      } else {
+        resolve(null);
+      }
+    });
   });
 }
 

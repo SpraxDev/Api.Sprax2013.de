@@ -82,6 +82,8 @@ export class AiModel {
             });
           }
 
+          classes.sort((o1, o2) => { return o2.probability - o1.probability; });  // Highest probability first
+
           resolve(classes);
         })
         .catch(reject)

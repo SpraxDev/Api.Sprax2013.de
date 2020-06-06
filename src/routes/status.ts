@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { restful, setCaching } from '../utils';
+import { restful, setCaching } from '../utils/utils';
 
 const router = Router();
 export const statusExpressRouter = router;

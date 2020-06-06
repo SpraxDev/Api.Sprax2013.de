@@ -1,4 +1,4 @@
-import { addHyphensToUUID } from './utils';
+import { addHyphensToUUID } from './utils/utils';
 
 /* SpraxAPI */
 export interface SpraxAPIcfg {
@@ -61,13 +61,47 @@ export interface Cape {
   readonly textureSignature?: string;
 }
 
+/* SkinDB */
+export interface SkinDBAccount {
+  readonly user: CleanMinecraftUser;
+
+  readonly skinHistory: {
+    readonly lastTen: number[];
+    readonly total: number;
+  }
+}
+
+export interface SkinDBSkin {
+  readonly skin: Skin;
+  readonly tags: { id: string, name: string }[];
+  readonly aiTags: { id: string, name: string }[];
+  readonly seen_on: { name: string, id: string }[];
+}
+
+export interface SkinDBSearch {
+  readonly profiles: {
+    readonly direct: { name: string, id: string } | null,
+    readonly indirect: { name: string, id: string }[]
+  }
+
+  readonly skins: {
+    readonly hits: Skin[];
+    readonly page: number;
+    readonly hasNextPage: boolean;
+  }
+}
+
+export interface SkinDBIndex {
+  top_ten: { id: string, count: number }[];
+}
+
 /**
  * value equals remote database enum
 */
 export enum CapeType {
   MOJANG = 'MOJANG',
   OPTIFINE = 'OPTIFINE',
-  LABY_MOD = 'LABY_MOD'
+  LABYMOD = 'LABYMOD'
 }
 
 export enum SkinArea {

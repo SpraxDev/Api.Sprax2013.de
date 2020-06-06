@@ -6,15 +6,17 @@ import request = require('request');
 
 import { Router, Request } from 'express';
 
+import { createCamera, createModel } from '../utils/modelRender';
 import { db } from '../index';
 import { importByTexture, importCapeByURL } from './skindb';
 import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
-import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL, generateHash } from '../utils';
-import { createCamera, createModel } from '../modelRender';
+import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL, generateHash } from '../utils/utils';
 
 const uuidCache = new nCache({ stdTTL: 59, useClones: false }), /* key:${name_lower};${at||''}, value: { id: string, name: string } | Error | null */
   userCache = new nCache({ stdTTL: 59, useClones: false }), /* key: profile.id, value: MinecraftUser | Error | null */
   userAgentCache = new nCache({ stdTTL: 10 * 60, useClones: false }) /* key: ${userAgent};${internal(boolean)}, value: UserAgent */;
+
+const userCacheWaitingForImportQueue: { key: string, callback: (err: Error | null, user: MinecraftUser | null) => void }[] = [];
 
 const profileRequestQueue: { key: string, callback: (err: Error | null, user: MinecraftUser | null) => void }[] = [],
   uuidRequestQueue: { key: string, callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void }[] = [];
@@ -72,48 +74,92 @@ const rendering = {
   }
 };
 
-userCache.on('set', async (_key: string, value: MinecraftUser | Error | null) => {
-  if (!db.isAvailable()) return;
+userCache.on('set', async (key: string, value: MinecraftUser | Error | null) => {
+  const done = () => {
+    let i: number;
+    do {
+      i = userCacheWaitingForImportQueue.findIndex((val) => val.key == key);
 
-  if (value instanceof MinecraftUser) {
-    db.updateUser(value, (err) => {
-      if (err) return ApiError.log('Could not update user in database', { profile: value.id, stack: err.stack });
+      if (i != -1) {
+        const err = value instanceof Error ? value : null;
+        const user = err || value == null ? null : value as MinecraftUser;
 
-      /* Skin */
-      if (value.textureValue) {
-        importByTexture(value.textureValue, value.textureSignature, value.userAgent, (err, skin, cape) => {
-          if (err) return ApiError.log('Could not import skin/cape from profile', { skinURL: value.skinURL, profile: value.id, stack: (err || new Error()).stack });
-
-          if (skin) {
-            db.addSkinToUserHistory(value, skin, (err) => {
-              if (err) return ApiError.log(`Could not update skin-history in database`, { skin: skin.id, profile: value.id, stack: err.stack });
-            });
-          }
-
-          if (cape) {
-            db.addCapeToUserHistory(value, cape, (err) => {
-              if (err) return ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
-            });
-          }
-        });
+        userCacheWaitingForImportQueue[i].callback(err, user);
+        userCacheWaitingForImportQueue.splice(i, 1);
       }
+    } while (i != -1);
+  };
 
-      const processCape = function (capeURL: string | null, capeType: CapeType) {
-        if (capeURL) {
-          importCapeByURL(capeURL, capeType, value.userAgent, (err, cape) => {
-            if (err || !cape) return ApiError.log(`Could not import cape(type=${capeType}) from profile`, { capeURL: capeURL, profile: value.id, stack: (err || new Error()).stack });
+  if (!db.isAvailable() || (!(value instanceof MinecraftUser) && value != null)) return done();
 
-            db.addCapeToUserHistory(value, cape, (err) => {
-              if (err) return ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
-            });
-          }, value.textureValue || undefined, value.textureSignature || undefined);
+  if (value == null) {
+    // We don't care about the result as the profile does not exist anymore (or never did)
+    db.markUserDeleted(key)
+      .catch((err) => {
+        // Just log errors that occured
+        ApiError.log('Could not mark user as deleted in database', { key: key, stack: err.stack });
+      });
+
+    done();
+  } else {
+    db.updateUser(value)
+      .then(async () => {
+        /* Skin */
+        if (value.textureValue) {
+          try {
+            const importedTextures = await importByTexture(value.textureValue, value.textureSignature, value.userAgent);
+
+            if (importedTextures.skin) {
+              try {
+                await db.addSkinToUserHistory(value, importedTextures.skin);
+              } catch (err) {
+                ApiError.log(`Could not update skin-history in database`, { skin: importedTextures.skin.id, profile: value.id, stack: err.stack });
+              }
+            }
+
+            if (importedTextures.cape) {
+              try {
+                await db.addCapeToUserHistory(value, importedTextures.cape);
+              } catch (err) {
+                ApiError.log(`Could not update cape-history in database`, { cape: importedTextures.cape.id, profile: value.id, stack: err.stack });
+              }
+            }
+          } catch (err) {
+            ApiError.log('Could not import skin/cape from profile', { skinURL: value.skinURL, profile: value.id, stack: (err || new Error()).stack });
+          }
         }
-      };
 
-      /* Capes */
-      processCape(value.getOptiFineCapeURL(), CapeType.OPTIFINE);
-      processCape(value.getLabyModCapeURL(), CapeType.LABY_MOD);
-    });
+        /* Capes */
+        const processCape = (capeURL: string | null, capeType: CapeType): Promise<void> => {
+          return new Promise((resolve, reject) => {
+            if (!capeURL) return resolve();
+
+            importCapeByURL(capeURL, capeType, value.userAgent, value.textureValue || undefined, value.textureSignature || undefined)
+              .then((cape) => {
+                if (!cape) return resolve();
+
+                db.addCapeToUserHistory(value, cape)
+                  .then(resolve)
+                  .catch((err) => {
+                    ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
+                    reject(err);
+                  });
+              })
+              .catch((err) => {
+                ApiError.log(`Could not import cape(type=${capeType}) from profile`, { capeURL: capeURL, profile: value.id, stack: err.stack });
+                reject(err);
+              });
+          });
+        };
+
+        await processCape(value.getOptiFineCapeURL(), CapeType.OPTIFINE);
+        await processCape(value.getLabyModCapeURL(), CapeType.LABYMOD);
+
+        done();
+      })
+      .catch((err) => {
+        ApiError.log('Could not update user in database', { profile: value.id, stack: err.stack })
+      });
   }
 });
 
@@ -462,7 +508,7 @@ router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
                 if (err || !png) return next(err || new Error());
 
                 sendDownloadHeaders(mimeType, download, `${getFileNameFromURL(skinURL)}-${skinArea.toLowerCase()}`);
-                setCaching(res, true, true, 60).send(png);
+                setCaching(res, true, true, 60 * 60 * 24 * 30 /*30d*/).send(png);
               });
             });
           } else {
@@ -491,7 +537,7 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
         const capeType = req.params.capeType as CapeType;
         const capeURL = capeType == CapeType.MOJANG ? mcUser.getSecureCapeURL() :
           capeType == CapeType.OPTIFINE ? mcUser.getOptiFineCapeURL() :
-            capeType == CapeType.LABY_MOD ? mcUser.getLabyModCapeURL() : null;
+            capeType == CapeType.LABYMOD ? mcUser.getLabyModCapeURL() : null;
 
         if (capeURL) {
           request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
@@ -582,7 +628,7 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
 
           const capeURL = capeType == CapeType.MOJANG ? mcUser.getSecureCapeURL() :
             capeType == CapeType.OPTIFINE ? mcUser.getOptiFineCapeURL() :
-              capeType == CapeType.LABY_MOD ? mcUser.getLabyModCapeURL() : null;
+              capeType == CapeType.LABYMOD ? mcUser.getLabyModCapeURL() : null;
 
           if (capeURL) {
             request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
@@ -814,7 +860,7 @@ export function getByUsername(username: string, at: number | string | null = nul
   }
 }
 
-export function getByUUID(uuid: string, req: Request, callback: (err: Error | null, user: MinecraftUser | null) => void): void {
+export function getByUUID(uuid: string, req: Request | null, callback: (err: Error | null, user: MinecraftUser | null) => void, waitForImport: boolean = false): void {
   const get = (callback: (err: Error | null, user: MinecraftUser | null) => void) => {
     const cacheValue: MinecraftUser | Error | null | undefined = userCache.get(uuid);
 
@@ -909,8 +955,13 @@ export function getByUUID(uuid: string, req: Request, callback: (err: Error | nu
                     uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
                   }
 
+                  if (waitForImport) {
+                    userCacheWaitingForImportQueue.push({ key: uuid, callback }); // Error, Not Found or Success
+                  }
+
                   userCache.set(uuid, err || mcUser);
-                  return callback(err || null, mcUser); // Error, Not Found or Success
+
+                  if (!waitForImport) return callback(err || null, mcUser); // Error, Not Found or Success
                 });
               });
             } else {
@@ -950,9 +1001,14 @@ export function getByUUID(uuid: string, req: Request, callback: (err: Error | nu
 
                   // TODO cache 404 and err
                   uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
+
+                  if (waitForImport) {
+                    userCacheWaitingForImportQueue.push({ key: uuid, callback }); // Success
+                  }
+
                   userCache.set(uuid, mcUser);
 
-                  return callback(null, mcUser); // Success
+                  if (!waitForImport) return callback(null, mcUser); // Success
                 });
               });
             }
@@ -972,8 +1028,13 @@ export function getByUUID(uuid: string, req: Request, callback: (err: Error | nu
                 uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
               }
 
+              if (waitForImport) {
+                userCacheWaitingForImportQueue.push({ key: uuid, callback }); // Error, Not Found or Success
+              }
+
               userCache.set(uuid, err || mcUser);
-              return callback(err || null, mcUser); // Error, Not Found or Success
+
+              if (!waitForImport) return callback(err || null, mcUser); // Error, Not Found or Success
             });
           });
         }
@@ -1011,6 +1072,10 @@ export function getByUUID(uuid: string, req: Request, callback: (err: Error | nu
       } while (i != -1);
     });
   }
+}
+
+export function isUUIDCached(uuid: string): boolean {
+  return userCache.has(uuid.replace(/-/g, '').toLowerCase());
 }
 
 function getBlockedServers(callback: (err: Error | null, hashes: string[] | null) => void): void {
@@ -1066,10 +1131,10 @@ function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean
   if (typeof alex != 'boolean')
     alex = skin.isSlimSkinModel();
 
-  skin.prepareForRender((err) => {
-    if (err) throw err;
+  if (is3d) {
+    skin.prepareForRender((err) => {
+      if (err) throw err;
 
-    if (is3d) {
       let cam;
       let model;
 
@@ -1095,9 +1160,12 @@ function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean
           return callback(err || undefined, png || undefined);
         }, size, size);
       });
-    } else if (!is3d) {
+    });
+  } else if (!is3d) {
+    skin.toCleanSkin((err) => {
+      if (err) throw err;
       const dimensions: { x: number, y: number } =
-        area == SkinArea.HEAD ? { x: 8, y: 8 } : { x: alex ? 14 : 16, y: 32 };
+        area == SkinArea.HEAD ? { x: 8, y: 8 } : { x: 16, y: 32 };
 
       Image.empty(dimensions.x, dimensions.y, (err, img) => {
         if (err || !img) throw err || new Error();
@@ -1106,39 +1174,39 @@ function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean
           xOffset = alex ? 1 : 0;
 
         if (area == SkinArea.HEAD) {
-          img.drawSubImg(skin, 8, 8, 8, 8, 0, 0);                        // Head
+          img.drawSubImg(skin, 8, 8, 8, 8, 0, 0, true);                       // Head
         } else if (area == SkinArea.BODY) {
-          img.drawSubImg(skin, 8, 8, 8, 8, 4 - xOffset, 0);              // Head
+          img.drawSubImg(skin, 8, 8, 8, 8, 4, 0, true);                       // Head
 
-          img.drawSubImg(skin, 20, 20, 8, 12, 4 - xOffset, 8);           // Body
-          img.drawSubImg(skin, 44, 20, armWidth, 12, 0, 8);              // Right arm
-          img.drawSubImg(skin, 36, 52, armWidth, 12, 12 - xOffset, 8);   // Left arm
+          img.drawSubImg(skin, 20, 20, 8, 12, 4, 8, true);                    // Body
+          img.drawSubImg(skin, 44, 20, armWidth, 12, 0 + xOffset, 8, true);   // Right arm
+          img.drawSubImg(skin, 36, 52, armWidth, 12, 12, 8, true);            // Left arm
         }
 
         if (area == SkinArea.BODY) {
-          img.drawSubImg(skin, 4, 20, 4, 12, 4 - xOffset, 20);           // Right leg
-          img.drawSubImg(skin, 20, 52, 4, 12, 8 - xOffset, 20);          // Left leg
+          img.drawSubImg(skin, 4, 20, 4, 12, 4, 20, true);                    // Right leg
+          img.drawSubImg(skin, 20, 52, 4, 12, 8, 20, true);                   // Left leg
         }
 
         if (overlay) {
           if (area == SkinArea.HEAD) {
-            img.drawSubImg(skin, 40, 8, 8, 8, 0, 0);                     // Head (overlay)
+            img.drawSubImg(skin, 40, 8, 8, 8, 0, 0);                    // Head (overlay)
           } else if (area == SkinArea.BODY) {
-            img.drawSubImg(skin, 40, 8, 8, 8, 4 - xOffset, 0);           // Head (overlay)
+            img.drawSubImg(skin, 40, 8, 8, 8, 4, 0);                    // Head (overlay)
 
-            img.drawSubImg(skin, 20, 36, 8, 12, 4 - xOffset, 8);         // Body (overlay)
-            img.drawSubImg(skin, 44, 36, armWidth, 12, 0, 8);            // Right arm (overlay)
-            img.drawSubImg(skin, 52, 52, armWidth, 12, 12 - xOffset, 8); // Left arm (overlay)
+            img.drawSubImg(skin, 20, 36, 8, 12, 4, 8);                  // Body (overlay)
+            img.drawSubImg(skin, 44, 36, armWidth, 12, 0 + xOffset, 8); // Right arm (overlay)
+            img.drawSubImg(skin, 52, 52, armWidth, 12, 12, 8);          // Left arm (overlay)
           }
 
           if (area == SkinArea.BODY) {
-            img.drawSubImg(skin, 4, 36, 4, 12, 4 - xOffset, 20);         // Right leg (overlay)
-            img.drawSubImg(skin, 4, 52, 4, 12, 8 - xOffset, 20);         // Left leg (overlay)
+            img.drawSubImg(skin, 4, 36, 4, 12, 4, 20);                  // Right leg (overlay)
+            img.drawSubImg(skin, 4, 52, 4, 12, 8, 20);                  // Left leg (overlay)
           }
         }
 
         return img.toPngBuffer((err, png) => callback(err || undefined, png || undefined), size, size);
       });
-    }
-  });
+    });
+  }
 }

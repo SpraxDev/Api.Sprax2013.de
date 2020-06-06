@@ -5,8 +5,8 @@ import sharp = require('sharp');
 import { EOL } from 'os';
 import { Request, Response } from 'express';
 
-import { Color } from './global';
-import { errorLogStream, cfg, appVersion } from '.';
+import { Color } from '../global';
+import { errorLogStream, cfg, appVersion } from '..';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   UUID_PATTERN_ADD_DASH = /(.{8})(.{4})(.{4})(.{4})(.{12})/;
@@ -128,7 +128,7 @@ export class Image {
     }
   }
 
-  drawSubImg(imgToDraw: Image, subX: number, subY: number, width: number, height: number, targetX: number, targetY: number): void {
+  drawSubImg(imgToDraw: Image, subX: number, subY: number, width: number, height: number, targetX: number, targetY: number, ignoreAlpha: boolean = false): void {
     for (let i = 0; i < width; i++) {
       for (let j = 0; j < height; j++) {
         const newTargetX = targetX + i,
@@ -136,7 +136,7 @@ export class Image {
 
         const color: Color = imgToDraw.getColor(subX + i, subY + j);
         if (newTargetX <= this.img.info.width && newTargetY <= this.img.info.height && color.alpha > 0) {
-          this.setColor(newTargetX, newTargetY, color);
+          this.setColor(newTargetX, newTargetY, { r: color.r, g: color.g, b: color.b, alpha: ignoreAlpha ? 255 : color.alpha });
         }
       }
     }
