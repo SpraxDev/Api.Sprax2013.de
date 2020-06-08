@@ -14,6 +14,34 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9
 export class Image {
   img: { data: Buffer, info: sharp.OutputInfo };
 
+  static firstSkinLayerAreas = [
+    { x: 8, y: 0, w: 16, h: 8 },
+    { x: 0, y: 8, w: 32, h: 8 },
+
+    { x: 0, y: 20, w: 56, h: 12 },
+    { x: 4, y: 16, w: 8, h: 4 },
+    { x: 20, y: 16, w: 16, h: 4 },
+    { x: 44, y: 16, w: 8, h: 4 },
+
+    { x: 16, y: 52, w: 16, h: 12 },
+    { x: 32, y: 52, w: 16, h: 12 },
+    { x: 20, y: 48, w: 8, h: 4 },
+    { x: 36, y: 48, w: 8, h: 4 }];
+
+  static secondSkinLayerAreas = [
+    { x: 40, y: 0, w: 16, h: 8 },
+    { x: 32, y: 8, w: 32, h: 8 },
+
+    { x: 0, y: 36, w: 56, h: 12 },
+    { x: 4, y: 32, w: 8, h: 4 },
+    { x: 20, y: 32, w: 16, h: 4 },
+    { x: 44, y: 32, w: 8, h: 4 },
+
+    { x: 0, y: 52, w: 16, h: 12 },
+    { x: 48, y: 52, w: 16, h: 12 },
+    { x: 4, y: 48, w: 8, h: 4 },
+    { x: 52, y: 48, w: 8, h: 4 }];
+
   /**
    * Use `Image.fromImg`
    */
@@ -408,22 +436,9 @@ export class Image {
     if (!this.hasSkinDimensions()) throw new Error('Image does not have valid skin dimensions');
     if (this.img.info.height != 64) throw new Error('Legacy skin dimensions are not supported');
 
-    const areas = [
-      { x: 8, y: 0, w: 16, h: 8 },
-      { x: 0, y: 8, w: 32, h: 8 },
-
-      { x: 0, y: 20, w: 56, h: 12 },
-      { x: 4, y: 16, w: 8, h: 4 },
-      { x: 20, y: 16, w: 16, h: 4 },
-      { x: 44, y: 16, w: 8, h: 4 },
-
-      { x: 16, y: 52, w: 32, h: 12 },
-      { x: 20, y: 48, w: 8, h: 4 },
-      { x: 36, y: 48, w: 8, h: 4 }];
-
     const black = { r: 0, g: 0, b: 0, alpha: 255 };
 
-    for (const area of areas) {
+    for (const area of Image.firstSkinLayerAreas) {
       for (let i = 0; i < area.w; i++) {
         for (let j = 0; j < area.h; j++) {
           const x = area.x + i,
@@ -434,6 +449,109 @@ export class Image {
         }
       }
     }
+  }
+
+  async generateSkinAlternatives(): Promise<Image[]> {
+    return new Promise((resolve, reject) => {
+      const getClone = (): Image => {
+        const buffer = Buffer.alloc(this.img.data.byteLength);
+        this.img.data.copy(buffer);
+
+        return new Image({ data: buffer, info: Object.assign({}, this.img.info) });
+      };
+
+      let waitingFor = 0;
+      const result: Image[] = [];
+
+      const done = (): void => {
+        waitingFor--;
+
+        if (waitingFor == 0) {
+          resolve(result);
+        }
+      };
+
+      const noColor = { r: 0, g: 0, b: 0, alpha: 0 };
+
+      waitingFor += 3;
+      const noOverlay = getClone(),
+        overlayIsFirstLayer = getClone(),
+        overlayOnTopOfFirstLayer = getClone();
+
+      noOverlay.toCleanSkin((err) => {
+        if (err) reject(err);
+
+        // Remove the second skin layer
+        for (const area of Image.secondSkinLayerAreas) {
+          for (let i = 0; i < area.w; i++) {
+            for (let j = 0; j < area.h; j++) {
+              noOverlay.setColor(area.x + i, area.y + j, noColor);
+            }
+          }
+        }
+
+        result.push(noOverlay);
+        done();
+      });
+
+      overlayIsFirstLayer.toCleanSkin((err) => {
+        if (err) reject(err);
+
+        for (let i = 0; i < Image.firstSkinLayerAreas.length; i++) {
+          const firstLayerArea = Image.firstSkinLayerAreas[i],
+            secondLayerArea = Image.secondSkinLayerAreas[i];
+
+          for (let j = 0; j < firstLayerArea.w; j++) {
+            for (let k = 0; k < firstLayerArea.h; k++) {
+              const fX = firstLayerArea.x + j,
+                fY = firstLayerArea.y + k,
+                sX = secondLayerArea.x + j,
+                sY = secondLayerArea.y + k;
+
+              const color = overlayIsFirstLayer.getColor(sX, sY);
+
+              // Move pixel from overlay to first layer
+              overlayIsFirstLayer.setColor(fX, fY, { r: color.r, g: color.g, b: color.b, alpha: 255 });
+
+              // Remove overlay pixel
+              overlayIsFirstLayer.setColor(sX, sY, noColor);
+            }
+          }
+        }
+
+        result.push(overlayIsFirstLayer);
+        done();
+      });
+
+      overlayOnTopOfFirstLayer.toCleanSkin((err) => {
+        if (err) reject(err);
+
+        for (let i = 0; i < Image.firstSkinLayerAreas.length; i++) {
+          const firstLayerArea = Image.firstSkinLayerAreas[i],
+            secondLayerArea = Image.secondSkinLayerAreas[i];
+
+          for (let j = 0; j < firstLayerArea.w; j++) {
+            for (let k = 0; k < firstLayerArea.h; k++) {
+              const fX = firstLayerArea.x + j,
+                fY = firstLayerArea.y + k,
+                sX = secondLayerArea.x + j,
+                sY = secondLayerArea.y + k;
+
+              const color = Image.mergeColors(overlayOnTopOfFirstLayer.getColor(fX, fY), overlayOnTopOfFirstLayer.getColor(sX, sY));
+
+              // Move pixel from overlay to first layer
+              overlayOnTopOfFirstLayer.setColor(fX, fY, { r: color.r, g: color.g, b: color.b, alpha: 255 });
+
+              // Remove overlay pixel
+              overlayOnTopOfFirstLayer.setColor(sX, sY, noColor);
+            }
+          }
+        }
+
+        result.push(overlayOnTopOfFirstLayer);
+        done();
+      });
+    });
   }
 }
 

@@ -7,7 +7,7 @@ import { Router } from 'express';
 
 import { AiModel } from '../utils/ai_predict';
 import { db } from '..';
-import { ErrorBuilder, restful, Image, setCaching, isNumber, generateHash } from '../utils/utils';
+import { ErrorBuilder, restful, Image, setCaching, isNumber, generateHash, ApiError } from '../utils/utils';
 import { getUserAgent, getByUUID, isUUIDCached } from './minecraft';
 import { MinecraftUser, UserAgent, Skin, Cape, CapeType } from '../global';
 
@@ -371,8 +371,8 @@ export function importSkinByURL(skinURL: string, userAgent: UserAgent, callback:
   });
 }
 
-export function importSkinByBuffer(skin: Buffer, skinURL: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void, textureValue: string | null = null, textureSignature: string | null = null): void {
-  Image.fromImg(skin, (err, img) => {
+export function importSkinByBuffer(skinBuffer: Buffer, skinURL: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void, textureValue: string | null = null, textureSignature: string | null = null): void {
+  Image.fromImg(skinBuffer, (err, img) => {
     if (err || !img) return callback(err, null, false);
 
     img.toPngBuffer((err, orgSkin) => {
@@ -384,7 +384,29 @@ export function importSkinByBuffer(skin: Buffer, skinURL: string | null, userAge
         db.addSkin(orgSkin, cleanSkin, generateHash(cleanSkin), skinURL, textureValue, textureSignature, userAgent, (err, skin, exactMatch) => {
           if (err || !skin) return callback(err, null, false);
 
-          return callback(null, skin, exactMatch);
+          callback(null, skin, exactMatch); // returning before starting background task
+
+          (async function () {
+            Image.fromImg(skinBuffer, async (err, img) => {
+              if (err || !img) return ApiError.log('Could not import alternative version for an skin', err);
+
+              const alternateVersions: Image[] = await img.generateSkinAlternatives();
+
+              for (const img of alternateVersions) {
+                img.toPngBuffer((err, orgSkin) => {
+                  if (err || !orgSkin) return ApiError.log('Could not import alternative version for an skin', err);
+
+                  img.toCleanSkinBuffer((err, cleanSkin) => {
+                    if (err || !cleanSkin) return ApiError.log('Could not import alternative version for an skin', err);
+
+                    db.addSkin(orgSkin, cleanSkin, generateHash(cleanSkin), null, null, null, userAgent, (err, _exactMatch) => {
+                      if (err) return ApiError.log('Could not import alternative version for an skin', err);
+                    });
+                  });
+                });
+              }
+            });
+          })();
         });
       });
     });
