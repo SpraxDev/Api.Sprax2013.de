@@ -22,7 +22,8 @@ export let cfg: SpraxAPIcfg = {
   logging: {
     accessLogFormat: '[:date[web]] :remote-addr by :remote-user | :method :url :status with :res[content-length] bytes | ":user-agent" referred from ":referrer" | :response-time[3] ms',
     discordErrorWebHookURL: null
-  }
+  },
+  proxies: []
 };
 export let dbCfg: SpraxAPIdbCfg = {
   enabled: false,

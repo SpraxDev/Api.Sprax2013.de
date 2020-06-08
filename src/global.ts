@@ -16,6 +16,8 @@ export interface SpraxAPIcfg {
     readonly accessLogFormat: string;
     readonly discordErrorWebHookURL: string | null;
   }
+
+  readonly proxies: string[];
 }
 
 export interface SpraxAPIdbCfg {
