@@ -8,6 +8,7 @@ import { Router, Request } from 'express';
 
 import { createCamera, createModel } from '../utils/modelRender';
 import { db } from '../index';
+import { getRequestOptions } from '../utils/web';
 import { importByTexture, importCapeByURL } from './skindb';
 import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
 import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL, generateHash } from '../utils/utils';
@@ -357,7 +358,7 @@ router.all('/skin/:user?', (req, res, next) => {
           const skinURL = mcUser.getSecureSkinURL();
 
           if (skinURL) {
-            request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
+            request.get(skinURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
               if (err) return next(err);
 
               if (httpRes.statusCode == 200) {
@@ -393,7 +394,7 @@ router.all('/skin/:user?', (req, res, next) => {
       } else {
         const skinURL: string = MinecraftUser.getSecureURL(req.query.url as string);
 
-        request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
+        request.get(skinURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
           if (err) return next(err);
 
           if (httpRes.statusCode == 200) {
@@ -459,7 +460,7 @@ router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
           const skinURL = mcUser.getSecureSkinURL();
 
           if (skinURL) {
-            request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
+            request.get(skinURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
               if (err) return next(err);
 
               if (httpRes.statusCode != 200 && httpRes.statusCode != 404) ApiError.log(`${skinURL} returned HTTP-Code ${httpRes.statusCode}`);
@@ -497,7 +498,7 @@ router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
         // if (skinURL.toLowerCase().startsWith('https://cdn.skindb.net/skins/')) {
         // }
 
-        request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
+        request.get(skinURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
           if (err) return next(err);
 
           if (httpRes.statusCode == 200) {
@@ -540,7 +541,7 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
             capeType == CapeType.LABYMOD ? mcUser.getLabyModCapeURL() : null;
 
         if (capeURL) {
-          request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
+          request.get(capeURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
             if (err) return next(err);
 
             if (httpRes.statusCode == 200) {
@@ -631,7 +632,7 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
               capeType == CapeType.LABYMOD ? mcUser.getLabyModCapeURL() : null;
 
           if (capeURL) {
-            request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
+            request.get(capeURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
               if (err) return next(err);
 
               if (httpRes.statusCode != 200 && httpRes.statusCode != 404) ApiError.log(`${capeURL} returned HTTP-Code ${httpRes.statusCode}`);
@@ -651,7 +652,7 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
       } else {
         const capeURL: string = MinecraftUser.getSecureURL(req.query.url as string);
 
-        request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
+        request.get(capeURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
           if (err) return next(err);
 
           if (httpRes.statusCode == 200) {
@@ -795,7 +796,7 @@ export function getByUsername(username: string, at: number | string | null = nul
   const get = (callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void) => {
     const cacheValue: { id: string, name: string } | Error | null | undefined = uuidCache.get(cacheKey);
     if (cacheValue == undefined) {
-      request.get(`https://api.mojang.com/users/profiles/minecraft/${username}${at != null ? `?at=${at}` : ''}`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {
+      request.get(`https://api.mojang.com/users/profiles/minecraft/${username}${at != null ? `?at=${at}` : ''}`, getRequestOptions(), (err, httpRes, httpBody) => {
         if (err) {
           uuidCache.set(cacheKey, err);
           return callback(err, null);
@@ -808,7 +809,7 @@ export function getByUsername(username: string, at: number | string | null = nul
 
           // Contact fallback api (should not be necessary but is better than returning an 429 or 500)
           ApiError.log(`Contacting api.ashcon.app for username lookup: ${username}`);
-          request.get(`https://api.ashcon.app/mojang/v1/user/${username}`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {
+          request.get(`https://api.ashcon.app/mojang/v1/user/${username}`, getRequestOptions(), (err, httpRes, httpBody) => {
             if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
               return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`), null);
             }
@@ -871,7 +872,7 @@ export function getByUUID(uuid: string, req: Request | null, callback: (err: Err
         // TODO: Reduce duplicate code
         if (rateLimitedNameHistory > 6) {
           // Contact fallback api (should not be necessary but is better than returning an 429 or 500
-          request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
+          request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, getRequestOptions(), (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
             if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
               return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`, true), null);
             }
@@ -888,7 +889,7 @@ export function getByUUID(uuid: string, req: Request | null, callback: (err: Err
             return callback(null, result);
           });
         } else {
-          request.get(`https://api.mojang.com/user/profiles/${mcUser.id}/names`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {
+          request.get(`https://api.mojang.com/user/profiles/${mcUser.id}/names`, getRequestOptions(), (err, httpRes, httpBody) => {
             if (err) return callback(err, null);
 
             if (httpRes.statusCode != 200 && httpRes.statusCode != 204) {
@@ -896,7 +897,7 @@ export function getByUUID(uuid: string, req: Request | null, callback: (err: Err
               ApiError.log(`Mojang returned ${httpRes.statusCode} on name history lookup for ${mcUser.id}`);
               rateLimitedNameHistory++;
 
-              request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
+              request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, getRequestOptions(), (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
                 if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
                   return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`, true), null);
                 }
@@ -930,7 +931,7 @@ export function getByUUID(uuid: string, req: Request | null, callback: (err: Err
         }
       };
 
-      request.get(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?unsigned=false`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {
+      request.get(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?unsigned=false`, getRequestOptions(), (err, httpRes, httpBody) => {
         if (err) {
           userCache.set(uuid, err);
           return callback(err, null);
@@ -968,7 +969,7 @@ export function getByUUID(uuid: string, req: Request | null, callback: (err: Err
               ApiError.log(`Contacting api.ashcon.app for profile lookup: ${uuid}`);
 
               // Contact fallback api (should not be necessary but is better than returning an 429 or 500
-              request.get(`https://api.ashcon.app/mojang/v2/user/${uuid}`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
+              request.get(`https://api.ashcon.app/mojang/v2/user/${uuid}`, getRequestOptions(), (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
                 if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
                   return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`, true), null);
                 }
@@ -1079,7 +1080,7 @@ export function isUUIDCached(uuid: string): boolean {
 }
 
 function getBlockedServers(callback: (err: Error | null, hashes: string[] | null) => void): void {
-  request.get(`https://sessionserver.mojang.com/blockedservers`, { jar: true, gzip: true }, (err, httpRes, httpBody) => {
+  request.get(`https://sessionserver.mojang.com/blockedservers`, getRequestOptions(), (err, httpRes, httpBody) => {
     if (err) return callback(err, null);
     if (httpRes.statusCode != 200) return callback(null, null);
 

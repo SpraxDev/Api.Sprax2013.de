@@ -10,6 +10,7 @@ import { db } from '..';
 import { ErrorBuilder, restful, Image, setCaching, isNumber, generateHash, ApiError } from '../utils/utils';
 import { getUserAgent, getByUUID, isUUIDCached } from './minecraft';
 import { MinecraftUser, UserAgent, Skin, Cape, CapeType } from '../global';
+import { getRequestOptions } from '../utils/web';
 
 const yggdrasilPublicKey = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));
 
@@ -364,7 +365,7 @@ export async function importByTexture(textureValue: string, textureSignature: st
 }
 
 export function importSkinByURL(skinURL: string, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void, textureValue: string | null = null, textureSignature: string | null = null): void {
-  request.get(skinURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
+  request.get(skinURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
     if (err || httpRes.statusCode != 200) return callback(err, null, false);
 
     return importSkinByBuffer(httpBody, skinURL, userAgent, callback, textureValue, textureSignature);
@@ -415,7 +416,7 @@ export function importSkinByBuffer(skinBuffer: Buffer, skinURL: string | null, u
 
 export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: UserAgent, textureValue?: string, textureSignature?: string): Promise<Cape | null> {
   return new Promise((resolve, reject) => {
-    request.get(capeURL, { encoding: null, jar: true, gzip: true }, (err, httpRes, httpBody) => {
+    request.get(capeURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
       if (err) return reject(err);
 
       if (httpRes.statusCode == 200) {
