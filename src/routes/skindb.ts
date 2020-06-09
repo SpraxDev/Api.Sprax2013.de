@@ -366,7 +366,7 @@ export async function importByTexture(textureValue: string, textureSignature: st
 export function importSkinByURL(skinURL: string, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void, textureValue: string | null = null, textureSignature: string | null = null): void {
   if (!skinURL.toLowerCase().startsWith('https://')) throw new Error(`skinURL(=${skinURL}) is not https`);
 
-  getHttp(skinURL)
+  getHttp(skinURL, false)
     .then((httpRes) => {
       if (httpRes.res.statusCode != 200) return callback(new Error(`Importing skin by URL returned status ${httpRes.res.statusCode}`), null, false);
 
@@ -419,7 +419,7 @@ export function importSkinByBuffer(skinBuffer: Buffer, skinURL: string | null, u
 
 export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: UserAgent, textureValue?: string, textureSignature?: string): Promise<Cape | null> {
   return new Promise((resolve, reject) => {
-    getHttp(capeURL)
+    getHttp(capeURL, false)
       .then((httpRes) => {
         if (httpRes.res.statusCode == 200) {
           Image.fromImg(httpRes.body, (err, img) => {

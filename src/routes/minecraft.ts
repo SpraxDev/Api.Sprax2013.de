@@ -540,7 +540,7 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
             capeType == CapeType.LABYMOD ? mcUser.getLabyModCapeURL() : null;
 
         if (capeURL) {
-          getHttp(capeURL)
+          getHttp(capeURL, false)
             .then((httpRes) => {
               if (httpRes.res.statusCode == 200) {
                 res.type(mimeType);
@@ -631,7 +631,7 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
               capeType == CapeType.LABYMOD ? mcUser.getLabyModCapeURL() : null;
 
           if (capeURL) {
-            getHttp(capeURL)
+            getHttp(capeURL, false)
               .then((httpRes) => {
                 if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 404) ApiError.log(`${capeURL} returned HTTP-Code ${httpRes.res.statusCode}`);
                 if (httpRes.res.statusCode != 200) return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
@@ -651,7 +651,7 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
       } else {
         const capeURL: string = MinecraftUser.getSecureURL(req.query.url as string);
 
-        getHttp(capeURL)
+        getHttp(capeURL, false)
           .then((httpRes) => {
             if (httpRes.res.statusCode == 200) {
               renderCape(httpRes.body, capeType, size, (err, png) => {
@@ -805,7 +805,7 @@ export function getByUsername(username: string, at: number | string | null = nul
 
             // Contact fallback api (should not be necessary but is better than returning an 429 or 500)
             ApiError.log(`Contacting api.ashcon.app for username lookup: ${username}`);
-            getHttp(`https://api.ashcon.app/mojang/v1/user/${username}`)
+            getHttp(`https://api.ashcon.app/mojang/v1/user/${username}`, false)
               .then((httpRes) => {
                 if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 404) {
                   return callback(new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.res.statusCode) || httpRes.res.statusCode})`), null);
@@ -872,7 +872,7 @@ export function getByUUID(uuid: string, req: Request | null, callback: (err: Err
         if (!mcUser) return callback(null, null);
 
         const fallbackApiProfile = () => {
-          getHttp(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`)  // FIXME: This api never returns legacy-field
+          getHttp(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, false)  // FIXME: This api never returns legacy-field
             .then((httpRes) => {
               if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 404) {
                 return callback(new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.res.statusCode) || httpRes.res.statusCode})`, true), null);
@@ -961,7 +961,7 @@ export function getByUUID(uuid: string, req: Request | null, callback: (err: Err
                 ApiError.log(`Contacting api.ashcon.app for profile lookup: ${uuid}`);
 
                 // Contact fallback api (should not be necessary but is better than returning an 429 or 500
-                getHttp(`https://api.ashcon.app/mojang/v2/user/${uuid}`) // FIXME: This api never returns legacy-field
+                getHttp(`https://api.ashcon.app/mojang/v2/user/${uuid}`, false) // FIXME: This api never returns legacy-field
                   .then((httpRes) => {
                     if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 404) {
                       return callback(new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.res.statusCode) || httpRes.res.statusCode})`, true), null);
