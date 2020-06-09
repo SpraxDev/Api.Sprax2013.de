@@ -11,12 +11,10 @@ const proxies: { proxy: string, jar: CookieJar }[] =
 export async function getHttp(uri: string, triesLeft: number = 3): Promise<{ res: Response, body: Buffer }> {
   return new Promise((resolve, reject) => {
     get(uri, getRequestOptions(), (err, httpRes, httpBody: Buffer) => {
-      if (err) {
+      if (err || httpRes.statusCode == 429 || httpRes.statusCode == 500 ||
+        httpRes.statusCode == 503 || httpRes.statusCode == 504) {
         if (triesLeft > 0) {
-          if (err.code == 'ETIMEDOUT' || err.code == 'ECONNREFUSED' ||
-            httpRes == undefined || httpRes.statusCode == 429 ||
-            httpRes.statusCode == 500 || httpRes.statusCode == 503 ||
-            httpRes.statusCode == 504) {
+          if (!err || err.code == 'ETIMEDOUT' || err.code == 'ECONNREFUSED') {
             ApiError.log('Retrying with another proxy...', { uri, triesLeft });
             return getHttp(uri, --triesLeft); // Retry with another proxy
           }
