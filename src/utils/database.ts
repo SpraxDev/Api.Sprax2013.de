@@ -97,22 +97,18 @@ export class dbUtils {
     });
   }
 
-  async searchProfile(name: string, mode: 'equal' | 'start' | 'end' | 'contains' = 'start', limit: number | 'ALL' = 12, offset: number = 0): Promise<MinecraftProfile[]> {
+  async searchProfile(name: string, limit: number | 'ALL' = 12, offset: number = 0): Promise<{ profile: MinecraftProfile, matched_name: string }[]> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
       if (!name) return reject(new Error('name may not be empty'));
 
-      name = name.toLowerCase();
-
-      const query = 'SELECT raw_json FROM profiles WHERE name_lower ' + (mode == 'equal' ? '=' : 'LIKE ') + '$1 ORDER BY name_lower LIMIT $2 OFFSET $3;',
-        queryArgs = [mode == 'equal' ? name : (mode == 'start' ? name + '%' : (mode == 'end' ? '%' + name : '%' + name + '%')), limit, offset];
-
-      this.pool.query(query, queryArgs)
+      this.pool.query('SELECT p.raw_json,nh.name as matched_name FROM name_history nh JOIN profiles p ON nh.profile_id =p.id WHERE lower(name) LIKE lower($1) LIMIT $2 OFFSET $3;',
+        [`${name}%`, limit, offset])
         .then((res) => {
-          let result: MinecraftProfile[] = [];
+          const result: { profile: MinecraftProfile, matched_name: string }[] = [];
 
           for (const row of res.rows) {
-            result.push(row.raw_json);
+            result.push({ profile: row.raw_json, matched_name: row.matched_name });
           }
 
           resolve(result);

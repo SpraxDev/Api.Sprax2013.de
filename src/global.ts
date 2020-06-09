@@ -82,8 +82,8 @@ export interface SkinDBSkin {
 
 export interface SkinDBSearch {
   readonly profiles: {
-    readonly direct: { name: string, id: string } | null,
-    readonly indirect: { name: string, id: string }[]
+    readonly direct: { name: string, id: string } | null;
+    readonly indirect: { name: string, matched_name: string, id: string }[];
   }
 
   readonly skins: {

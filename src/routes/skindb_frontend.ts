@@ -116,7 +116,7 @@ router.all('/search', (req, res, next) => {
       if (page < 1) return next(new ErrorBuilder().invalidParams('query', [{ param: 'page', condition: 'Valid number > 0' }]));
 
       let directProfileHit: { name: string, id: string } | null = null,
-        indirectProfileHits: { name: string, id: string }[] = [];
+        indirectProfileHits: { name: string, matched_name: string, id: string }[] = [];
 
       let skinHits: { skins: Skin[], moreAvailable: boolean } = { skins: [], moreAvailable: false };
 
@@ -129,18 +129,21 @@ router.all('/search', (req, res, next) => {
         if (isUUID(query)) {
           directProfileHit = await new Promise((resolve, reject) => {
             getByUUID(query, req, (err, user) => {
-              if (err || !user) return reject(err || new Error('WTF just happened? This should be dead-code'));
+              if (err) return reject(err);
+              if (!user) return resolve(null);
 
               resolve({ id: user.id, name: user.name });
             });
           });
         } else if (query.length <= 16) {
-          directProfileHit = await new Promise<{ name: string, id: string }>((resolve, reject) => {
+          directProfileHit = await new Promise((resolve, reject) => {
             getByUsername(query, null, (err, apiRes) => {
-              if (err || !apiRes) return reject(err || new Error('WTF just happened? This should be dead-code'));
+              if (err) return reject(err);
+              if (!apiRes) return resolve(null);
 
               getByUUID(apiRes.id, req, (err, user) => {
-                if (err || !user) return reject(err || new Error('WTF just happened? This should be dead-code'));
+                if (err) return reject(err);
+                if (!user) return resolve(null);
 
                 resolve({ id: user.id, name: user.name });
               });
@@ -149,6 +152,16 @@ router.all('/search', (req, res, next) => {
         }
       } catch (err) {
         ApiError.log('Could not search for profiles (direct)', { err, query });
+      }
+
+      if (query.length <= 16) {
+        indirectProfileHits = (await db.searchProfile(query, 4, 0))
+          .map((elem) => { return { name: elem.profile.name, matched_name: elem.matched_name, id: elem.profile.id }; })
+          .filter((elem) => elem.id != directProfileHit?.id);
+
+        if (indirectProfileHits.length == 4) {
+          indirectProfileHits.pop();
+        }
       }
 
       // Search for Tagged Skins
