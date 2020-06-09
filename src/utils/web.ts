@@ -8,15 +8,17 @@ const proxies: { proxy: string, jar: CookieJar }[] =
     [{ proxy: '', jar: jar() }] :
     cfg.proxies.map((val) => { return { proxy: val.length > 0 ? `http://${val}` : val, jar: jar() } });
 
-export async function getHttp(uri: string, triesLeft: number = 3): Promise<{ res: Response, body: Buffer }> {
+export async function getHttp(uri: string, useProxy: boolean = true, triesLeft: number = 3): Promise<{ res: Response, body: Buffer }> {
   return new Promise((resolve, reject) => {
-    get(uri, getRequestOptions(), (err, httpRes, httpBody: Buffer) => {
+    get(uri, getRequestOptions(useProxy), (err, httpRes, httpBody: Buffer) => {
       if (err || httpRes.statusCode == 429 || httpRes.statusCode == 500 ||
         httpRes.statusCode == 503 || httpRes.statusCode == 504) {
-        if (triesLeft > 0) {
-          if (!err || err.code == 'ETIMEDOUT' || err.code == 'ECONNREFUSED') {
+        if (!err || err.code == 'ETIMEDOUT' || err.code == 'ECONNREFUSED') {
+          if (triesLeft > 0) {
             ApiError.log('Retrying with another proxy...', { uri, triesLeft });
-            return getHttp(uri, --triesLeft); // Retry with another proxy
+            return getHttp(uri, useProxy, --triesLeft); // Retry with another proxy
+          } else if (triesLeft == 0 && useProxy) {
+            return getHttp(uri, false, --triesLeft); // One last try without proxy pool (my proxies are sometimes down for a couple of hours >:( - Patreons can help me with that c:)
           }
         }
 
@@ -28,8 +30,8 @@ export async function getHttp(uri: string, triesLeft: number = 3): Promise<{ res
   });
 }
 
-export function getRequestOptions(): CoreOptions {
-  return Object.assign(getNextProxy(), { encoding: null });
+export function getRequestOptions(useProxy: boolean): CoreOptions {
+  return Object.assign(useProxy ? getNextProxy() : {}, { encoding: null });
 }
 
 function getNextProxy(): { proxy: string, jar: CookieJar } {

@@ -1078,7 +1078,7 @@ export function isUUIDCached(uuid: string): boolean {
 }
 
 function getBlockedServers(callback: (err: Error | null, hashes: string[] | null) => void): void {
-  getHttp(`https://sessionserver.mojang.com/blockedservers`)
+  getHttp(`https://sessionserver.mojang.com/blockedservers`, false)
     .then((httpRes) => {
       if (httpRes.res.statusCode != 200) return callback(null, null);
 
