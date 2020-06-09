@@ -872,10 +872,7 @@ export function getByUUID(uuid: string, req: Request | null, callback: (err: Err
       const getNameHistory = function (mcUser: MinecraftProfile | null, callback: (err: Error | null, nameHistory: MinecraftNameHistoryElement[] | null) => void): void {
         if (!mcUser) return callback(null, null);
 
-        // TODO: Reduce duplicate code
-        if (rateLimitedNameHistory > 6) {
-          // Contact fallback api (should not be necessary but is better than returning an 429 or 500
-          ApiError.log(`Contacting api.ashcon.app for username history lookup: ${mcUser.id}`);
+        const fallbackApiProfile = () => {
           getHttp(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`)  // FIXME: This api never returns legacy-field
             .then((httpRes) => {
               if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 404) {
@@ -894,6 +891,14 @@ export function getByUUID(uuid: string, req: Request | null, callback: (err: Err
               return callback(null, result);
             })
             .catch((err) => callback(err, null));
+        }
+
+        // TODO: Reduce duplicate code
+        if (rateLimitedNameHistory > 6) {
+          // Contact fallback api (should not be necessary but is better than returning an 429 or 500
+          ApiError.log(`Contacting api.ashcon.app for username history lookup: ${mcUser.id}`);
+
+          fallbackApiProfile();
         } else {
           getHttp(`https://api.mojang.com/user/profiles/${mcUser.id}/names`)
             .then((httpRes) => {
@@ -902,24 +907,7 @@ export function getByUUID(uuid: string, req: Request | null, callback: (err: Err
                 ApiError.log(`Mojang returned ${httpRes.res.statusCode} on name history lookup for ${mcUser.id}`);
                 rateLimitedNameHistory++;
 
-                getHttp(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`) // FIXME: This api never returns legacy-field
-                  .then((httpRes) => {
-                    if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 404) {
-                      return callback(new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.res.statusCode) || httpRes.res.statusCode})`, true), null);
-                    }
-                    if (httpRes.res.statusCode == 404) return callback(null, null);
-
-                    const result: MinecraftNameHistoryElement[] = [];
-                    for (const elem of JSON.parse(httpRes.body.toString('utf-8')).username_history) {
-                      result.push({
-                        name: elem.username,
-                        changedToAt: elem.changed_at ? new Date(elem.changed_at).getTime() : undefined
-                      });
-                    }
-
-                    return callback(null, result);
-                  })
-                  .catch((err) => callback(err, null));
+                fallbackApiProfile();
               } else {
                 const result: MinecraftNameHistoryElement[] = [];
 
