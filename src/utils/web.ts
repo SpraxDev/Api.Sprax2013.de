@@ -13,18 +13,18 @@ export async function getHttp(uri: string, useProxy: boolean = true, triesLeft: 
     get(uri, getRequestOptions(useProxy), (err, httpRes, httpBody: Buffer) => {
       if (err || httpRes.statusCode == 429 || httpRes.statusCode == 500 ||
         httpRes.statusCode == 503 || httpRes.statusCode == 504) {
-        if (!err || err.code == 'ETIMEDOUT' || err.code == 'ECONNREFUSED' ||
-          err.message == 'ESOCKETTIMEDOUT' ||
-          err.cause == 'connect ECONNREFUSED' || err.cause == 'read ECONNRESET') {
-          if (triesLeft > 0) {
-            ApiError.log('Retrying with another proxy...', { uri, triesLeft });
-            return getHttp(uri, useProxy, --triesLeft); // Retry with another proxy
-          } else if (triesLeft == 0 && useProxy) {
-            return getHttp(uri, false, --triesLeft); // One last try without proxy pool (my proxies are sometimes down for a couple of hours >:( - Patreons can help me with that c:)
-          }
+        if (triesLeft > 0) {
+          ApiError.log('Retrying with another proxy...', { uri, triesLeft }, false);
+          return getHttp(uri, useProxy, --triesLeft) // Retry with another proxy
+            .then(resolve)
+            .catch(reject);
+        } else if (triesLeft == 0 && useProxy) {
+          return getHttp(uri, false, --triesLeft) // One last try without proxy pool (my proxies are sometimes down for a couple of hours >:( - Patreons can help me with that c:)
+            .then(resolve)
+            .catch(reject);
         }
 
-        return reject(err);
+        return reject(err || new Error(`Outgoing request failed: ${uri}`));
       }
 
       return resolve({ res: httpRes, body: httpBody });
