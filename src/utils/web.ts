@@ -14,8 +14,9 @@ export async function getHttp(uri: string, triesLeft: number = 3): Promise<{ res
       if (err) {
         if (triesLeft > 0) {
           if (err.code == 'ETIMEDOUT' || err.code == 'ECONNREFUSED' ||
-            httpRes.statusCode == 429 || httpRes.statusCode == 500 ||
-            httpRes.statusCode == 503 || httpRes.statusCode == 504) {
+            httpRes == undefined || httpRes.statusCode == 429 ||
+            httpRes.statusCode == 500 || httpRes.statusCode == 503 ||
+            httpRes.statusCode == 504) {
             ApiError.log('Retrying with another proxy...', { uri, triesLeft });
             return getHttp(uri, --triesLeft); // Retry with another proxy
           }

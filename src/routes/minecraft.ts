@@ -2,7 +2,6 @@ import fs = require('fs');
 import nCache = require('node-cache');
 import net = require('net');
 import path = require('path');
-import request = require('request');
 
 import { Router, Request } from 'express';
 
