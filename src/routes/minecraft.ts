@@ -2,13 +2,12 @@ import fs = require('fs');
 import nCache = require('node-cache');
 import net = require('net');
 import path = require('path');
-import request = require('request');
 
 import { Router, Request } from 'express';
 
 import { createCamera, createModel } from '../utils/modelRender';
 import { db } from '../index';
-import { getRequestOptions } from '../utils/web';
+import { getHttp } from '../utils/web';
 import { importByTexture, importCapeByURL } from './skindb';
 import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
 import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL, generateHash } from '../utils/utils';
@@ -358,33 +357,33 @@ router.all('/skin/:user?', (req, res, next) => {
           const skinURL = mcUser.getSecureSkinURL();
 
           if (skinURL) {
-            request.get(skinURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
-              if (err) return next(err);
+            getHttp(skinURL)
+              .then((httpRes) => {
+                if (httpRes.res.statusCode == 200) {
+                  if (!raw) {
+                    Image.fromImg(httpRes.body, (err, img) => {
+                      if (err || !img) return next(err);
 
-              if (httpRes.statusCode == 200) {
-                if (!raw) {
-                  Image.fromImg(httpBody, (err, img) => {
-                    if (err || !img) return next(err);
+                      img.toCleanSkinBuffer((err, png) => {
+                        if (err) return next(err);
 
-                    img.toCleanSkinBuffer((err, png) => {
-                      if (err) return next(err);
-
-                      sendDownloadHeaders(mimeType, download, mcUser.name);
-                      setCaching(res, true, true, 60).send(png);
+                        sendDownloadHeaders(mimeType, download, mcUser.name);
+                        setCaching(res, true, true, 60).send(png);
+                      });
                     });
-                  });
+                  } else {
+                    sendDownloadHeaders(mimeType, download, mcUser.name);
+                    setCaching(res, true, true, 60).send(httpRes.body);
+                  }
                 } else {
+                  if (httpRes.res.statusCode != 404) ApiError.log(`${skinURL} returned HTTP-Code ${httpRes.res.statusCode}`);
+
                   sendDownloadHeaders(mimeType, download, mcUser.name);
-                  setCaching(res, true, true, 60).send(httpBody);
+
+                  setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
                 }
-              } else {
-                if (httpRes.statusCode != 404) ApiError.log(`${mcUser.skinURL} returned HTTP-Code ${httpRes.statusCode}`);
-
-                sendDownloadHeaders(mimeType, download, mcUser.name);
-
-                setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
-              }
-            });
+              })
+              .catch(next);
           } else {
             sendDownloadHeaders(mimeType, download, mcUser.name);
 
@@ -394,30 +393,30 @@ router.all('/skin/:user?', (req, res, next) => {
       } else {
         const skinURL: string = MinecraftUser.getSecureURL(req.query.url as string);
 
-        request.get(skinURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
-          if (err) return next(err);
+        getHttp(skinURL)
+          .then((httpRes) => {
+            if (httpRes.res.statusCode == 200) {
+              if (!raw) {
+                Image.fromImg(httpRes.body, (err, img) => {
+                  if (err || !img) return next(err);
 
-          if (httpRes.statusCode == 200) {
-            if (!raw) {
-              Image.fromImg(httpBody, (err, img) => {
-                if (err || !img) return next(err);
+                  img.toCleanSkinBuffer((err, png) => {
+                    if (err) return next(err);
 
-                img.toCleanSkinBuffer((err, png) => {
-                  if (err) return next(err);
-
-                  sendDownloadHeaders(mimeType, download, getFileNameFromURL(skinURL));
-                  setCaching(res, true, true, 60 * 60).send(png);
+                    sendDownloadHeaders(mimeType, download, getFileNameFromURL(skinURL));
+                    setCaching(res, true, true, 60 * 60).send(png);
+                  });
                 });
-              });
+              } else {
+                sendDownloadHeaders(mimeType, download, getFileNameFromURL(skinURL));
+                setCaching(res, true, true, 60 * 60).send(httpRes.body);
+              }
             } else {
-              sendDownloadHeaders(mimeType, download, getFileNameFromURL(skinURL));
-              setCaching(res, true, true, 60 * 60).send(httpBody);
+              setCaching(res, true, true, 15 * 60);
+              next(new ErrorBuilder().notFound('Provided URL returned 404 (Not Found)'));
             }
-          } else {
-            setCaching(res, true, true, 15 * 60);
-            next(new ErrorBuilder().notFound('Provided URL returned 404 (Not Found)'));
-          }
-        });
+          })
+          .catch(next);
       }
     }
   });
@@ -460,24 +459,24 @@ router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
           const skinURL = mcUser.getSecureSkinURL();
 
           if (skinURL) {
-            request.get(skinURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
-              if (err) return next(err);
+            getHttp(skinURL)
+              .then((httpRes) => {
+                if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 404) ApiError.log(`${skinURL} returned HTTP-Code ${httpRes.res.statusCode}`);
 
-              if (httpRes.statusCode != 200 && httpRes.statusCode != 404) ApiError.log(`${skinURL} returned HTTP-Code ${httpRes.statusCode}`);
+                const skinBuffer: Buffer = httpRes.res.statusCode == 200 ? httpRes.body : (mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
 
-              const skinBuffer: Buffer = httpRes.statusCode == 200 ? httpBody : (mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
+                Image.fromImg(skinBuffer, (err, img) => {
+                  if (err || !img) return next(err || new Error());
 
-              Image.fromImg(skinBuffer, (err, img) => {
-                if (err || !img) return next(err || new Error());
+                  renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : mcUser.modelSlim, is3D, size, (err, png) => {
+                    if (err || !png) return next(err || new Error());
 
-                renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : mcUser.modelSlim, is3D, size, (err, png) => {
-                  if (err || !png) return next(err || new Error());
-
-                  sendDownloadHeaders(mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
-                  setCaching(res, true, true, 60).send(png);
+                    sendDownloadHeaders(mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
+                    setCaching(res, true, true, 60).send(png);
+                  });
                 });
-              });
-            });
+              })
+              .catch(next);
           } else {
             Image.fromImg(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE, (err, img) => {
               if (err || !img) return next(err || new Error());
@@ -498,25 +497,25 @@ router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
         // if (skinURL.toLowerCase().startsWith('https://cdn.skindb.net/skins/')) {
         // }
 
-        request.get(skinURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
-          if (err) return next(err);
+        getHttp(skinURL)
+          .then((httpRes) => {
+            if (httpRes.res.statusCode == 200) {
+              Image.fromImg(httpRes.body, (err, img) => {
+                if (err || !img) return next(err || new Error());
 
-          if (httpRes.statusCode == 200) {
-            Image.fromImg(httpBody, (err, img) => {
-              if (err || !img) return next(err || new Error());
+                renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : 'auto', is3D, size, (err, png) => {
+                  if (err || !png) return next(err || new Error());
 
-              renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : 'auto', is3D, size, (err, png) => {
-                if (err || !png) return next(err || new Error());
-
-                sendDownloadHeaders(mimeType, download, `${getFileNameFromURL(skinURL)}-${skinArea.toLowerCase()}`);
-                setCaching(res, true, true, 60 * 60 * 24 * 30 /*30d*/).send(png);
+                  sendDownloadHeaders(mimeType, download, `${getFileNameFromURL(skinURL)}-${skinArea.toLowerCase()}`);
+                  setCaching(res, true, true, 60 * 60 * 24 * 30 /*30d*/).send(png);
+                });
               });
-            });
-          } else {
-            setCaching(res, true, true, 15 * 60);
-            next(new ErrorBuilder().notFound('Provided URL returned 404 (Not Found)'));
-          }
-        });
+            } else {
+              setCaching(res, true, true, 15 * 60);
+              next(new ErrorBuilder().notFound('Provided URL returned 404 (Not Found)'));
+            }
+          })
+          .catch(next);
       }
     }
   });
@@ -541,22 +540,22 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
             capeType == CapeType.LABYMOD ? mcUser.getLabyModCapeURL() : null;
 
         if (capeURL) {
-          request.get(capeURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
-            if (err) return next(err);
+          getHttp(capeURL, false)
+            .then((httpRes) => {
+              if (httpRes.res.statusCode == 200) {
+                res.type(mimeType);
+                if (download) {
+                  res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
+                }
 
-            if (httpRes.statusCode == 200) {
-              res.type(mimeType);
-              if (download) {
-                res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
+                setCaching(res, true, true, 60).send(httpRes.body);
+              } else {
+                if (httpRes.res.statusCode != 404) ApiError.log(`${capeURL} returned HTTP-Code ${httpRes.res.statusCode}`);
+
+                return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
               }
-
-              setCaching(res, true, true, 60).send(httpBody);
-            } else {
-              if (httpRes.statusCode != 404) ApiError.log(`${capeURL} returned HTTP-Code ${httpRes.statusCode}`);
-
-              return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
-            }
-          });
+            })
+            .catch(next);
         } else {
           return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
         }
@@ -632,19 +631,19 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
               capeType == CapeType.LABYMOD ? mcUser.getLabyModCapeURL() : null;
 
           if (capeURL) {
-            request.get(capeURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
-              if (err) return next(err);
+            getHttp(capeURL, false)
+              .then((httpRes) => {
+                if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 404) ApiError.log(`${capeURL} returned HTTP-Code ${httpRes.res.statusCode}`);
+                if (httpRes.res.statusCode != 200) return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
 
-              if (httpRes.statusCode != 200 && httpRes.statusCode != 404) ApiError.log(`${capeURL} returned HTTP-Code ${httpRes.statusCode}`);
-              if (httpRes.statusCode != 200) return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
+                renderCape(httpRes.body, capeType, size, (err, png) => {
+                  if (err || !png) return next(err);
 
-              renderCape(httpBody, capeType, size, (err, png) => {
-                if (err || !png) return next(err);
-
-                sendDownloadHeaders(mimeType, download, `${mcUser.name}-${capeType.toLowerCase()}`);
-                setCaching(res, true, true, 60).send(png);
-              });
-            });
+                  sendDownloadHeaders(mimeType, download, `${mcUser.name}-${capeType.toLowerCase()}`);
+                  setCaching(res, true, true, 60).send(png);
+                });
+              })
+              .catch(next);
           } else {
             return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
           }
@@ -652,21 +651,21 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
       } else {
         const capeURL: string = MinecraftUser.getSecureURL(req.query.url as string);
 
-        request.get(capeURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
-          if (err) return next(err);
+        getHttp(capeURL, false)
+          .then((httpRes) => {
+            if (httpRes.res.statusCode == 200) {
+              renderCape(httpRes.body, capeType, size, (err, png) => {
+                if (err || !png) return next(err);
 
-          if (httpRes.statusCode == 200) {
-            renderCape(httpBody, capeType, size, (err, png) => {
-              if (err || !png) return next(err);
-
-              sendDownloadHeaders(mimeType, download, `${getFileNameFromURL(capeURL)}-${capeType.toLowerCase()}`);
-              setCaching(res, true, true, 60 * 60).send(png);
-            });
-          } else {
-            setCaching(res, true, true, 15 * 60);
-            next(new ErrorBuilder().notFound('Provided URL returned 404 (Not Found)'));
-          }
-        });
+                sendDownloadHeaders(mimeType, download, `${getFileNameFromURL(capeURL)}-${capeType.toLowerCase()}`);
+                setCaching(res, true, true, 60 * 60).send(png);
+              });
+            } else {
+              setCaching(res, true, true, 15 * 60);
+              next(new ErrorBuilder().notFound('Provided URL returned 404 (Not Found)'));
+            }
+          })
+          .catch(next);
       }
     }
   });
@@ -686,6 +685,7 @@ router.all('/servers/blocked', (req, res, next) => {  // TODO: return object (ke
   });
 });
 
+// FIXME: Route needs a lot of time for the first response
 router.all('/servers/blocked/known', (req, res, next) => {
   restful(req, res, {
     get: () => {
@@ -796,37 +796,39 @@ export function getByUsername(username: string, at: number | string | null = nul
   const get = (callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void) => {
     const cacheValue: { id: string, name: string } | Error | null | undefined = uuidCache.get(cacheKey);
     if (cacheValue == undefined) {
-      request.get(`https://api.mojang.com/users/profiles/minecraft/${username}${at != null ? `?at=${at}` : ''}`, getRequestOptions(), (err, httpRes, httpBody) => {
-        if (err) {
+      getHttp(`https://api.mojang.com/users/profiles/minecraft/${username}${at != null ? `?at=${at}` : ''}`)
+        .then((httpRes) => {
+          if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 204) {
+            ApiError.log(`Mojang returned ${httpRes.res.statusCode} on uuid lookup for ${username}(at=${at || 'null'})`);
+
+            if (at != null) return callback(new ErrorBuilder().serverErr('The server got rejected with status 429', true), null); // Currently no fallback available accepting at-param
+
+            // Contact fallback api (should not be necessary but is better than returning an 429 or 500)
+            ApiError.log(`Contacting api.ashcon.app for username lookup: ${username}`);
+            getHttp(`https://api.ashcon.app/mojang/v1/user/${username}`, false)
+              .then((httpRes) => {
+                if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 404) {
+                  return callback(new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.res.statusCode) || httpRes.res.statusCode})`), null);
+                }
+                if (httpRes.res.statusCode == 404) return callback(null, null);
+
+                const json = JSON.parse(httpRes.body.toString('utf-8'));
+                const apiRes = { id: json.uuid.replace(/-/g, ''), name: json.username };
+                uuidCache.set(cacheKey, apiRes);  // TODO cache 404 and err
+                return callback(null, apiRes);
+              })
+              .catch((err) => { callback(err, null) });
+          } else {
+            const apiRes = httpRes.res.statusCode == 200 ? JSON.parse(httpRes.body.toString('utf-8')) : null;
+            uuidCache.set(cacheKey, apiRes);
+
+            callback(null, apiRes); // Not Found or Success
+          }
+        })
+        .catch((err) => {
           uuidCache.set(cacheKey, err);
           return callback(err, null);
-        }
-
-        if (httpRes.statusCode != 200 && httpRes.statusCode != 204) {
-          ApiError.log(`Mojang returned ${httpRes.statusCode} on uuid lookup for ${username}(at=${at || 'null'})`);
-
-          if (at != null) return callback(err || new ErrorBuilder().serverErr('The server got rejected with status 429', true), null); // Currently no fallback available accepting at-param
-
-          // Contact fallback api (should not be necessary but is better than returning an 429 or 500)
-          ApiError.log(`Contacting api.ashcon.app for username lookup: ${username}`);
-          request.get(`https://api.ashcon.app/mojang/v1/user/${username}`, getRequestOptions(), (err, httpRes, httpBody) => {
-            if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
-              return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`), null);
-            }
-            if (httpRes.statusCode == 404) return callback(null, null);
-
-            const json = JSON.parse(httpBody);
-            const apiRes = { id: json.uuid.replace(/-/g, ''), name: json.username };
-            uuidCache.set(cacheKey, apiRes);  // TODO cache 404 and err
-            return callback(null, apiRes);
-          });
-        } else {
-          const apiRes = httpRes.statusCode == 200 ? JSON.parse(httpBody) : null;
-          uuidCache.set(cacheKey, apiRes);
-
-          callback(null, apiRes); // Not Found or Success
-        }
-      });
+        });
     } else {
       if (!cacheValue) return callback(null, null); // Not Found
       if (cacheValue instanceof Error) return callback(cacheValue, null); // Error
@@ -869,177 +871,173 @@ export function getByUUID(uuid: string, req: Request | null, callback: (err: Err
       const getNameHistory = function (mcUser: MinecraftProfile | null, callback: (err: Error | null, nameHistory: MinecraftNameHistoryElement[] | null) => void): void {
         if (!mcUser) return callback(null, null);
 
-        // TODO: Reduce duplicate code
-        if (rateLimitedNameHistory > 6) {
-          // Contact fallback api (should not be necessary but is better than returning an 429 or 500
-          request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, getRequestOptions(), (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
-            if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
-              return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`, true), null);
-            }
-            if (httpRes.statusCode == 404) return callback(null, null);
+        const fallbackApiProfile = () => {
+          getHttp(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, false)  // FIXME: This api never returns legacy-field
+            .then((httpRes) => {
+              if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 404) {
+                return callback(new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.res.statusCode) || httpRes.res.statusCode})`, true), null);
+              }
+              if (httpRes.res.statusCode == 404) return callback(null, null);
 
-            const result: MinecraftNameHistoryElement[] = [];
-            for (const elem of JSON.parse(httpBody).username_history) {
-              result.push({
-                name: elem.username,
-                changedToAt: elem.changed_at ? new Date(elem.changed_at).getTime() : undefined
-              });
-            }
-
-            return callback(null, result);
-          });
-        } else {
-          request.get(`https://api.mojang.com/user/profiles/${mcUser.id}/names`, getRequestOptions(), (err, httpRes, httpBody) => {
-            if (err) return callback(err, null);
-
-            if (httpRes.statusCode != 200 && httpRes.statusCode != 204) {
-              // Contact fallback api (should not be necessary but is better than returning an 429 or 500
-              ApiError.log(`Mojang returned ${httpRes.statusCode} on name history lookup for ${mcUser.id}`);
-              rateLimitedNameHistory++;
-
-              request.get(`https://api.ashcon.app/mojang/v2/user/${mcUser.id}`, getRequestOptions(), (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
-                if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
-                  return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`, true), null);
-                }
-                if (httpRes.statusCode == 404) return callback(null, null);
-
-                const result: MinecraftNameHistoryElement[] = [];
-                for (const elem of JSON.parse(httpBody).username_history) {
-                  result.push({
-                    name: elem.username,
-                    changedToAt: elem.changed_at ? new Date(elem.changed_at).getTime() : undefined
-                  });
-                }
-
-                return callback(null, result);
-              });
-            } else {
               const result: MinecraftNameHistoryElement[] = [];
-
-              if (httpRes.statusCode == 200) {
-                for (const elem of JSON.parse(httpBody)) {
-                  result.push({
-                    name: elem.name,
-                    changedToAt: elem.changedToAt
-                  });
-                }
+              for (const elem of JSON.parse(httpRes.body.toString('utf-8')).username_history) {
+                result.push({
+                  name: elem.username,
+                  changedToAt: elem.changed_at ? new Date(elem.changed_at).getTime() : undefined
+                });
               }
 
               return callback(null, result);
-            }
-          });
+            })
+            .catch((err) => callback(err, null));
+        }
+
+        // TODO: Reduce duplicate code
+        if (rateLimitedNameHistory > 6) {
+          // Contact fallback api (should not be necessary but is better than returning an 429 or 500
+          ApiError.log(`Contacting api.ashcon.app for username history lookup: ${mcUser.id}`);
+
+          fallbackApiProfile();
+        } else {
+          getHttp(`https://api.mojang.com/user/profiles/${mcUser.id}/names`)
+            .then((httpRes) => {
+              if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 204) {
+                // Contact fallback api (should not be necessary but is better than returning an 429 or 500
+                ApiError.log(`Mojang returned ${httpRes.res.statusCode} on name history lookup for ${mcUser.id}`);
+                rateLimitedNameHistory++;
+
+                fallbackApiProfile();
+              } else {
+                const result: MinecraftNameHistoryElement[] = [];
+
+                if (httpRes.res.statusCode == 200) {
+                  for (const elem of JSON.parse(httpRes.body.toString('utf-8'))) {
+                    result.push({
+                      name: elem.name,
+                      changedToAt: elem.changedToAt
+                    });
+                  }
+                }
+
+                return callback(null, result);
+              }
+            })
+            .catch((err) => callback(err, null));
         }
       };
 
-      request.get(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?unsigned=false`, getRequestOptions(), (err, httpRes, httpBody) => {
-        if (err) {
+      // TODO: hier bin ich grad (delete this line if you forgot what it is for)
+      getHttp(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?unsigned=false`)
+        .then((httpRes) => {
+          if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 204) {
+            ApiError.log(`Mojang returned ${httpRes.res.statusCode} on profile lookup for ${uuid}`);
+
+            db.getProfile(uuid, (err, profile) => {
+              if (err) ApiError.log('Could not fetch profile from database', err);
+
+              if (profile) {
+                getNameHistory(profile, (err, nameHistory) => {
+                  if (err) return callback(err, null); // Error
+
+                  getUserAgent(req, (err, userAgent) => {
+                    if (err || !userAgent) return callback(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`), null);
+
+                    const mcUser = nameHistory ? new MinecraftUser(profile, nameHistory, userAgent, true) : null;
+
+                    if (mcUser) {
+                      uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
+                    }
+
+                    if (waitForImport) {
+                      userCacheWaitingForImportQueue.push({ key: uuid, callback }); // Error, Not Found or Success
+                    }
+
+                    userCache.set(uuid, err || mcUser);
+
+                    if (!waitForImport) return callback(err || null, mcUser); // Error, Not Found or Success
+                  });
+                });
+              } else {
+                ApiError.log(`Contacting api.ashcon.app for profile lookup: ${uuid}`);
+
+                // Contact fallback api (should not be necessary but is better than returning an 429 or 500
+                getHttp(`https://api.ashcon.app/mojang/v2/user/${uuid}`, false) // FIXME: This api never returns legacy-field
+                  .then((httpRes) => {
+                    if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 404) {
+                      return callback(new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.res.statusCode) || httpRes.res.statusCode})`, true), null);
+                    }
+                    if (httpRes.res.statusCode == 404) return callback(null, null);
+
+                    const json = JSON.parse(httpRes.body.toString('utf-8'));
+
+                    const nameHistory: MinecraftNameHistoryElement[] = [];
+                    for (const elem of json.username_history) {
+                      nameHistory.push({
+                        name: elem.username,
+                        changedToAt: elem.changed_at ? new Date(elem.changed_at).getTime() : undefined
+                      });
+                    }
+
+                    getUserAgent(req, (err, userAgent) => {
+                      if (err || !userAgent) return callback(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`), null);
+
+                      const mcUser: MinecraftUser = new MinecraftUser({
+                        id: json.uuid.replace(/-/g, ''),
+                        name: json.username,
+                        properties: [
+                          {
+                            name: 'textures',
+                            value: json.textures.raw.value,
+                            signature: json.textures.raw.signature
+                          }
+                        ]
+                      }, nameHistory, userAgent);
+
+                      // TODO cache 404 and err
+                      uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
+
+                      if (waitForImport) {
+                        userCacheWaitingForImportQueue.push({ key: uuid, callback }); // Success
+                      }
+
+                      userCache.set(uuid, mcUser);
+
+                      if (!waitForImport) return callback(null, mcUser); // Success
+                    });
+                  })
+                  .catch((err) => callback(err, null));
+              }
+            });
+          } else {
+            const profile: MinecraftProfile | null = httpRes.res.statusCode == 200 ? JSON.parse(httpRes.body.toString('utf-8')) : null;
+
+            getNameHistory(profile, (err, nameHistory) => {
+              if (err) return callback(err, null); // Error
+
+              getUserAgent(null, (err, userAgent) => {
+                if (err || !userAgent) return callback(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`), null);
+
+                const mcUser = profile && nameHistory ? new MinecraftUser(profile, nameHistory, userAgent, true) : null;
+
+                if (mcUser) {
+                  uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
+                }
+
+                if (waitForImport) {
+                  userCacheWaitingForImportQueue.push({ key: uuid, callback }); // Error, Not Found or Success
+                }
+
+                userCache.set(uuid, err || mcUser);
+
+                if (!waitForImport) return callback(err || null, mcUser); // Error, Not Found or Success
+              });
+            });
+          }
+        })
+        .catch((err) => {
           userCache.set(uuid, err);
           return callback(err, null);
-        }
-
-        if (httpRes.statusCode != 200 && httpRes.statusCode != 204) {
-          ApiError.log(`Mojang returned ${httpRes.statusCode} on profile lookup for ${uuid}`);
-
-          db.getProfile(uuid, (err, profile) => {
-            if (err) ApiError.log('Could not fetch profile from database', err);
-
-            if (profile) {
-              getNameHistory(profile, (err, nameHistory) => {
-                if (err) return callback(err, null); // Error
-
-                getUserAgent(req, (err, userAgent) => {
-                  if (err || !userAgent) return callback(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`), null);
-
-                  const mcUser = nameHistory ? new MinecraftUser(profile, nameHistory, userAgent, true) : null;
-
-                  if (mcUser) {
-                    uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
-                  }
-
-                  if (waitForImport) {
-                    userCacheWaitingForImportQueue.push({ key: uuid, callback }); // Error, Not Found or Success
-                  }
-
-                  userCache.set(uuid, err || mcUser);
-
-                  if (!waitForImport) return callback(err || null, mcUser); // Error, Not Found or Success
-                });
-              });
-            } else {
-              ApiError.log(`Contacting api.ashcon.app for profile lookup: ${uuid}`);
-
-              // Contact fallback api (should not be necessary but is better than returning an 429 or 500
-              request.get(`https://api.ashcon.app/mojang/v2/user/${uuid}`, getRequestOptions(), (err, httpRes, httpBody) => {  // FIXME: This api never returns legacy-field
-                if (err || (httpRes.statusCode != 200 && httpRes.statusCode != 404)) {
-                  return callback(err || new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.statusCode) || httpRes.statusCode})`, true), null);
-                }
-                if (httpRes.statusCode == 404) return callback(null, null);
-
-                const json = JSON.parse(httpBody);
-
-                const nameHistory: MinecraftNameHistoryElement[] = [];
-                for (const elem of JSON.parse(httpBody).username_history) {
-                  nameHistory.push({
-                    name: elem.username,
-                    changedToAt: elem.changed_at ? new Date(elem.changed_at).getTime() : undefined
-                  });
-                }
-
-                getUserAgent(req, (err, userAgent) => {
-                  if (err || !userAgent) return callback(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`), null);
-
-                  const mcUser: MinecraftUser = new MinecraftUser({
-                    id: json.uuid.replace(/-/g, ''),
-                    name: json.username,
-                    properties: [
-                      {
-                        name: 'textures',
-                        value: json.textures.raw.value,
-                        signature: json.textures.raw.signature
-                      }
-                    ]
-                  }, nameHistory, userAgent);
-
-                  // TODO cache 404 and err
-                  uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
-
-                  if (waitForImport) {
-                    userCacheWaitingForImportQueue.push({ key: uuid, callback }); // Success
-                  }
-
-                  userCache.set(uuid, mcUser);
-
-                  if (!waitForImport) return callback(null, mcUser); // Success
-                });
-              });
-            }
-          });
-        } else {
-          const profile: MinecraftProfile | null = httpRes.statusCode == 200 ? JSON.parse(httpBody) : null;
-
-          getNameHistory(profile, (err, nameHistory) => {
-            if (err) return callback(err, null); // Error
-
-            getUserAgent(null, (err, userAgent) => {
-              if (err || !userAgent) return callback(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`), null);
-
-              const mcUser = profile && nameHistory ? new MinecraftUser(profile, nameHistory, userAgent, true) : null;
-
-              if (mcUser) {
-                uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
-              }
-
-              if (waitForImport) {
-                userCacheWaitingForImportQueue.push({ key: uuid, callback }); // Error, Not Found or Success
-              }
-
-              userCache.set(uuid, err || mcUser);
-
-              if (!waitForImport) return callback(err || null, mcUser); // Error, Not Found or Success
-            });
-          });
-        }
-      });
+        });
     } else {
       if (!cacheValue) return callback(null, null); // Not Found
       if (cacheValue instanceof Error) return callback(cacheValue, null); // Error
@@ -1080,22 +1078,23 @@ export function isUUIDCached(uuid: string): boolean {
 }
 
 function getBlockedServers(callback: (err: Error | null, hashes: string[] | null) => void): void {
-  request.get(`https://sessionserver.mojang.com/blockedservers`, getRequestOptions(), (err, httpRes, httpBody) => {
-    if (err) return callback(err, null);
-    if (httpRes.statusCode != 200) return callback(null, null);
+  getHttp(`https://sessionserver.mojang.com/blockedservers`, false)
+    .then((httpRes) => {
+      if (httpRes.res.statusCode != 200) return callback(null, null);
 
-    let hashes = [];
+      let hashes = [];
 
-    for (const hash of httpBody.split('\n')) {
-      hashes.push(hash);
-    }
+      for (const hash of httpRes.body.toString('utf-8').split('\n')) {
+        hashes.push(hash);
+      }
 
-    if (hashes[hashes.length - 1].trim() == '') {
-      hashes.pop();
-    }
+      if (hashes[hashes.length - 1].trim() == '') {
+        hashes.pop();
+      }
 
-    callback(null, hashes);
-  });
+      callback(null, hashes);
+    })
+    .catch((err) => callback(err, null));
 }
 
 // TODO put inside global and change the UserAgent-interface to an class
