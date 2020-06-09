@@ -103,7 +103,7 @@ userCache.on('set', async (key: string, value: MinecraftUser | Error | null) => 
     done();
   } else {
     db.updateUser(value)
-      .then(async () => {
+      .then(async (): Promise<void> => {
         /* Skin */
         if (value.textureValue) {
           try {
@@ -152,8 +152,17 @@ userCache.on('set', async (key: string, value: MinecraftUser | Error | null) => 
           });
         };
 
-        await processCape(value.getOptiFineCapeURL(), CapeType.OPTIFINE);
-        await processCape(value.getLabyModCapeURL(), CapeType.LABYMOD);
+        try {
+          await processCape(value.getOptiFineCapeURL(), CapeType.OPTIFINE);
+        } catch (err) {
+          ApiError.log('Could not process OptiFine-Cape', err);
+        }
+
+        try {
+          await processCape(value.getLabyModCapeURL(), CapeType.LABYMOD);
+        } catch (err) {
+          ApiError.log('Could not process LabyMod-Cape', err);
+        }
 
         done();
       })
