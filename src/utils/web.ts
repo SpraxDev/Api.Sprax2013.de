@@ -14,7 +14,8 @@ export async function getHttp(uri: string, useProxy: boolean = true, triesLeft: 
       if (err || httpRes.statusCode == 429 || httpRes.statusCode == 500 ||
         httpRes.statusCode == 503 || httpRes.statusCode == 504) {
         if (!err || err.code == 'ETIMEDOUT' || err.code == 'ECONNREFUSED' ||
-          err.code == 'read ECONNRESET' || err.message == 'ESOCKETTIMEDOUT') {
+          err.message == 'ESOCKETTIMEDOUT' ||
+          err.cause == 'connect ECONNREFUSED' || err.cause == 'read ECONNRESET') {
           if (triesLeft > 0) {
             ApiError.log('Retrying with another proxy...', { uri, triesLeft });
             return getHttp(uri, useProxy, --triesLeft); // Retry with another proxy
