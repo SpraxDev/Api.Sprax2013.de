@@ -752,34 +752,33 @@ router.all('/servers/blocked/check', (req, res, next) => {
       let waiting = 0;
 
       for (const host in hosts) {
-        if (hosts.hasOwnProperty(host)) {
-          let hash = hosts[host];
+        let hash = hosts[host];
 
-          waiting++;
-          db.addHost(host, hash, (err) => {
-            waiting--;
+        waiting++;
+        db.addHost(host, hash, (err) => {
+          waiting--;
 
-            if (waiting == 0) {
-              getBlockedServers((err, hashes) => {
-                if (err) return next(err);
-                if (!hashes) return next(new ErrorBuilder().notFound('List of blocked servers', true));
+          if (waiting == 0) {
+            return getBlockedServers((err, hashes) => {
+              if (err) return next(err);
+              if (!hashes) return next(new ErrorBuilder().notFound('List of blocked servers', true));
+              if (res.headersSent) return;
 
-                const result: { [key: string]: boolean } = {};
+              const result: { [key: string]: boolean } = {};
 
-                for (const key in hosts) {
-                  if (hosts.hasOwnProperty(key)) {
-                    result[key] = hashes.includes(hosts[key]);
-                  }
+              for (const key in hosts) {
+                if (hosts.hasOwnProperty(key)) {
+                  result[key] = hashes.includes(hosts[key]);
                 }
+              }
 
-                return setCaching(res, true, true, 60 * 15)
-                  .send(result);
-              });
-            }
+              return setCaching(res, true, true, 60 * 15)
+                .send(result);
+            });
+          }
 
-            if (err) return next(err);
-          });
-        }
+          if (err) return next(err);
+        });
       }
     }
   });
