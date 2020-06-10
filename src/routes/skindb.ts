@@ -445,21 +445,17 @@ export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: 
               db.addCape(capePng, generateHash(capePng), capeType, capeURL, capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent, (err, cape) => {
                 if (err || !cape) return reject(err);
 
-                db.addCape(capePng, generateHash(capePng), capeType, capeURL, capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent, (err, cape) => {
-                  if (err || !cape) return reject(err);
+                if (capeType == 'MOJANG' && textureValue && textureSignature) {
+                  const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
+                  getByUUID(json.profileId, null, (err, user) => {
+                    if (err || !user) return;  // Error or invalid uuid
 
-                  if (capeType == 'MOJANG' && textureValue && textureSignature) {
-                    const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
-                    getByUUID(json.profileId, null, (err, user) => {
-                      if (err || !user) return;  // Error or invalid uuid
+                    db.addCapeToUserHistory(user, cape, new Date(json.timestamp))
+                      .catch((err) => ApiError.log(`Could not update cape-history in database`, { profile: json.profileId, cape: cape.id, stack: err.stack }));
+                  });
+                }
 
-                      db.addCapeToUserHistory(user, cape, new Date(json.timestamp))
-                        .catch((err) => ApiError.log(`Could not update cape-history in database`, { profile: json.profileId, cape: cape.id, stack: err.stack }));
-                    });
-                  }
-
-                  return resolve(cape);
-                });
+                return resolve(cape);
               });
             });
           });
