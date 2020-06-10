@@ -244,7 +244,7 @@ export class dbUtils {
     });
   }
 
-  async addSkinToUserHistory(mcUser: MinecraftUser, skin: Skin): Promise<void> {
+  async addSkinToUserHistory(mcUser: MinecraftUser, skin: Skin, timestamp: Date | 'now'): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
 
@@ -257,29 +257,31 @@ export class dbUtils {
           client.query('LOCK TABLE skin_history IN EXCLUSIVE MODE;', (err) => {
             if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-            client.query(`SELECT EXISTS(SELECT * FROM (SELECT skin_id FROM skin_history WHERE profile_id =$1 ORDER BY added DESC LIMIT 1)x WHERE skin_id =$2) FOR UPDATE;`, [mcUser.id, skin.duplicateOf || skin.id], (err, res) => {
-              if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+            client.query(`SELECT EXISTS(SELECT * FROM (SELECT skin_id FROM skin_history WHERE profile_id =$1 AND added < ${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$2'} ORDER BY added DESC LIMIT 1)x WHERE skin_id =$3) FOR UPDATE;`,
+              [mcUser.id, timestamp != 'now' ? timestamp : undefined, skin.duplicateOf || skin.id], (err, res) => {
+                if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-              if (res.rows[0].exists) { // Skin hasn't changed
-                client.query('COMMIT', (err) => {
-                  done();
-                  if (err) return reject(err);
-
-                  resolve();
-                });
-              } else {
-                client.query(`INSERT INTO skin_history(profile_id,skin_id) VALUES($1,$2);`, [mcUser.id, skin.duplicateOf || skin.id], (err, _res) => {
-                  if (this.shouldAbortTransaction(client, done, err)) return reject(err);
-
+                if (res.rows[0].exists) { // Skin hasn't changed
                   client.query('COMMIT', (err) => {
                     done();
                     if (err) return reject(err);
 
                     resolve();
                   });
-                });
-              }
-            });
+                } else {
+                  client.query(`INSERT INTO skin_history(profile_id,skin_id,added) VALUES($1,$2,${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$3'});`,
+                    [mcUser.id, skin.duplicateOf || skin.id, timestamp != 'now' ? timestamp : undefined], (err, _res) => {
+                      if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+
+                      client.query('COMMIT', (err) => {
+                        done();
+                        if (err) return reject(err);
+
+                        resolve();
+                      });
+                    });
+                }
+              });
           });
         });
       });
@@ -382,7 +384,7 @@ export class dbUtils {
     });
   }
 
-  async addCapeToUserHistory(mcUser: MinecraftUser, cape: Cape): Promise<void> {
+  async addCapeToUserHistory(mcUser: MinecraftUser, cape: Cape, timestamp: Date | 'now'): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
 
@@ -395,8 +397,8 @@ export class dbUtils {
           client.query('LOCK TABLE cape_history IN EXCLUSIVE MODE;', (err) => {
             if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-            client.query(`SELECT EXISTS(SELECT cape_id FROM (SELECT cape_id FROM(SELECT cape_id,added FROM cape_history WHERE profile_id =$1)x JOIN capes ON x.cape_id = capes.id AND capes.type =$2 ORDER BY x.added DESC LIMIT 1)x WHERE x.cape_id =$3);`,
-              [mcUser.id, cape.type, cape.duplicateOf || cape.id], (err, res) => {
+            client.query(`SELECT EXISTS(SELECT cape_id FROM (SELECT cape_id FROM(SELECT cape_id,added FROM cape_history WHERE profile_id =$1)x JOIN capes ON x.cape_id =capes.id AND capes.type =$2 AND added < ${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$3'} ORDER BY x.added DESC LIMIT 1)x WHERE x.cape_id =$4);`,
+              [mcUser.id, cape.type, timestamp != 'now' ? timestamp : undefined, cape.duplicateOf || cape.id], (err, res) => {
                 if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
                 if (res.rows[0].exists) { // Cape hasn't changed
@@ -407,8 +409,8 @@ export class dbUtils {
                     resolve();
                   });
                 } else {
-                  client.query(`INSERT INTO cape_history(profile_id,cape_id) VALUES($1,$2);`,
-                    [mcUser.id, cape.duplicateOf || cape.id], (err, _res) => {
+                  client.query(`INSERT INTO cape_history(profile_id,cape_id,added) VALUES($1,$2,${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$3'});`,
+                    [mcUser.id, cape.duplicateOf || cape.id, timestamp != 'now' ? timestamp : undefined], (err, _res) => {
                       if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
                       client.query('COMMIT', (err) => {

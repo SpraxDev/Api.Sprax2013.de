@@ -110,17 +110,9 @@ userCache.on('set', async (key: string, value: MinecraftUser | Error | null) => 
           try {
             const importedTextures = await importByTexture(value.textureValue, value.textureSignature, value.userAgent);
 
-            if (importedTextures.skin) {
-              try {
-                await db.addSkinToUserHistory(value, importedTextures.skin);
-              } catch (err) {
-                ApiError.log(`Could not update skin-history in database`, { skin: importedTextures.skin.id, profile: value.id, stack: err.stack });
-              }
-            }
-
             if (importedTextures.cape) {
               try {
-                await db.addCapeToUserHistory(value, importedTextures.cape);
+                await db.addCapeToUserHistory(value, importedTextures.cape, 'now');
               } catch (err) {
                 ApiError.log(`Could not update cape-history in database`, { cape: importedTextures.cape.id, profile: value.id, stack: err.stack });
               }
@@ -139,12 +131,14 @@ userCache.on('set', async (key: string, value: MinecraftUser | Error | null) => 
               .then((cape) => {
                 if (!cape) return resolve();
 
-                db.addCapeToUserHistory(value, cape)
-                  .then(resolve)
-                  .catch((err) => {
-                    ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
-                    reject(err);
-                  });
+                if (capeType != 'MOJANG') {
+                  db.addCapeToUserHistory(value, cape, 'now')
+                    .then(resolve)
+                    .catch((err) => {
+                      ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
+                      reject(err);
+                    });
+                }
               })
               .catch((err) => {
                 ApiError.log(`Could not import cape(type=${capeType}) from profile`, { capeURL: capeURL, profile: value.id, stack: err.stack });

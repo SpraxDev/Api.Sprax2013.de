@@ -9,7 +9,7 @@ import { AiModel } from '../utils/ai_predict';
 import { db } from '..';
 import { ErrorBuilder, restful, Image, setCaching, isNumber, generateHash, ApiError } from '../utils/utils';
 import { getUserAgent, getByUUID, isUUIDCached } from './minecraft';
-import { MinecraftUser, UserAgent, Skin, Cape, CapeType } from '../global';
+import { MinecraftUser, UserAgent, Skin, Cape, CapeType, MinecraftProfileTextureProperty } from '../global';
 import { getRequestOptions } from '../utils/web';
 
 const yggdrasilPublicKey = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));
@@ -321,8 +321,6 @@ export async function importByTexture(textureValue: string, textureSignature: st
     let resultSkin: Skin | null = null,
       resultCape: Cape | null = null;
 
-    // TODO add skin to SkinHistory if valid signature and previous skin (use timestamp from texture!) is not the same
-
     let waitingFor = 0;
     const done = () => {
       waitingFor--;
@@ -373,6 +371,8 @@ export function importSkinByURL(skinURL: string, userAgent: UserAgent, callback:
 }
 
 export function importSkinByBuffer(skinBuffer: Buffer, skinURL: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void, textureValue: string | null = null, textureSignature: string | null = null): void {
+  if (textureValue && textureSignature && !isFromYggdrasil(textureValue, textureSignature)) return callback(new Error('Texture signature is invalid!'), null, false);
+
   Image.fromImg(skinBuffer, (err, img) => {
     if (err || !img) return callback(err, null, false);
 
@@ -384,6 +384,16 @@ export function importSkinByBuffer(skinBuffer: Buffer, skinURL: string | null, u
 
         db.addSkin(orgSkin, cleanSkin, generateHash(cleanSkin), skinURL, textureValue, textureSignature, userAgent, (err, skin, exactMatch) => {
           if (err || !skin) return callback(err, null, false);
+
+          if (textureValue && textureSignature) {
+            const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
+            getByUUID(json.profileId, null, (err, user) => {
+              if (err || !user) return;  // Error or invalid uuid
+
+              db.addSkinToUserHistory(user, skin, new Date(json.timestamp))
+                .catch((err) => ApiError.log(`Could not update skin-history in database`, { skin: skin.id, profile: user.id, stack: err.stack }));
+            });
+          }
 
           callback(null, skin, exactMatch); // returning before starting background task
 
@@ -428,6 +438,16 @@ export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: 
 
             db.addCape(capePng, generateHash(capePng), capeType, capeURL, capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent, (err, cape) => {
               if (err || !cape) return reject(err);
+
+              if (capeType == 'MOJANG' && textureValue && textureSignature) {
+                const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
+                getByUUID(json.profileId, null, (err, user) => {
+                  if (err || !user) return;  // Error or invalid uuid
+
+                  db.addCapeToUserHistory(user, cape, new Date(json.timestamp))
+                    .catch((err) => ApiError.log(`Could not update cape-history in database`, { profile: json.profileId, cape: cape.id, stack: err.stack }));
+                });
+              }
 
               return resolve(cape);
             });
