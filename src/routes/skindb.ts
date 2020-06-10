@@ -161,6 +161,8 @@ router.use('/cdn/skins/:id?/:type?', (req, res, next) => {
   const id = req.params.id.trim();
   const originalType = req.params.type && req.params.type.trim().toLowerCase() == 'original.png';
 
+  if (!db.isAvailable()) return next(new ErrorBuilder().serviceUnavailable('Currently not connected to a database'));
+
   db.getSkin(id)
     .then((skin) => {
       if (!skin) return next(new ErrorBuilder().notFound('Skin for given ID'));
@@ -187,6 +189,8 @@ router.use('/cdn/capes/:id?', (req, res, next) => {
   if (!req.params.id || !isNumber(req.params.id.trim())) return next(new ErrorBuilder().invalidParams('url', [{ param: 'id', condition: 'Is numeric string (0-9)' }]));
 
   const id = req.params.id.trim();
+
+  if (!db.isAvailable()) return next(new ErrorBuilder().serviceUnavailable('Currently not connected to a database'));
 
   db.getCape(id, (err, cape) => {
     if (err) return next(err);
