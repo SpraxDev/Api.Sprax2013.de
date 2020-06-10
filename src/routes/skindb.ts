@@ -1,7 +1,6 @@
 import crypto = require('crypto');
 import fs = require('fs');
 import path = require('path');
-import request = require('request');
 
 import { Router } from 'express';
 
@@ -10,7 +9,7 @@ import { db } from '..';
 import { ErrorBuilder, restful, Image, setCaching, isNumber, generateHash, ApiError } from '../utils/utils';
 import { getUserAgent, getByUUID, isUUIDCached } from './minecraft';
 import { MinecraftUser, UserAgent, Skin, Cape, CapeType, MinecraftProfileTextureProperty } from '../global';
-import { getRequestOptions } from '../utils/web';
+import { getHttp } from '../utils/web';
 
 const yggdrasilPublicKey = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));
 
@@ -363,11 +362,15 @@ export async function importByTexture(textureValue: string, textureSignature: st
 }
 
 export function importSkinByURL(skinURL: string, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void, textureValue: string | null = null, textureSignature: string | null = null): void {
-  request.get(skinURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
-    if (err || httpRes.statusCode != 200) return callback(err, null, false);
+  if (!skinURL.toLowerCase().startsWith('https://')) throw new Error(`skinURL(=${skinURL}) is not https`);
 
-    return importSkinByBuffer(httpBody, skinURL, userAgent, callback, textureValue, textureSignature);
-  });
+  getHttp(skinURL, false)
+    .then((httpRes) => {
+      if (httpRes.res.statusCode != 200) return callback(new Error(`Importing skin by URL returned status ${httpRes.res.statusCode}`), null, false);
+
+      return importSkinByBuffer(httpRes.body, skinURL, userAgent, callback, textureValue, textureSignature);
+    })
+    .catch((err) => callback(err, null, false));
 }
 
 export function importSkinByBuffer(skinBuffer: Buffer, skinURL: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void, textureValue: string | null = null, textureSignature: string | null = null): void {
@@ -426,39 +429,43 @@ export function importSkinByBuffer(skinBuffer: Buffer, skinURL: string | null, u
 
 export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: UserAgent, textureValue?: string, textureSignature?: string): Promise<Cape | null> {
   return new Promise((resolve, reject) => {
-    request.get(capeURL, Object.assign(getRequestOptions(), { encoding: null }), (err, httpRes, httpBody) => {
-      if (err) return reject(err);
+    getHttp(capeURL, false)
+      .then((httpRes) => {
+        if (httpRes.res.statusCode == 200) {
+          Image.fromImg(httpRes.body, (err, img) => {
+            if (err || !img) return reject(err);
 
-      if (httpRes.statusCode == 200) {
-        Image.fromImg(httpBody, (err, img) => {
-          if (err || !img) return reject(err);
+            img.toPngBuffer((err, capePng) => {
+              if (err || !capePng) return reject(err);
 
-          img.toPngBuffer((err, capePng) => {
-            if (err || !capePng) return reject(err);
+              db.addCape(capePng, generateHash(capePng), capeType, capeURL, capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent, (err, cape) => {
+                if (err || !cape) return reject(err);
 
-            db.addCape(capePng, generateHash(capePng), capeType, capeURL, capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent, (err, cape) => {
-              if (err || !cape) return reject(err);
+                db.addCape(capePng, generateHash(capePng), capeType, capeURL, capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent, (err, cape) => {
+                  if (err || !cape) return reject(err);
 
-              if (capeType == 'MOJANG' && textureValue && textureSignature) {
-                const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
-                getByUUID(json.profileId, null, (err, user) => {
-                  if (err || !user) return;  // Error or invalid uuid
+                  if (capeType == 'MOJANG' && textureValue && textureSignature) {
+                    const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
+                    getByUUID(json.profileId, null, (err, user) => {
+                      if (err || !user) return;  // Error or invalid uuid
 
-                  db.addCapeToUserHistory(user, cape, new Date(json.timestamp))
-                    .catch((err) => ApiError.log(`Could not update cape-history in database`, { profile: json.profileId, cape: cape.id, stack: err.stack }));
+                      db.addCapeToUserHistory(user, cape, new Date(json.timestamp))
+                        .catch((err) => ApiError.log(`Could not update cape-history in database`, { profile: json.profileId, cape: cape.id, stack: err.stack }));
+                    });
+                  }
+
+                  return resolve(cape);
                 });
-              }
-
-              return resolve(cape);
+              });
             });
           });
-        });
-      } else if (httpRes.statusCode != 404) {
-        reject(new Error(`Importing cape by URL returned status ${httpRes.statusCode}`));
-      } else {
-        resolve(null);
-      }
-    });
+        } else if (httpRes.res.statusCode != 404) {
+          reject(new Error(`Importing cape by URL returned status ${httpRes.res.statusCode}`));
+        } else {
+          resolve(null);
+        }
+      })
+      .catch(reject);
   });
 }
 
