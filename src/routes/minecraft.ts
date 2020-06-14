@@ -111,7 +111,7 @@ userCache.on('set', async (key: string, value: MinecraftUser | Error | null) => 
 
             if (importedTextures.cape) {
               try {
-                await db.addCapeToUserHistory(value, importedTextures.cape, 'now');
+                await db.addCapeToUserHistory(value, importedTextures.cape, new Date(MinecraftUser.extractMinecraftProfileTextureProperty(value.textureValue).timestamp));
               } catch (err) {
                 ApiError.log(`Could not update cape-history in database`, { cape: importedTextures.cape.id, profile: value.id, stack: err.stack });
               }
@@ -131,7 +131,7 @@ userCache.on('set', async (key: string, value: MinecraftUser | Error | null) => 
                 if (!cape) return resolve();
 
                 if (capeType != 'MOJANG') {
-                  db.addCapeToUserHistory(value, cape, 'now')
+                  db.addCapeToUserHistory(value, cape, value.textureValue ? new Date(MinecraftUser.extractMinecraftProfileTextureProperty(value.textureValue).timestamp) : 'now')
                     .then(resolve)
                     .catch((err) => {
                       ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
