@@ -254,15 +254,15 @@ export class dbUtils {
         client.query('BEGIN', (err) => {
           if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-          client.query('LOCK TABLE skin_history IN EXCLUSIVE MODE;', (err) => {
+          client.query('LOCK TABLE skin_history IN ACCESS EXCLUSIVE MODE;', (err) => {
             if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-            client.query(`SELECT EXISTS(SELECT * FROM (SELECT skin_id FROM skin_history WHERE profile_id =$1 AND added < ${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$2'} ORDER BY added DESC LIMIT 1)x WHERE skin_id =$3) FOR UPDATE;`,
+            client.query(`SELECT EXISTS(SELECT * FROM(SELECT sh.* FROM skin_history sh JOIN skins s ON sh.skin_id =s.id WHERE profile_id =$1 AND sh.added <= ${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$3'} ORDER BY sh.added DESC LIMIT 1)x WHERE x.skin_id =$2) as before, EXISTS(SELECT * FROM(SELECT sh.* FROM skin_history sh JOIN skins s ON sh.skin_id =s.id WHERE profile_id =$1 AND sh.added > ${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$3'} ORDER BY sh.added DESC LIMIT 1)x WHERE x.skin_id =$2) as after;`,
               [mcUser.id, timestamp != 'now' ? timestamp : undefined, skin.duplicateOf || skin.id], (err, res) => {
                 if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                if (res.rows[0].exists) { // Skin hasn't changed
-                  client.query('COMMIT', (err) => {
+                if (res.rows[0].before || res.rows[0].after) { // Skin hasn't changed
+                  client.query('ROLLBACK', (err) => {
                     done();
                     if (err) return reject(err);
 
@@ -394,15 +394,15 @@ export class dbUtils {
         client.query('BEGIN', (err) => {
           if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-          client.query('LOCK TABLE cape_history IN EXCLUSIVE MODE;', (err) => {
+          client.query('LOCK TABLE cape_history IN ACCESS EXCLUSIVE MODE;', (err) => {
             if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-            client.query(`SELECT EXISTS(SELECT cape_id FROM (SELECT cape_id FROM(SELECT cape_id,added FROM cape_history WHERE profile_id =$1)x JOIN capes ON x.cape_id =capes.id AND capes.type =$2 AND added < ${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$3'} ORDER BY x.added DESC LIMIT 1)x WHERE x.cape_id =$4);`,
-              [mcUser.id, cape.type, timestamp != 'now' ? timestamp : undefined, cape.duplicateOf || cape.id], (err, res) => {
+            client.query(`SELECT EXISTS(SELECT * FROM(SELECT ch.* FROM cape_history ch JOIN capes c ON ch.cape_id =c.id WHERE profile_id =$1 AND c.type =$2 AND ch.added <= ${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$4'} ORDER BY ch.added DESC LIMIT 1)x WHERE x.cape_id =$3) as before, EXISTS(SELECT * FROM(SELECT ch.* FROM cape_history ch JOIN capes c ON ch.cape_id =c.id WHERE profile_id =$2 AND c.type =$2 AND ch.added > ${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$4'} ORDER BY ch.added DESC LIMIT 1)x WHERE x.cape_id =$3) as after;`,
+              [mcUser.id, cape.type, cape.duplicateOf || cape.id, timestamp != 'now' ? timestamp : undefined], (err, res) => {
                 if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                if (res.rows[0].exists) { // Cape hasn't changed
-                  client.query('COMMIT', (err) => {
+                if (res.rows[0].before || res.rows[0].after) { // Cape hasn't changed
+                  client.query('ROLLBACK', (err) => {
                     done();
                     if (err) return reject(err);
 
