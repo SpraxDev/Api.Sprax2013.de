@@ -402,7 +402,7 @@ export function importSkinByBuffer(skinBuffer: Buffer, skinURL: string | null, u
       img.toCleanSkinBuffer((err, cleanSkin) => {
         if (err || !cleanSkin) return callback(err, null, false);
 
-        db.addSkin(orgSkin, cleanSkin, generateHash(cleanSkin), skinURL, textureValue, textureSignature, userAgent, (err, skin, exactMatch) => {
+        db.addSkin(orgSkin, cleanSkin, generateHash(img.img.data), skinURL, textureValue, textureSignature, userAgent, (err, skin, exactMatch) => {
           if (err || !skin) return callback(err, null, false);
 
           if (textureValue && textureSignature) {
@@ -430,7 +430,7 @@ export function importSkinByBuffer(skinBuffer: Buffer, skinURL: string | null, u
                   img.toCleanSkinBuffer((err, cleanSkin) => {
                     if (err || !cleanSkin) return ApiError.log('Could not import alternative version for an skin', err);
 
-                    db.addSkin(orgSkin, cleanSkin, generateHash(cleanSkin), null, null, null, userAgent, (err, _exactMatch) => {
+                    db.addSkin(orgSkin, cleanSkin, generateHash(img.img.data), null, null, null, userAgent, (err, _exactMatch) => {
                       if (err) return ApiError.log('Could not import alternative version for an skin', err);
                     });
                   });
@@ -455,7 +455,7 @@ export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: 
             img.toPngBuffer((err, capePng) => {
               if (err || !capePng) return reject(err);
 
-              db.addCape(capePng, generateHash(capePng), capeType, capeURL, capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent, (err, cape) => {
+              db.addCape(capePng, generateHash(img.img.data), capeType, capeURL, capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent, (err, cape) => {
                 if (err || !cape) return reject(err);
 
                 if (capeType == 'MOJANG' && textureValue && textureSignature) {
