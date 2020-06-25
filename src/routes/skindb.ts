@@ -124,21 +124,34 @@ router.all('/import', (req, res, next) => {
           if (!MinecraftUser.getSecureURL(json.url).toLowerCase().startsWith('https://textures.minecraft.net/texture/'))
             return next(new ErrorBuilder().invalidBody([{ param: 'JSON-Body: json.url', condition: 'Valid textures.minecraft.net URL' }]));
 
-          getUserAgent(req, (err, userAgent) => {
-            if (err || !userAgent) return next(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`));
-            if (!json.url) return next(new ErrorBuilder().unknown());  // FIXME: why does TypeScript need this line? o.0
+          db.getSkinByURL(MinecraftUser.getSecureURL(json.url).toLowerCase())
+            .then((skin) => {
+              if (!skin) {
+                getUserAgent(req, (err, userAgent) => {
+                  if (err || !userAgent) return next(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`));
+                  if (!json.url) return next(new ErrorBuilder().unknown());  // FIXME: why does TypeScript need this line? o.0
 
-            importSkinByURL(MinecraftUser.getSecureURL(json.url), userAgent, (err, skin, exactMatch) => {
-              if (err || !skin) return next(err || new ErrorBuilder().serverErr(undefined, `Could not import uploaded skin-URL`));
+                  importSkinByURL(MinecraftUser.getSecureURL(json.url), userAgent, (err, skin, exactMatch) => {
+                    if (err || !skin) return next(err || new ErrorBuilder().serverErr(undefined, `Could not import uploaded skin-URL`));
 
-              return setCaching(res, false, false)
-                .status(exactMatch ? 200 : 201)
-                .send({
-                  result: exactMatch ? 'Skin already in database' : 'Skin added to database',
-                  skinID: skin.id
+                    return setCaching(res, false, false)
+                      .status(exactMatch ? 200 : 201)
+                      .send({
+                        result: exactMatch ? 'Skin already in database' : 'Skin added to database',
+                        skinID: skin.id
+                      });
+                  });
                 });
+              } else {
+                return setCaching(res, false, false)
+                  .status(200)
+                  .send({
+                    result: 'Skin already in database',
+                    skinID: skin.id
+                  });
+              }
             })
-          });
+            .catch(next);
         } else {
           return next(new ErrorBuilder().invalidBody([]));  //TODO
         }

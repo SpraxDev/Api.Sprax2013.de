@@ -158,6 +158,20 @@ export class dbUtils {
     });
   }
 
+  async getSkinByURL(url: string): Promise<Skin> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('SELECT * FROM skins WHERE original_url =$1;',
+        [url], (err, res) => {
+          if (err) return reject(err);
+
+          resolve(res.rows.length > 0 ? res.rows[0] : null);
+        });
+    });
+    //
+  }
+
   addSkin(originalPng: Buffer, cleanPng: Buffer, cleanPngHash: string, originalURL: string | null, textureValue: string | null,
     textureSignature: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void): void {
     if (this.pool == null) return callback(null, null, false);
