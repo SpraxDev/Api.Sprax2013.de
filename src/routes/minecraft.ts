@@ -815,7 +815,7 @@ function sendDownloadHeaders(res: Response, mimeType: string, download: boolean,
   if (download) {
     res.set('Content-Disposition', `attachment;filename=${fileIdentifier}.${fileExtension}`);
   }
-};
+}
 
 export function getByUsername(username: string, at: number | string | null = null, callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void): void {
   if (typeof at != 'number' || (typeof at == 'number' && at > Date.now())) {
