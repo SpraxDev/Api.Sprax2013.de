@@ -80,6 +80,12 @@ export interface SkinDBSkin {
   readonly seen_on: { name: string, id: string }[];
 }
 
+export interface SkinDBSkins {
+  readonly skins: Skin[];
+  readonly page: number;
+  readonly hasNextPage: boolean;
+}
+
 export interface SkinDBSearch {
   readonly profiles: {
     readonly direct: { name: string, id: string } | null;

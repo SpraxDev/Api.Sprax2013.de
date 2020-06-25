@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { db } from '..';
 import { getByUUID, getByUsername } from './minecraft';
 import { restful, isUUID, ErrorBuilder, isNumber, setCaching, ApiError } from '../utils/utils';
-import { SkinDBAccount, SkinDBSkin, SkinDBSearch, SkinDBIndex, Skin } from '../global';
+import { SkinDBAccount, SkinDBSkin, SkinDBSearch, SkinDBIndex, Skin, SkinDBSkins } from '../global';
 
 /* Routes */
 const router = Router();
@@ -97,6 +97,32 @@ router.all('/skin/:skinID', (req, res, next) => {
                 .catch(next);
             })
             .catch(next);
+        })
+        .catch(next);
+    }
+  });
+});
+
+router.all('/skins', (req, res, next) => {
+  restful(req, res, {
+    get: () => {
+      if (!db.isAvailable()) return next(new ErrorBuilder().serviceUnavailable('SkinDB-Frontend route can only work while using a database'));
+      if (req.query.page && !isNumber(req.query.page as string)) return next(new ErrorBuilder().invalidParams('query', [{ param: 'page', condition: 'Valid number > 0' }]));
+
+      const page = typeof req.query.page == 'string' ? parseInt(req.query.page) : 1;
+
+      if (page < 1) return next(new ErrorBuilder().invalidParams('query', [{ param: 'page', condition: 'Valid number > 0' }]));
+
+      db.getNewestSkins(12, page * 12, true)
+        .then((skins) => {
+          const result: SkinDBSkins = {
+            skins: skins.skins,
+            page,
+            hasNextPage: skins.moreAvailable
+          }
+
+          setCaching(res, true, false, 60, 60)
+            .send(result);
         })
         .catch(next);
     }

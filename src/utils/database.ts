@@ -450,6 +450,31 @@ export class dbUtils {
     });
   }
 
+  async getNewestSkins(limit: number | 'ALL' = 12, offset: number = 0, sortASC = false): Promise<{ skins: Skin[], moreAvailable: boolean }> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query(`SELECT * FROM skins ORDER BY added ${sortASC ? '' : 'DESC'} LIMIT $1 OFFSET $2;`,
+        [typeof limit == 'number' ? limit + 1 : limit, offset], (err, res) => {
+          if (err) return reject(err);
+
+          const result = [];
+
+          for (const row of res.rows) {
+            result.push(RowUtils.toSkin(row));
+          }
+
+          let moreAvailable = limit == 'ALL';
+          if (!moreAvailable && result.length > limit) {
+            result.pop();
+            moreAvailable = true;
+          }
+
+          resolve({ skins: result, moreAvailable });
+        });
+    });
+  }
+
   async getSkins(tags: string[], limit: number | 'ALL' = 6, offset: number = 0): Promise<{ skins: Skin[], moreAvailable: boolean }> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
