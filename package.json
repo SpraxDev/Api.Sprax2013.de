@@ -10,7 +10,7 @@
     "mojang-api",
     "skindb"
   ],
-  "homepage": "https://github.com/Sprax2013/Api.Sprax2013.de#readme",
+  "homepage": "https://github.com/SpraxDev/Api.Sprax2013.de#readme",
   "main": "build/index.js",
   "private": false,
   "scripts": {
@@ -35,10 +35,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Sprax2013/Api.Sprax2013.de.git"
+    "url": "https://github.com/SpraxDev/Api.Sprax2013.de.git"
   },
   "bugs": {
-    "url": "https://github.com/Sprax2013/Api.Sprax2013.de/issues"
+    "url": "https://github.com/SpraxDev/Api.Sprax2013.de/issues"
   },
   "engines": {
     "node": ">=10.0.0"
@@ -55,11 +55,11 @@
     "pg": "^8.2.1",
     "request": "^2.88.2",
     "rotating-file-stream": "^2.1.1",
-    "sharp": "^0.25.3"
+    "sharp": "^0.25.4"
   },
   "devDependencies": {
     "@types/express": "^4.17.6",
-    "@types/morgan": "^1.9.0",
+    "@types/morgan": "^1.9.1",
     "@types/object-assign-deep": "^0.4.0",
     "@types/pg": "^7.14.3",
     "@types/request": "^2.48.5",

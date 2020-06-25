@@ -14,7 +14,7 @@ export async function getHttp(uri: string, useProxy: boolean = true, triesLeft: 
       if (err || httpRes.statusCode == 429 || httpRes.statusCode == 500 ||
         httpRes.statusCode == 503 || httpRes.statusCode == 504) {
         if (triesLeft > 0) {
-          ApiError.log('Retrying with another proxy...', { uri, triesLeft }, false);
+          ApiError.log('Retrying with another proxy...', { uri, triesLeft }, true);
           return getHttp(uri, useProxy, --triesLeft) // Retry with another proxy
             .then(resolve)
             .catch(reject);
