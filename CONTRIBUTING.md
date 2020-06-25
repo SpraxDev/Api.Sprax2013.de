@@ -24,8 +24,8 @@ We actively welcome your pull requests:
 In short, when you submit code changes, your submissions are understood to be under the same [MIT License](https://choosealicense.com/licenses/mit/) that covers the project.
 Feel free to contact the maintainers if that's a concern.
 
-## Report bugs using GitHub's [issues](https://github.com/Sprax2013/Api.Sprax2013.de/issues)
-We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/Sprax2013/Api.Sprax2013.de/issues/new) – it's that easy!
+## Report bugs using GitHub's [issues](https://github.com/SpraxDev/Api.Sprax2013.de/issues)
+We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/SpraxDev/Api.Sprax2013.de/issues/new) – it's that easy!
 
 ## Write bug reports with detail, background, and sample code
 Make sure to provide all the relevant information needed to reproduce the bug you are reporting. You can upload logs, images or videos if needed.
