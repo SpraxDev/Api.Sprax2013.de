@@ -494,9 +494,7 @@ export class Image {
         done();
       });
 
-      overlayIsFirstLayer.toCleanSkin((err) => {
-        if (err) reject(err);
-
+      const moveSecondLayer = (img: Image, mergeColors: boolean) => {
         for (let i = 0; i < Image.firstSkinLayerAreas.length; i++) {
           const firstLayerArea = Image.firstSkinLayerAreas[i],
             secondLayerArea = Image.secondSkinLayerAreas[i];
@@ -508,16 +506,24 @@ export class Image {
                 sX = secondLayerArea.x + j,
                 sY = secondLayerArea.y + k;
 
-              const color = overlayIsFirstLayer.getColor(sX, sY);
+              const color = mergeColors ?
+                Image.mergeColors(overlayOnTopOfFirstLayer.getColor(fX, fY), overlayOnTopOfFirstLayer.getColor(sX, sY)) :
+                img.getColor(sX, sY);
 
               // Move pixel from overlay to first layer
-              overlayIsFirstLayer.setColor(fX, fY, { r: color.r, g: color.g, b: color.b, alpha: 255 });
+              img.setColor(fX, fY, { r: color.r, g: color.g, b: color.b, alpha: 255 });
 
               // Remove overlay pixel
-              overlayIsFirstLayer.setColor(sX, sY, noColor);
+              img.setColor(sX, sY, noColor);
             }
           }
         }
+      }
+
+      overlayIsFirstLayer.toCleanSkin((err) => {
+        if (err) reject(err);
+
+        moveSecondLayer(overlayIsFirstLayer, false);
 
         result.push(overlayIsFirstLayer);
         done();
@@ -526,27 +532,7 @@ export class Image {
       overlayOnTopOfFirstLayer.toCleanSkin((err) => {
         if (err) reject(err);
 
-        for (let i = 0; i < Image.firstSkinLayerAreas.length; i++) {
-          const firstLayerArea = Image.firstSkinLayerAreas[i],
-            secondLayerArea = Image.secondSkinLayerAreas[i];
-
-          for (let j = 0; j < firstLayerArea.w; j++) {
-            for (let k = 0; k < firstLayerArea.h; k++) {
-              const fX = firstLayerArea.x + j,
-                fY = firstLayerArea.y + k,
-                sX = secondLayerArea.x + j,
-                sY = secondLayerArea.y + k;
-
-              const color = Image.mergeColors(overlayOnTopOfFirstLayer.getColor(fX, fY), overlayOnTopOfFirstLayer.getColor(sX, sY));
-
-              // Move pixel from overlay to first layer
-              overlayOnTopOfFirstLayer.setColor(fX, fY, { r: color.r, g: color.g, b: color.b, alpha: 255 });
-
-              // Remove overlay pixel
-              overlayOnTopOfFirstLayer.setColor(sX, sY, noColor);
-            }
-          }
-        }
+        moveSecondLayer(overlayIsFirstLayer, true);
 
         result.push(overlayOnTopOfFirstLayer);
         done();
