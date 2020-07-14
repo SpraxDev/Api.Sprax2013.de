@@ -145,7 +145,7 @@ router.all('/skin/:skinID', (req, res, next) => {
 
                               if (aiTag.id == tagVote.id) {
                                 sum = tagVote.sum;
-                                delete tagVotes[i];
+                                tagVotes.splice(i, 1);
                                 break;
                               }
                             }
@@ -161,7 +161,7 @@ router.all('/skin/:skinID', (req, res, next) => {
                             skin,
                             tags,
                             aiTags,
-                            tagVotes: tagVotes.filter((value) => value != undefined), // cleanup array
+                            tagVotes: tagVotes,
                             seenOn,
                             profileVotes
                           };

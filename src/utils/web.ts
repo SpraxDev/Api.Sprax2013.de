@@ -1,6 +1,5 @@
 import { jar, CookieJar, CoreOptions, get, Response } from 'request';
 import { cfg } from '..';
-import { ApiError } from './utils';
 
 let lastProxy = 0;
 const proxies: { proxy: string, jar: CookieJar }[] =

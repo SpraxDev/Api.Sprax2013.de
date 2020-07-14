@@ -377,10 +377,11 @@ export class dbUtils {
       if (tags.length == 0) return resolve({ skins: [], moreAvailable: false });
 
       // alter Codeteil der jetzt fehlt: SELECT skins.*,COUNT(*) OVER() AS total FROM
+      // TODO: Include user-votes too
       const queryStart = 'SELECT skins.* FROM (WITH tagIDs AS (SELECT id FROM tags WHERE ',
         queryEnd = ') SELECT skin_id,tag_id FROM skin_tags WHERE tag_id IN (SELECT * FROM tagIDs) UNION ' +
           'SELECT skin_id,tag_id FROM tag_votes_ai WHERE tag_id IN (SELECT * FROM tagIDs)) ' +
-          `as outerT JOIN skins ON skins.id = outerT.skin_id LIMIT $${tags.length + 1} OFFSET $${tags.length + 2};`;
+          `as outerT JOIN skins ON skins.id =outerT.skin_id LIMIT $${tags.length + 1} OFFSET $${tags.length + 2};`;
 
       let queryTagFilter = '';
 
