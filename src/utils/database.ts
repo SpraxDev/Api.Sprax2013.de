@@ -466,21 +466,21 @@ export class dbUtils {
 
   /* Tags */
 
-  async getTag(name: string, createWhenMissing: boolean = true): Promise<{ id: string, name: string } | null> {
+  async getTag(name: string, createWhenMissing: boolean = true): Promise<{ id: string, name: string, duplicateOf: string } | null> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
 
-      this.pool.query('SELECT id,name FROM tags WHERE lower(name) =lower($1) LIMIT 1;', [name], (err, res) => {
+      this.pool.query('SELECT * FROM tags WHERE lower(name) =lower($1) LIMIT 1;', [name], (err, res) => {
         if (err) return reject(err);
 
-        if (res.rows.length > 0) return resolve({ id: res.rows[0].id, name: res.rows[0].name });
+        if (res.rows.length > 0) return resolve({ id: res.rows[0].id, name: res.rows[0].name, duplicateOf: res.rows[0].duplicate_of });
         if (!createWhenMissing) return resolve(null);
 
         if (this.pool == null) return reject(new Error('No database connected'));
-        this.pool.query('INSERT INTO tags(name) VALUES($1) ON CONFLICT DO NOTHING RETURNING id,name;', [name], (err, res) => {
+        this.pool.query('INSERT INTO tags(name) VALUES($1) ON CONFLICT DO NOTHING RETURNING *;', [name], (err, res) => {
           if (err) return reject(err);
 
-          return resolve(res.rows.length > 0 ? { id: res.rows[0].id, name: res.rows[0].name } : null);
+          return resolve(res.rows.length > 0 ? { id: res.rows[0].id, name: res.rows[0].name, duplicateOf: res.rows[0].duplicate_of } : null);
         });
       });
     });

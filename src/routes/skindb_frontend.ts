@@ -93,11 +93,11 @@ router.all('/skin/:skinID/vote', (req, res, next) => {
               };
 
               if (req.body.vote == 'unset') {
-                db.removeSkinVote(req.body.user, skin.id, tag.id)
+                db.removeSkinVote(req.body.user, skin.id, tag.duplicateOf || tag.id)
                   .then(done)
                   .catch(next);
               } else {
-                db.setSkinVote(req.body.user, skin.id, tag.id, req.body.vote)
+                db.setSkinVote(req.body.user, skin.id, tag.duplicateOf || tag.id, req.body.vote)
                   .then(done)
                   .catch(next);
               }
