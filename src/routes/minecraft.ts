@@ -3,7 +3,7 @@ import nCache = require('node-cache');
 import net = require('net');
 import path = require('path');
 
-import { Router, Request } from 'express';
+import { Router, Request, Response } from 'express';
 
 import { createCamera, createModel } from '../utils/modelRender';
 import { db } from '../index';
@@ -349,13 +349,6 @@ router.all('/history/:user?', (req, res, next) => {
 
 /* Skin Routes */
 router.all('/skin/:user?', (req, res, next) => {
-  const sendDownloadHeaders = (mimeType: string, download: boolean, fileIdentifier: string): void => {
-    res.type(mimeType);
-    if (download) {
-      res.set('Content-Disposition', `attachment;filename=${fileIdentifier}.png`);
-    }
-  };
-
   restful(req, res, {
     get: () => {
       if (!req.params.user) return next(new ErrorBuilder().invalidParams('url', [{ param: 'user', condition: 'user.length > 0' }]));
@@ -382,25 +375,25 @@ router.all('/skin/:user?', (req, res, next) => {
                       img.toCleanSkinBuffer((err, png) => {
                         if (err) return next(err);
 
-                        sendDownloadHeaders(mimeType, download, mcUser.name);
+                        sendDownloadHeaders(res, mimeType, download, mcUser.name);
                         setCaching(res, true, true, 60).send(png);
                       });
                     });
                   } else {
-                    sendDownloadHeaders(mimeType, download, mcUser.name);
+                    sendDownloadHeaders(res, mimeType, download, mcUser.name);
                     setCaching(res, true, true, 60).send(httpRes.body);
                   }
                 } else {
                   if (httpRes.res.statusCode != 404) ApiError.log(`${skinURL} returned HTTP-Code ${httpRes.res.statusCode}`);
 
-                  sendDownloadHeaders(mimeType, download, mcUser.name);
+                  sendDownloadHeaders(res, mimeType, download, mcUser.name);
 
                   setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
                 }
               })
               .catch(next);
           } else {
-            sendDownloadHeaders(mimeType, download, mcUser.name);
+            sendDownloadHeaders(res, mimeType, download, mcUser.name);
 
             setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
           }
@@ -418,12 +411,12 @@ router.all('/skin/:user?', (req, res, next) => {
                   img.toCleanSkinBuffer((err, png) => {
                     if (err) return next(err);
 
-                    sendDownloadHeaders(mimeType, download, getFileNameFromURL(skinURL));
+                    sendDownloadHeaders(res, mimeType, download, getFileNameFromURL(skinURL));
                     setCaching(res, true, true, 60 * 60).send(png);
                   });
                 });
               } else {
-                sendDownloadHeaders(mimeType, download, getFileNameFromURL(skinURL));
+                sendDownloadHeaders(res, mimeType, download, getFileNameFromURL(skinURL));
                 setCaching(res, true, true, 60 * 60).send(httpRes.body);
               }
             } else {
@@ -438,14 +431,6 @@ router.all('/skin/:user?', (req, res, next) => {
 });
 
 router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
-  const sendDownloadHeaders = (mimeType: string, download: boolean, fileIdentifier: string): void => {
-    res.type(mimeType);
-
-    if (download) {
-      res.set('Content-Disposition', `attachment;filename=${fileIdentifier}.png`);
-    }
-  };
-
   restful(req, res, {
     get: () => {
       const is3D = typeof req.params['3d'] == 'string' && req.params['3d'].toLowerCase() == '3d';
@@ -486,7 +471,7 @@ router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
                   renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : mcUser.modelSlim, is3D, size, (err, png) => {
                     if (err || !png) return next(err || new Error());
 
-                    sendDownloadHeaders(mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
+                    sendDownloadHeaders(res, mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
                     setCaching(res, true, true, 60).send(png);
                   });
                 });
@@ -499,7 +484,7 @@ router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
               renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : 'auto', is3D, size, (err, png) => {
                 if (err || !png) return next(err || new Error());
 
-                sendDownloadHeaders(mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
+                sendDownloadHeaders(res, mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
                 setCaching(res, true, true, 60).send(png);
               });
             });
@@ -521,7 +506,7 @@ router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
                 renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : 'auto', is3D, size, (err, png) => {
                   if (err || !png) return next(err || new Error());
 
-                  sendDownloadHeaders(mimeType, download, `${getFileNameFromURL(skinURL)}-${skinArea.toLowerCase()}`);
+                  sendDownloadHeaders(res, mimeType, download, `${getFileNameFromURL(skinURL)}-${skinArea.toLowerCase()}`);
                   setCaching(res, true, true, 60 * 60 * 24 * 30 /*30d*/).send(png);
                 });
               });
@@ -538,14 +523,6 @@ router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
 
 /* Block Routes */
 router.all('/render/block', (req, res, next) => {
-  const sendDownloadHeaders = (mimeType: string, download: boolean, fileIdentifier: string): void => {
-    res.type(mimeType);
-
-    if (download) {
-      res.set('Content-Disposition', `attachment;filename=${fileIdentifier}.png`);
-    }
-  };
-
   restful(req, res, {
     get: () => {
       const size: number | null = typeof req.query.size == 'string' ? toInt(req.query.size) : 150;
@@ -567,7 +544,7 @@ router.all('/render/block', (req, res, next) => {
           renderBlock(img, size, (err, png) => {
             if (err || !png) return next(err || new Error());
 
-            sendDownloadHeaders(mimeType, download, `block-${(req.body as Buffer).length}`);
+            sendDownloadHeaders(res, mimeType, download, `block-${(req.body as Buffer).length}`);
             setCaching(res, false, false).send(png);
           });
         });
@@ -620,14 +597,6 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
 });
 
 router.all('/capes/:capeType/:user?/render', (req, res, next) => {
-  const sendDownloadHeaders = (mimeType: string, download: boolean, fileIdentifier: string): void => {
-    res.type(mimeType);
-
-    if (download) {
-      res.set('Content-Disposition', `attachment;filename=${fileIdentifier}.png`);
-    }
-  };
-
   const renderCape = function (cape: Buffer, type: CapeType, size: number, callback: (err: Error | null, png: Buffer | null) => void): void {
     Image.fromImg(cape, (err, capeImg) => {
       if (err || !capeImg) return callback(err, null);
@@ -694,7 +663,7 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
                 renderCape(httpRes.body, capeType, size, (err, png) => {
                   if (err || !png) return next(err);
 
-                  sendDownloadHeaders(mimeType, download, `${mcUser.name}-${capeType.toLowerCase()}`);
+                  sendDownloadHeaders(res, mimeType, download, `${mcUser.name}-${capeType.toLowerCase()}`);
                   setCaching(res, true, true, 60).send(png);
                 });
               })
@@ -712,7 +681,7 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
               renderCape(httpRes.body, capeType, size, (err, png) => {
                 if (err || !png) return next(err);
 
-                sendDownloadHeaders(mimeType, download, `${getFileNameFromURL(capeURL)}-${capeType.toLowerCase()}`);
+                sendDownloadHeaders(res, mimeType, download, `${getFileNameFromURL(capeURL)}-${capeType.toLowerCase()}`);
                 setCaching(res, true, true, 60 * 60).send(png);
               });
             } else {
@@ -840,6 +809,14 @@ router.all('/servers/blocked/check', (req, res, next) => {
 });
 
 /* Helper */
+function sendDownloadHeaders(res: Response, mimeType: string, download: boolean, fileIdentifier: string, fileExtension: string = 'png'): void {
+  res.type(mimeType);
+
+  if (download) {
+    res.set('Content-Disposition', `attachment;filename=${fileIdentifier}.${fileExtension}`);
+  }
+}
+
 export function getByUsername(username: string, at: number | string | null = null, callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void): void {
   if (typeof at != 'number' || (typeof at == 'number' && at > Date.now())) {
     at = null;
