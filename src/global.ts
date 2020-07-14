@@ -78,7 +78,8 @@ export interface SkinDBSkin {
   readonly tags: { id: string, name: string }[];
   readonly aiTags: { id: string, name: string, sum: number }[];
   readonly tagVotes: { id: string, name: string, sum: number }[];
-  readonly seen_on: { name: string, id: string }[];
+  readonly seenOn: { name: string, id: string }[];
+  readonly profileVotes: { id: string, vote: boolean }[] | undefined;
 }
 
 export interface SkinDBSkins {

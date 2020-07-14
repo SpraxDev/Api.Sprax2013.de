@@ -563,6 +563,27 @@ export class dbUtils {
     });
   }
 
+  async getSkinVotes(skinID: string, profileID: string): Promise<{ id: string, vote: boolean }[]> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('SELECT tag_id,vote FROM tag_votes WHERE skin_id =$1 AND profile_id =$2;',
+        [skinID, profileID], (err, res) => {
+          if (err) return reject(err);
+
+          const result = [];
+          for (const row of res.rows) {
+            result.push({
+              id: row.tag_id,
+              vote: row.vote
+            });
+          }
+
+          resolve(result);
+        });
+    });
+  }
+
   async removeSkinVote(profileID: string, skinID: string, tagID: string): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));

@@ -76,7 +76,7 @@ router.all('/skin/:skinID/vote', (req, res, next) => {
       const invalidBody: { param: string, condition: string }[] = [];
       if (!req.body.user || !isUUID(req.body.user)) invalidBody.push({ param: 'user', condition: 'Valid UUID v4' });
       if (typeof req.body.tag != 'string') invalidBody.push({ param: 'tag', condition: 'String value' });
-      if (typeof req.body.vote != 'boolean') invalidBody.push({ param: 'vote', condition: 'Boolean value' });
+      if (typeof req.body.vote != 'boolean' && req.body.vote != 'unset') invalidBody.push({ param: 'vote', condition: `Boolean value or 'unset'` });
       if (invalidBody.length > 0) return next(new ErrorBuilder().invalidBody(invalidBody));
 
       db.getSkin(req.params.skinID)
@@ -87,12 +87,20 @@ router.all('/skin/:skinID/vote', (req, res, next) => {
             .then((tag) => {
               if (!tag) return next(new ErrorBuilder().notFound('tag for that name'));
 
-              db.setSkinVote(req.body.user, skin.id, tag.id, req.body.vote)
-                .then(() => {
-                  return setCaching(res, false, false)
-                    .send({ success: true });
-                })
-                .catch(next);
+              const done = () => {
+                return setCaching(res, false, false)
+                  .send({ success: true });
+              };
+
+              if (req.body.vote == 'unset') {
+                db.removeSkinVote(req.body.user, skin.id, tag.id)
+                  .then(done)
+                  .catch(next);
+              } else {
+                db.setSkinVote(req.body.user, skin.id, tag.id, req.body.vote)
+                  .then(done)
+                  .catch(next);
+              }
             })
             .catch(next);
         })
@@ -106,6 +114,7 @@ router.all('/skin/:skinID', (req, res, next) => {
     get: () => {
       if (!db.isAvailable()) return next(new ErrorBuilder().serviceUnavailable('SkinDB-Frontend route can only work while using a database'));
       if (!isNumber(req.params.skinID)) return next(new ErrorBuilder().invalidParams('url', [{ param: 'skinID', condition: 'Numeric string' }]));
+      if (req.query.profile && !isUUID(req.query.profile as string)) return next(new ErrorBuilder().invalidParams('query', [{ param: 'profile', condition: 'Valid UUID v4' }]));
 
       db.getSkin(req.params.skinID)
         .then((skin) => {
@@ -118,7 +127,13 @@ router.all('/skin/:skinID', (req, res, next) => {
                   db.getSkinTagVotes(skin.id)
                     .then((tagVotes) => {
                       db.getSkinSeenOn(skin.id)
-                        .then((seenOn) => {
+                        .then(async (seenOn): Promise<void> => {
+                          let profileVotes = undefined;
+
+                          if (req.query.profile) {
+                            profileVotes = await db.getSkinVotes(skin.id, req.query.profile as string);
+                          }
+
                           const aiTags = [];
 
                           // Are votes present for tags the AI maintains? Move them.
@@ -147,7 +162,8 @@ router.all('/skin/:skinID', (req, res, next) => {
                             tags,
                             aiTags,
                             tagVotes: tagVotes.filter((value) => value != undefined), // cleanup array
-                            seen_on: seenOn
+                            seenOn,
+                            profileVotes
                           };
 
                           setCaching(res, true, false, 60, 60)
