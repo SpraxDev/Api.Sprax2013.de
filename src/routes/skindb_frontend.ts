@@ -66,6 +66,41 @@ router.all('/account/:uuid', (req, res, next) => {
   });
 });
 
+router.all('/skin/:skinID/vote', (req, res, next) => {
+  restful(req, res, {
+    post: () => {
+      if (!db.isAvailable()) return next(new ErrorBuilder().serviceUnavailable('SkinDB-Frontend route can only work while using a database'));
+      if (!isNumber(req.params.skinID)) return next(new ErrorBuilder().invalidParams('url', [{ param: 'skinID', condition: 'Numeric string' }]));
+
+      // Check for valid body
+      const invalidBody: { param: string, condition: string }[] = [];
+      if (!req.body.user || !isUUID(req.body.user)) invalidBody.push({ param: 'user', condition: 'Valid UUID v4' });
+      if (typeof req.body.tag != 'string') invalidBody.push({ param: 'tag', condition: 'String value' });
+      if (typeof req.body.vote != 'boolean') invalidBody.push({ param: 'vote', condition: 'Boolean value' });
+      if (invalidBody.length > 0) return next(new ErrorBuilder().invalidBody(invalidBody));
+
+      db.getSkin(req.params.skinID)
+        .then((skin) => {
+          if (!skin) return next(new ErrorBuilder().notFound('skin for that id'));
+
+          db.getTag(req.body.tag)
+            .then((tag) => {
+              if (!tag) return next(new ErrorBuilder().notFound('tag for that name'));
+
+              db.setSkinVote(req.body.user, skin.id, tag.id, req.body.vote)
+                .then(() => {
+                  return setCaching(res, false, false)
+                    .send({ success: true });
+                })
+                .catch(next);
+            })
+            .catch(next);
+        })
+        .catch(next);
+    }
+  });
+});
+
 router.all('/skin/:skinID', (req, res, next) => {
   restful(req, res, {
     get: () => {
@@ -79,22 +114,51 @@ router.all('/skin/:skinID', (req, res, next) => {
           db.getSkinTags(skin.id)
             .then((tags) => {
               db.getSkinAiTags(skin.id)
-                .then((aiTags) => {
-                  db.getSkinSeenOn(skin.id)
-                    .then((seenOn) => {
-                      const result: SkinDBSkin = {
-                        skin,
-                        tags,
-                        aiTags,
-                        seen_on: seenOn
-                      };
+                .then((rawAITags) => {
+                  db.getSkinTagVotes(skin.id)
+                    .then((tagVotes) => {
+                      db.getSkinSeenOn(skin.id)
+                        .then((seenOn) => {
+                          const aiTags = [];
 
-                      setCaching(res, true, false, 60, 60)
-                        .send(result);
+                          // Are votes present for tags the AI maintains? Move them.
+                          for (const aiTag of rawAITags) {
+                            let sum = 0;
+
+                            for (let i = 0; i < tagVotes.length; i++) {
+                              const tagVote = tagVotes[i];
+
+                              if (aiTag.id == tagVote.id) {
+                                sum = tagVote.sum;
+                                delete tagVotes[i];
+                                break;
+                              }
+                            }
+
+                            aiTags.push({
+                              id: aiTag.id,
+                              name: aiTag.name,
+                              sum
+                            });
+                          }
+
+                          const result: SkinDBSkin = {
+                            skin,
+                            tags,
+                            aiTags,
+                            tagVotes: tagVotes.filter((value) => value != undefined), // cleanup array
+                            seen_on: seenOn
+                          };
+
+                          setCaching(res, true, false, 60, 60)
+                            .send(result);
+                        })
+                        .catch(next);
                     })
                     .catch(next);
                 })
                 .catch(next);
+
             })
             .catch(next);
         })
