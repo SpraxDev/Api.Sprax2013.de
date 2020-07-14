@@ -3,7 +3,7 @@ import nCache = require('node-cache');
 import net = require('net');
 import path = require('path');
 
-import { Router, Request } from 'express';
+import { Router, Request, Response } from 'express';
 
 import { createCamera, createModel } from '../utils/modelRender';
 import { db } from '../index';
@@ -61,6 +61,16 @@ const rendering = {
       cam.setScale({ x: 4.49, y: 4.49 });
 
       return cam;
+    }(),
+
+    block: function () {
+      const cam = createCamera(256, 256);
+      cam.setPosition({ x: -1.25, y: 1.25, z: -1.25 });
+      cam.setRotation({ x: Math.PI / 4, y: Math.PI / 4, z: 0 });
+      cam.setPostPosition({ x: 0, y: .145 });
+      cam.setScale({ x: 2.5, y: 2.5 });
+
+      return cam;
     }()
   },
 
@@ -70,7 +80,9 @@ const rendering = {
     modelSteve: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'steve.obj'), 64, 64),
     modelSteveNoOverlay: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'steveNoOverlay.obj'), 64, 64),
     modelSteveHead: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'steveHead.obj'), 64, 64),
-    modelSteveHeadNoOverlay: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'steveHeadNoOverlay.obj'), 64, 64)
+    modelSteveHeadNoOverlay: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'steveHeadNoOverlay.obj'), 64, 64),
+
+    block: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'block.obj'), 64, 64)
   }
 };
 
@@ -109,17 +121,9 @@ userCache.on('set', async (key: string, value: MinecraftUser | Error | null) => 
           try {
             const importedTextures = await importByTexture(value.textureValue, value.textureSignature, value.userAgent);
 
-            if (importedTextures.skin) {
-              try {
-                await db.addSkinToUserHistory(value, importedTextures.skin);
-              } catch (err) {
-                ApiError.log(`Could not update skin-history in database`, { skin: importedTextures.skin.id, profile: value.id, stack: err.stack });
-              }
-            }
-
             if (importedTextures.cape) {
               try {
-                await db.addCapeToUserHistory(value, importedTextures.cape);
+                await db.addCapeToUserHistory(value, importedTextures.cape, new Date(MinecraftUser.extractMinecraftProfileTextureProperty(value.textureValue).timestamp));
               } catch (err) {
                 ApiError.log(`Could not update cape-history in database`, { cape: importedTextures.cape.id, profile: value.id, stack: err.stack });
               }
@@ -138,12 +142,14 @@ userCache.on('set', async (key: string, value: MinecraftUser | Error | null) => 
               .then((cape) => {
                 if (!cape) return resolve();
 
-                db.addCapeToUserHistory(value, cape)
-                  .then(resolve)
-                  .catch((err) => {
-                    ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
-                    reject(err);
-                  });
+                if (capeType != 'MOJANG') {
+                  db.addCapeToUserHistory(value, cape, value.textureValue ? new Date(MinecraftUser.extractMinecraftProfileTextureProperty(value.textureValue).timestamp) : 'now')
+                    .then(resolve)
+                    .catch((err) => {
+                      ApiError.log(`Could not update cape-history in database`, { cape: cape.id, profile: value.id, stack: err.stack });
+                      reject(err);
+                    });
+                }
               })
               .catch((err) => {
                 ApiError.log(`Could not import cape(type=${capeType}) from profile`, { capeURL: capeURL, profile: value.id, stack: err.stack });
@@ -343,13 +349,6 @@ router.all('/history/:user?', (req, res, next) => {
 
 /* Skin Routes */
 router.all('/skin/:user?', (req, res, next) => {
-  const sendDownloadHeaders = (mimeType: string, download: boolean, fileIdentifier: string): void => {
-    res.type(mimeType);
-    if (download) {
-      res.set('Content-Disposition', `attachment;filename=${fileIdentifier}.png`);
-    }
-  };
-
   restful(req, res, {
     get: () => {
       if (!req.params.user) return next(new ErrorBuilder().invalidParams('url', [{ param: 'user', condition: 'user.length > 0' }]));
@@ -376,25 +375,25 @@ router.all('/skin/:user?', (req, res, next) => {
                       img.toCleanSkinBuffer((err, png) => {
                         if (err) return next(err);
 
-                        sendDownloadHeaders(mimeType, download, mcUser.name);
+                        sendDownloadHeaders(res, mimeType, download, mcUser.name);
                         setCaching(res, true, true, 60).send(png);
                       });
                     });
                   } else {
-                    sendDownloadHeaders(mimeType, download, mcUser.name);
+                    sendDownloadHeaders(res, mimeType, download, mcUser.name);
                     setCaching(res, true, true, 60).send(httpRes.body);
                   }
                 } else {
                   if (httpRes.res.statusCode != 404) ApiError.log(`${skinURL} returned HTTP-Code ${httpRes.res.statusCode}`);
 
-                  sendDownloadHeaders(mimeType, download, mcUser.name);
+                  sendDownloadHeaders(res, mimeType, download, mcUser.name);
 
                   setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
                 }
               })
               .catch(next);
           } else {
-            sendDownloadHeaders(mimeType, download, mcUser.name);
+            sendDownloadHeaders(res, mimeType, download, mcUser.name);
 
             setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
           }
@@ -412,12 +411,12 @@ router.all('/skin/:user?', (req, res, next) => {
                   img.toCleanSkinBuffer((err, png) => {
                     if (err) return next(err);
 
-                    sendDownloadHeaders(mimeType, download, getFileNameFromURL(skinURL));
+                    sendDownloadHeaders(res, mimeType, download, getFileNameFromURL(skinURL));
                     setCaching(res, true, true, 60 * 60).send(png);
                   });
                 });
               } else {
-                sendDownloadHeaders(mimeType, download, getFileNameFromURL(skinURL));
+                sendDownloadHeaders(res, mimeType, download, getFileNameFromURL(skinURL));
                 setCaching(res, true, true, 60 * 60).send(httpRes.body);
               }
             } else {
@@ -432,14 +431,6 @@ router.all('/skin/:user?', (req, res, next) => {
 });
 
 router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
-  const sendDownloadHeaders = (mimeType: string, download: boolean, fileIdentifier: string): void => {
-    res.type(mimeType);
-
-    if (download) {
-      res.set('Content-Disposition', `attachment;filename=${fileIdentifier}.png`);
-    }
-  };
-
   restful(req, res, {
     get: () => {
       const is3D = typeof req.params['3d'] == 'string' && req.params['3d'].toLowerCase() == '3d';
@@ -480,7 +471,7 @@ router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
                   renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : mcUser.modelSlim, is3D, size, (err, png) => {
                     if (err || !png) return next(err || new Error());
 
-                    sendDownloadHeaders(mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
+                    sendDownloadHeaders(res, mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
                     setCaching(res, true, true, 60).send(png);
                   });
                 });
@@ -493,7 +484,7 @@ router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
               renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : 'auto', is3D, size, (err, png) => {
                 if (err || !png) return next(err || new Error());
 
-                sendDownloadHeaders(mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
+                sendDownloadHeaders(res, mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
                 setCaching(res, true, true, 60).send(png);
               });
             });
@@ -515,7 +506,7 @@ router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
                 renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : 'auto', is3D, size, (err, png) => {
                   if (err || !png) return next(err || new Error());
 
-                  sendDownloadHeaders(mimeType, download, `${getFileNameFromURL(skinURL)}-${skinArea.toLowerCase()}`);
+                  sendDownloadHeaders(res, mimeType, download, `${getFileNameFromURL(skinURL)}-${skinArea.toLowerCase()}`);
                   setCaching(res, true, true, 60 * 60 * 24 * 30 /*30d*/).send(png);
                 });
               });
@@ -526,6 +517,38 @@ router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
           })
           .catch(next);
       }
+    }
+  });
+});
+
+/* Block Routes */
+router.all('/render/block', (req, res, next) => {
+  restful(req, res, {
+    get: () => {
+      const size: number | null = typeof req.query.size == 'string' ? toInt(req.query.size) : 150;
+
+      if ((req.headers['content-type'] || '').toLowerCase() != 'image/png') return next(new ErrorBuilder().invalidBody([{ param: 'Content-Type', condition: 'image/png' }]));
+      if (!(req.body instanceof Buffer)) return next(new ErrorBuilder().invalidBody([{ param: 'body', condition: 'Valid png under 3MB' }]));
+      if (!size || size < 8 || size > 1024) return next(new ErrorBuilder().invalidParams('query', [{ param: 'size', condition: 'size >= 8 and size <= 1024' }]));
+
+      const download: boolean = typeof req.query.download == 'string' ? toBoolean(req.query.download) : false;
+      const mimeType: string = download ? 'application/octet-stream' : 'png';
+
+      Image.fromImg(req.body, (err, img) => {
+        if (err || !img) return next(new ErrorBuilder().invalidBody([{ param: 'body', condition: 'Valid png' }]));
+        if (img.img.info.width != img.img.info.height) return next(new ErrorBuilder().invalidBody([{ param: 'body', condition: 'Image width equals Image height' }]));
+
+        img.resize(64, 64, (err, img) => {
+          if (err || !img) return next(new ErrorBuilder().invalidBody([{ param: 'body', condition: 'Please provide an texture with dimensions of 64x64 pixels' }]));
+
+          renderBlock(img, size, (err, png) => {
+            if (err || !png) return next(err || new Error());
+
+            sendDownloadHeaders(res, mimeType, download, `block-${(req.body as Buffer).length}`);
+            setCaching(res, false, false).send(png);
+          });
+        });
+      });
     }
   });
 });
@@ -574,14 +597,6 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
 });
 
 router.all('/capes/:capeType/:user?/render', (req, res, next) => {
-  const sendDownloadHeaders = (mimeType: string, download: boolean, fileIdentifier: string): void => {
-    res.type(mimeType);
-
-    if (download) {
-      res.set('Content-Disposition', `attachment;filename=${fileIdentifier}.png`);
-    }
-  };
-
   const renderCape = function (cape: Buffer, type: CapeType, size: number, callback: (err: Error | null, png: Buffer | null) => void): void {
     Image.fromImg(cape, (err, capeImg) => {
       if (err || !capeImg) return callback(err, null);
@@ -648,7 +663,7 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
                 renderCape(httpRes.body, capeType, size, (err, png) => {
                   if (err || !png) return next(err);
 
-                  sendDownloadHeaders(mimeType, download, `${mcUser.name}-${capeType.toLowerCase()}`);
+                  sendDownloadHeaders(res, mimeType, download, `${mcUser.name}-${capeType.toLowerCase()}`);
                   setCaching(res, true, true, 60).send(png);
                 });
               })
@@ -666,7 +681,7 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
               renderCape(httpRes.body, capeType, size, (err, png) => {
                 if (err || !png) return next(err);
 
-                sendDownloadHeaders(mimeType, download, `${getFileNameFromURL(capeURL)}-${capeType.toLowerCase()}`);
+                sendDownloadHeaders(res, mimeType, download, `${getFileNameFromURL(capeURL)}-${capeType.toLowerCase()}`);
                 setCaching(res, true, true, 60 * 60).send(png);
               });
             } else {
@@ -794,6 +809,14 @@ router.all('/servers/blocked/check', (req, res, next) => {
 });
 
 /* Helper */
+function sendDownloadHeaders(res: Response, mimeType: string, download: boolean, fileIdentifier: string, fileExtension: string = 'png'): void {
+  res.type(mimeType);
+
+  if (download) {
+    res.set('Content-Disposition', `attachment;filename=${fileIdentifier}.${fileExtension}`);
+  }
+}
+
 export function getByUsername(username: string, at: number | string | null = null, callback: (err: Error | null, apiRes: { id: string, name: string } | null) => void): void {
   if (typeof at != 'number' || (typeof at == 'number' && at > Date.now())) {
     at = null;
@@ -1212,5 +1235,18 @@ function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean
         return img.toPngBuffer((err, png) => callback(err || undefined, png || undefined), size, size);
       });
     }
+  });
+}
+
+function renderBlock(texture: Image, size: number = 512, callback: (err?: Error, resultImg?: Buffer) => void) {
+  const cam = rendering.cams.block,
+    model = rendering.models.block;
+
+  return Image.fromRaw(Buffer.from(cam.render(model, texture.img.data)), cam.width, cam.height, 4, (err, img) => {
+    if (err || !img) return callback(err || new Error());
+
+    img.toPngBuffer((err, png) => {
+      return callback(err || undefined, png || undefined);
+    }, size, size);
   });
 }

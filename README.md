@@ -23,7 +23,7 @@ I'm currently working on SkinDB. It will make great use of this API and provide 
 It aims to be highly transparent to everyone.
 Thanks to this transparency it is easily compliant with most data protection laws e.g. the **[GDPR](https://en.wikipedia.org/wiki/General_Data_Protection_Regulation)**.
 
-This API provides data in JSON format. I can't even display an ad in some corner if I wanted to. *(consider supporting me on [Patreon](https://www.patreon.com/bePatron?u=11714503&redirect_uri=https%3A%2F%2Fgithub.com%2FSprax2013%2FApi.Sprax2013.de))*
+This API provides data in JSON format. I can't even display an ad in some corner if I wanted to. *(consider supporting me on [Patreon](https://www.patreon.com/bePatron?u=11714503&redirect_uri=https%3A%2F%2Fgithub.com%SpraxDev%2FApi.Sprax2013.de))*
 
 
 ## Setup
