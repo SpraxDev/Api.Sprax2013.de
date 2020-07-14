@@ -495,36 +495,11 @@ export class dbUtils {
 
         const tags = [];
         for (const row of res.rows) {
-          tags.push({
-            id: row.tag_id,
-            name: row.name
-          });
+          tags.push(RowUtils.toTag(row));
         }
 
         resolve(tags);
       });
-    });
-  }
-
-  async getSkinTagVotes(skinID: string): Promise<{ id: string, name: string, sum: number }[]> {
-    return new Promise((resolve, reject) => {
-      if (this.pool == null) return reject(new Error('No database connected'));
-
-      this.pool.query('SELECT tag_id,name,SUM(CASE WHEN vote THEN 1 ELSE -1 END) as sum FROM tag_votes JOIN tags ON tag_votes.tag_id =tags.id WHERE skin_id =$1 GROUP BY tag_id,name;',
-        [skinID], (err, res) => {
-          if (err) return reject(err);
-
-          const tags = [];
-          for (const row of res.rows) {
-            tags.push({
-              id: row.tag_id,
-              name: row.name,
-              sum: row.sum
-            });
-          }
-
-          resolve(tags);
-        });
     });
   }
 
@@ -537,10 +512,7 @@ export class dbUtils {
 
         const tags = [];
         for (const row of res.rows) {
-          tags.push({
-            id: row.tag_id,
-            name: row.name
-          });
+          tags.push(RowUtils.toTag(row));
         }
 
         resolve(tags);
@@ -549,6 +521,24 @@ export class dbUtils {
   }
 
   /* Tag-Votes */
+
+  async getSkinTagVotes(skinID: string): Promise<{ id: string, name: string, sum: number }[]> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('SELECT tag_id,name,SUM(CASE WHEN vote THEN 1 ELSE -1 END) as sum FROM tag_votes JOIN tags ON tag_votes.tag_id =tags.id WHERE skin_id =$1 GROUP BY tag_id,name;',
+        [skinID], (err, res) => {
+          if (err) return reject(err);
+
+          const tags = [];
+          for (const row of res.rows) {
+            tags.push(RowUtils.toTagWithSum(row));
+          }
+
+          resolve(tags);
+        });
+    });
+  }
 
   async setSkinVote(profileID: string, skinID: string, tagID: string, vote: boolean): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -821,5 +811,19 @@ class RowUtils {
       name: row.name,
       internal: row.internal
     };
+  }
+
+  static toTag(row: any): { id: string, name: string } {
+    return {
+      id: row.tag_id,
+      name: row.name
+    };
+  }
+
+  static toTagWithSum(row: any): { id: string, name: string, sum: number } {
+    const result = this.toTag(row) as { id: string, name: string, sum: number };
+    result.sum = row.sum;
+
+    return result;
   }
 }
