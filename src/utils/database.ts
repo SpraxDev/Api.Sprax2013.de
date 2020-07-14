@@ -24,6 +24,8 @@ export class dbUtils {
     }
   }
 
+  /* Profiles */
+
   async updateUser(mcUser: MinecraftUser): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
@@ -117,6 +119,8 @@ export class dbUtils {
     });
   }
 
+  /* UserAgent */
+
   getUserAgent(name: string, internal: boolean, callback: (err: Error | null, userAgent: UserAgent | null) => void): void {
     if (this.pool == null) return callback(null, null);
 
@@ -150,6 +154,20 @@ export class dbUtils {
               });
           }
         });
+      });
+    });
+  }
+
+  /* Skins */
+
+  async getSkin(skinID: string): Promise<Skin | null> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query(`SELECT * FROM skins WHERE id =$1;`, [skinID], (err, res) => {
+        if (err) return reject(err);
+
+        resolve(res.rows.length == 0 ? null : RowUtils.toSkin(res.rows[0]));
       });
     });
   }
@@ -328,6 +346,238 @@ export class dbUtils {
     });
   }
 
+  // TODO: rename to #getSkinList
+  async getNewestSkins(limit: number | 'ALL' = 12, offset: number = 0, sortASC = false): Promise<{ skins: Skin[], moreAvailable: boolean }> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query(`SELECT * FROM skins ORDER BY added ${sortASC ? '' : 'DESC'} LIMIT $1 OFFSET $2;`,
+        [typeof limit == 'number' ? limit + 1 : limit, offset], (err, res) => {
+          if (err) return reject(err);
+
+          const result = [];
+
+          for (const row of res.rows) {
+            result.push(RowUtils.toSkin(row));
+          }
+
+          let moreAvailable = limit == 'ALL';
+          if (!moreAvailable && result.length > limit) {
+            result.pop();
+            moreAvailable = true;
+          }
+
+          resolve({ skins: result, moreAvailable });
+        });
+    });
+  }
+
+  async getSkins(tags: string[], limit: number | 'ALL' = 6, offset: number = 0): Promise<{ skins: Skin[], moreAvailable: boolean }> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+      if (tags.length == 0) return resolve({ skins: [], moreAvailable: false });
+
+      // alter Codeteil der jetzt fehlt: SELECT skins.*,COUNT(*) OVER() AS total FROM
+      const queryStart = 'SELECT skins.* FROM (WITH tagIDs AS (SELECT id FROM tags WHERE ',
+        queryEnd = ') SELECT skin_id,tag_id FROM skin_tags WHERE tag_id IN (SELECT * FROM tagIDs) UNION ' +
+          'SELECT skin_id,tag_id FROM tag_votes_ai WHERE tag_id IN (SELECT * FROM tagIDs)) ' +
+          `as outerT JOIN skins ON skins.id = outerT.skin_id LIMIT $${tags.length + 1} OFFSET $${tags.length + 2};`;
+
+      let queryTagFilter = '';
+
+      for (let i = 0; i < tags.length; i++) {
+        if (i != 0) {
+          queryTagFilter += ' OR ';
+        }
+
+        queryTagFilter += `lower(name) =lower($${i + 1})`;
+      }
+
+      this.pool.query(queryStart + queryTagFilter + queryEnd, [...tags, typeof limit == 'number' ? limit + 1 : limit, offset], (err, res) => {
+        if (err) return reject(err);
+
+        const result = [];
+
+        for (const row of res.rows) {
+          result.push(RowUtils.toSkin(row));
+        }
+
+        let moreAvailable = limit == 'ALL';
+        if (!moreAvailable && result.length > limit) {
+          result.pop();
+          moreAvailable = true;
+        }
+
+        resolve({ skins: result, moreAvailable });
+      });
+    });
+  }
+
+  // TODO: Make sure that not too many are returned at once using LIMIT and OFFSET
+  async getSkinSeenOn(skinID: string): Promise<{ name: string, id: string }[]> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('SELECT * FROM(SELECT DISTINCT ON(id) profiles.raw_json->>\'name\' as name, profiles.id,(SELECT EXISTS(SELECT * FROM (SELECT * FROM skin_history as inner_skin_history WHERE inner_skin_history.profile_id =id ORDER BY added DESC LIMIT 1)x WHERE skin_id =$1)) as exists FROM skin_history JOIN profiles ON id =profile_id WHERE skin_id =$1)x2 ORDER BY name,exists DESC LIMIT 600;', [skinID], (err, res) => {
+        if (err) return reject(err);
+
+        let result = [];
+        for (const row of res.rows) {
+          result.push({
+            name: row.name,
+            id: row.id
+          });
+        }
+
+        resolve(result);
+      });
+    });
+  }
+
+  async getMostUsedSkinsLast7Days(): Promise<{ id: string, count: number }[]> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('SELECT skin_id, COUNT(*) as count FROM skin_history JOIN skins ON skin_history.skin_id = skins.id WHERE duplicate_of IS NULL AND skins.added >= CURRENT_TIMESTAMP - interval \'7 DAYS\' GROUP BY skin_id ORDER BY count DESC LIMIT 10;', [], (err, res) => {
+        if (err) return reject(err);
+
+        let result = [];
+        for (const row of res.rows) {
+          result.push({
+            id: row.skin_id,
+            count: row.count
+          });
+        }
+
+        resolve(result);
+      });
+    });
+  }
+
+  getSkinImage(skinID: string, type: 'clean' | 'original', callback: (err: Error | null, img: Buffer | null) => void): void {
+    if (this.pool == null) return callback(null, null);
+
+    this.pool.query(`SELECT ${type == 'original' ? 'original' : 'clean'} as img FROM skin_images WHERE skin_id =$1;`, [skinID], (err, res) => {
+      if (err) return callback(err, null);
+
+      callback(null, res.rows.length > 0 ? res.rows[0].img : null);
+    });
+  }
+
+  /* Tags */
+
+  async getTag(name: string, createWhenMissing: boolean = true): Promise<{ id: string, name: string } | null> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('SELECT id,name FROM tags WHERE lower(name) =lower($1) LIMIT 1;', [name], (err, res) => {
+        if (err) return reject(err);
+
+        if (res.rows.length > 0) return resolve({ id: res.rows[0].id, name: res.rows[0].name });
+        if (!createWhenMissing) return resolve(null);
+
+        if (this.pool == null) return reject(new Error('No database connected'));
+        this.pool.query('INSERT INTO tags(name) VALUES($1) ON CONFLICT DO NOTHING RETURNING id,name;', [name], (err, res) => {
+          if (err) return reject(err);
+
+          return resolve(res.rows.length > 0 ? { id: res.rows[0].id, name: res.rows[0].name } : null);
+        });
+      });
+    });
+  }
+
+  async getSkinTags(skinID: string): Promise<{ id: string, name: string }[]> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('SELECT tag_id,name FROM skin_tags JOIN tags ON skin_tags.tag_id =tags.id WHERE skin_id =$1;', [skinID], (err, res) => {
+        if (err) return reject(err);
+
+        const tags = [];
+        for (const row of res.rows) {
+          tags.push({
+            id: row.tag_id,
+            name: row.name
+          });
+        }
+
+        resolve(tags);
+      });
+    });
+  }
+
+  async getSkinTagVotes(skinID: string): Promise<{ id: string, name: string, sum: number }[]> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('SELECT tag_id,name,SUM(CASE WHEN vote THEN 1 ELSE -1 END) as sum FROM tag_votes JOIN tags ON tag_votes.tag_id =tags.id WHERE skin_id =$1 GROUP BY tag_id,name;',
+        [skinID], (err, res) => {
+          if (err) return reject(err);
+
+          const tags = [];
+          for (const row of res.rows) {
+            tags.push({
+              id: row.tag_id,
+              name: row.name,
+              sum: row.sum
+            });
+          }
+
+          resolve(tags);
+        });
+    });
+  }
+
+  async getSkinAiTags(skinID: string): Promise<{ id: string, name: string }[]> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('SELECT tag_id,name FROM tag_votes_ai JOIN tags ON tag_votes_ai.tag_id =tags.id WHERE skin_id =$1 AND vote =true;', [skinID], (err, res) => {
+        if (err) return reject(err);
+
+        const tags = [];
+        for (const row of res.rows) {
+          tags.push({
+            id: row.tag_id,
+            name: row.name
+          });
+        }
+
+        resolve(tags);
+      });
+    });
+  }
+
+  /* Tag-Votes */
+
+  async setSkinVote(profileID: string, skinID: string, tagID: string, vote: boolean): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('INSERT INTO tag_votes(skin_id,tag_id,profile_id,vote) VALUES($1,$2,$3,$4) ON CONFLICT(skin_id,tag_id,profile_id) DO UPDATE SET vote =$4;',
+        [skinID, tagID, profileID, vote], (err, _res) => {
+          if (err) return reject(err);
+
+          resolve();
+        });
+    });
+  }
+
+  async removeSkinVote(profileID: string, skinID: string, tagID: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('DELETE FROM tag_votes WHERE skin_id =$1 AND tag_id =$2 AND profile_id =$3;',
+        [skinID, tagID, profileID], (err, _res) => {
+          if (err) return reject(err);
+
+          resolve();
+        });
+    });
+  }
+
+  /* Cape */
+
   addCape(capePng: Buffer, pngHash: string, type: CapeType, originalURL: string, textureValue: string | null, textureSignature: string | null, userAgent: UserAgent, callback: (err: Error | null, cape: Cape | null) => void): void {
     if (this.pool == null) return callback(null, null);
     if (type != CapeType.MOJANG && (textureValue || textureSignature)) return callback(new Error('Only provide textureValue and -Signature for Mojang-Capes!'), null);
@@ -438,176 +688,6 @@ export class dbUtils {
     });
   }
 
-  async getSkin(skinID: string): Promise<Skin | null> {
-    return new Promise((resolve, reject) => {
-      if (this.pool == null) return reject(new Error('No database connected'));
-
-      this.pool.query(`SELECT * FROM skins WHERE id =$1;`, [skinID], (err, res) => {
-        if (err) return reject(err);
-
-        resolve(res.rows.length == 0 ? null : RowUtils.toSkin(res.rows[0]));
-      });
-    });
-  }
-
-  // TODO: rename to #getSkinList
-  async getNewestSkins(limit: number | 'ALL' = 12, offset: number = 0, sortASC = false): Promise<{ skins: Skin[], moreAvailable: boolean }> {
-    return new Promise((resolve, reject) => {
-      if (this.pool == null) return reject(new Error('No database connected'));
-
-      this.pool.query(`SELECT * FROM skins ORDER BY added ${sortASC ? '' : 'DESC'} LIMIT $1 OFFSET $2;`,
-        [typeof limit == 'number' ? limit + 1 : limit, offset], (err, res) => {
-          if (err) return reject(err);
-
-          const result = [];
-
-          for (const row of res.rows) {
-            result.push(RowUtils.toSkin(row));
-          }
-
-          let moreAvailable = limit == 'ALL';
-          if (!moreAvailable && result.length > limit) {
-            result.pop();
-            moreAvailable = true;
-          }
-
-          resolve({ skins: result, moreAvailable });
-        });
-    });
-  }
-
-  async getSkins(tags: string[], limit: number | 'ALL' = 6, offset: number = 0): Promise<{ skins: Skin[], moreAvailable: boolean }> {
-    return new Promise((resolve, reject) => {
-      if (this.pool == null) return reject(new Error('No database connected'));
-      if (tags.length == 0) return resolve({ skins: [], moreAvailable: false });
-
-      // alter Codeteil der jetzt fehlt: SELECT skins.*,COUNT(*) OVER() AS total FROM
-      const queryStart = 'SELECT skins.* FROM (WITH tagIDs AS (SELECT id FROM tags WHERE ',
-        queryEnd = ') SELECT skin_id,tag_id FROM skin_tags WHERE tag_id IN (SELECT * FROM tagIDs) UNION ' +
-          'SELECT skin_id,tag_id FROM tag_votes_ai WHERE tag_id IN (SELECT * FROM tagIDs)) ' +
-          `as outerT JOIN skins ON skins.id = outerT.skin_id LIMIT $${tags.length + 1} OFFSET $${tags.length + 2};`;
-
-      let queryTagFilter = '';
-
-      for (let i = 0; i < tags.length; i++) {
-        if (i != 0) {
-          queryTagFilter += ' OR ';
-        }
-
-        queryTagFilter += `lower(name) =lower($${i + 1})`;
-      }
-
-      this.pool.query(queryStart + queryTagFilter + queryEnd, [...tags, typeof limit == 'number' ? limit + 1 : limit, offset], (err, res) => {
-        if (err) return reject(err);
-
-        const result = [];
-
-        for (const row of res.rows) {
-          result.push(RowUtils.toSkin(row));
-        }
-
-        let moreAvailable = limit == 'ALL';
-        if (!moreAvailable && result.length > limit) {
-          result.pop();
-          moreAvailable = true;
-        }
-
-        resolve({ skins: result, moreAvailable });
-      });
-    });
-  }
-
-  async getSkinTags(skinID: string): Promise<{ id: string, name: string }[]> {
-    return new Promise((resolve, reject) => {
-      if (this.pool == null) return reject(new Error('No database connected'));
-
-      this.pool.query('SELECT tag_id,name FROM skin_tags JOIN tags ON skin_tags.tag_id =tags.id WHERE skin_id =$1;', [skinID], (err, res) => {
-        if (err) return reject(err);
-
-        const tags = [];
-        for (const row of res.rows) {
-          tags.push({
-            id: row.tag_id,
-            name: row.name
-          });
-        }
-
-        resolve(tags);
-      });
-    });
-  }
-
-  async getSkinAiTags(skinID: string): Promise<{ id: string, name: string }[]> {
-    return new Promise((resolve, reject) => {
-      if (this.pool == null) return reject(new Error('No database connected'));
-
-      this.pool.query('SELECT tag_id,name FROM tag_votes_ai JOIN tags ON tag_votes_ai.tag_id =tags.id WHERE skin_id =$1 AND vote =true;', [skinID], (err, res) => {
-        if (err) return reject(err);
-
-        const tags = [];
-        for (const row of res.rows) {
-          tags.push({
-            id: row.tag_id,
-            name: row.name
-          });
-        }
-
-        resolve(tags);
-      });
-    });
-  }
-
-  // TODO: Make sure that not too many are returned at once using LIMIT and OFFSET
-  async getSkinSeenOn(skinID: string): Promise<{ name: string, id: string }[]> {
-    return new Promise((resolve, reject) => {
-      if (this.pool == null) return reject(new Error('No database connected'));
-
-      this.pool.query('SELECT * FROM(SELECT DISTINCT ON(id) profiles.raw_json->>\'name\' as name, profiles.id,(SELECT EXISTS(SELECT * FROM (SELECT * FROM skin_history as inner_skin_history WHERE inner_skin_history.profile_id =id ORDER BY added DESC LIMIT 1)x WHERE skin_id =$1)) as exists FROM skin_history JOIN profiles ON id =profile_id WHERE skin_id =$1)x2 ORDER BY name,exists DESC LIMIT 600;', [skinID], (err, res) => {
-        if (err) return reject(err);
-
-        let result = [];
-        for (const row of res.rows) {
-          result.push({
-            name: row.name,
-            id: row.id
-          });
-        }
-
-        resolve(result);
-      });
-    });
-  }
-
-  async getMostUsedSkinsLast7Days(): Promise<{ id: string, count: number }[]> {
-    return new Promise((resolve, reject) => {
-      if (this.pool == null) return reject(new Error('No database connected'));
-
-      this.pool.query('SELECT skin_id, COUNT(*) as count FROM skin_history JOIN skins ON skin_history.skin_id = skins.id WHERE duplicate_of IS NULL AND skins.added >= CURRENT_TIMESTAMP - interval \'7 DAYS\' GROUP BY skin_id ORDER BY count DESC LIMIT 10;', [], (err, res) => {
-        if (err) return reject(err);
-
-        let result = [];
-        for (const row of res.rows) {
-          result.push({
-            id: row.skin_id,
-            count: row.count
-          });
-        }
-
-        resolve(result);
-      });
-    });
-  }
-
-  getSkinImage(skinID: string, type: 'clean' | 'original', callback: (err: Error | null, img: Buffer | null) => void): void {
-    if (this.pool == null) return callback(null, null);
-
-    this.pool.query(`SELECT ${type == 'original' ? 'original' : 'clean'} as img FROM skin_images WHERE skin_id =$1;`, [skinID], (err, res) => {
-      if (err) return callback(err, null);
-
-      callback(null, res.rows.length > 0 ? res.rows[0].img : null);
-    });
-  }
-
   getCape(capeID: string, callback: (err: Error | null, cape: Cape | null) => void): void {
     if (this.pool == null) return callback(null, null);
 
@@ -627,6 +707,8 @@ export class dbUtils {
       callback(null, res.rows.length > 0 ? res.rows[0].original : null);
     });
   }
+
+  /* Hosts */
 
   addHost(host: string, sha1: string, callback: (err: Error | null) => void): void {
     if (this.pool == null) return callback(null);
