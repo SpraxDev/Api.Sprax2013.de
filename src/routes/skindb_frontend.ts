@@ -193,7 +193,7 @@ router.all('/skins', (req, res, next) => {
 
       if (page < 1) return next(new ErrorBuilder().invalidParams('query', [{ param: 'page', condition: 'Valid number > 0' }]));
 
-      db.getNewestSkins(12, page * 12, true)
+      db.getSkinList(12, page * 12, true)
         .then((skins) => {
           const result: SkinDBSkins = {
             skins: skins.skins,
