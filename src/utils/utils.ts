@@ -507,7 +507,7 @@ export class Image {
                 sY = secondLayerArea.y + k;
 
               const color = mergeColors ?
-                Image.mergeColors(overlayOnTopOfFirstLayer.getColor(fX, fY), overlayOnTopOfFirstLayer.getColor(sX, sY)) :
+                Image.mergeColors(img.getColor(fX, fY), img.getColor(sX, sY)) :
                 img.getColor(sX, sY);
 
               // Move pixel from overlay to first layer
@@ -532,7 +532,7 @@ export class Image {
       overlayOnTopOfFirstLayer.toCleanSkin((err) => {
         if (err) reject(err);
 
-        moveSecondLayer(overlayIsFirstLayer, true);
+        moveSecondLayer(overlayOnTopOfFirstLayer, true);
 
         result.push(overlayOnTopOfFirstLayer);
         done();
