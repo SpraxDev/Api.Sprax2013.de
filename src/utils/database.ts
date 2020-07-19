@@ -1,7 +1,7 @@
 import { Pool, PoolClient } from 'pg';
 
 import { ApiError } from './utils';  // TODO: Don't use ./utils.ts because of ./index-debug.ts
-import { SpraxAPIdbCfg, UserAgent, Skin, MinecraftUser, Cape, CapeType, MinecraftProfile } from '../global';
+import { SpraxAPIdbCfg, UserAgent, Skin, MinecraftUser, Cape, CapeType, MinecraftProfile, SkinDBSearch } from '../global';
 
 export class dbUtils {
   private pool: Pool | null = null;
@@ -370,45 +370,38 @@ export class dbUtils {
     });
   }
 
-  async getSkins(tags: string[], limit: number | 'ALL' = 6, offset: number = 0): Promise<{ skins: Skin[], moreAvailable: boolean }> {
+  async searchSkins(searchQuery: string, limit: number | 'ALL' = 6, offset: number = 0): Promise<{ skins: Skin[], time: number, moreAvailable: boolean }> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
-      if (tags.length == 0) return resolve({ skins: [], moreAvailable: false });
+      if (searchQuery.trim().length == 0) return resolve({ skins: [], time: 0, moreAvailable: false });
 
-      // alter Codeteil der jetzt fehlt: SELECT skins.*,COUNT(*) OVER() AS total FROM
-      // TODO: Include user-votes too
-      const queryStart = 'SELECT skins.* FROM (WITH tagIDs AS (SELECT id FROM tags WHERE ',
-        queryEnd = ') SELECT skin_id,tag_id FROM skin_tags WHERE tag_id IN (SELECT * FROM tagIDs) UNION ' +
-          'SELECT skin_id,tag_id FROM tag_votes_ai WHERE tag_id IN (SELECT * FROM tagIDs)) ' +
-          `as outerT JOIN skins ON skins.id =outerT.skin_id LIMIT $${tags.length + 1} OFFSET $${tags.length + 2};`;
+      let end;
+      const start = Date.now();
 
-      let queryTagFilter = '';
+      // TODO: Currently missing in query:
+      //        ,COUNT(*) OVER () AS total
+      //        SELECT DISTINCT
+      this.pool.query(`SELECT s.*,weight FROM skin_tags_merged JOIN skins s on skin_tags_merged.skin_id =s.id WHERE websearch_to_tsquery('english',$1) @@ to_tsvector('english',search_term) ORDER BY weight DESC LIMIT $2 OFFSET $3;`,
+        [searchQuery, typeof limit == 'number' ? limit + 1 : limit, offset], (err, res) => {
+          if (err) return reject(err);
 
-      for (let i = 0; i < tags.length; i++) {
-        if (i != 0) {
-          queryTagFilter += ' OR ';
-        }
+          // const total = res.rows.length > 0 ? res.rows[0].total : 0;
+          const result = [];
 
-        queryTagFilter += `lower(name) =lower($${i + 1})`;
-      }
+          for (const row of res.rows) {
+            result.push(RowUtils.toSkin(row));
+          }
 
-      this.pool.query(queryStart + queryTagFilter + queryEnd, [...tags, typeof limit == 'number' ? limit + 1 : limit, offset], (err, res) => {
-        if (err) return reject(err);
+          let moreAvailable = limit == 'ALL'; // total > offset + result.length
+          if (!moreAvailable && result.length > limit) {
+            result.pop();
+            moreAvailable = true;
+          }
 
-        const result = [];
+          end = Date.now();
 
-        for (const row of res.rows) {
-          result.push(RowUtils.toSkin(row));
-        }
-
-        let moreAvailable = limit == 'ALL';
-        if (!moreAvailable && result.length > limit) {
-          result.pop();
-          moreAvailable = true;
-        }
-
-        resolve({ skins: result, moreAvailable });
-      });
+          resolve({ skins: result, time: end - start, moreAvailable });
+        });
     });
   }
 

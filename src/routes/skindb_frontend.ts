@@ -224,7 +224,7 @@ router.all('/search', (req, res, next) => {
       let directProfileHit: { name: string, id: string } | null = null,
         indirectProfileHits: { name: string, matched_name: string, id: string }[] = [];
 
-      let skinHits: { skins: Skin[], moreAvailable: boolean } = { skins: [], moreAvailable: false };
+      let skinHits: { skins: Skin[], time: number, moreAvailable: boolean };
 
       // TODO: name->uuid schlägt bei scheinbar ungültigen Namen fehl. Zusätzlich die Datenbank für direct-hits nutzen
       // TODO: Ergänzung zu oben: 'z' gibt nen indirect match zu 'Z' aber 'Z' nen direct zu 'Z'
@@ -272,34 +272,12 @@ router.all('/search', (req, res, next) => {
 
       // Search for Tagged Skins
       try {
-        skinHits = await db.getSkins(query.split(' '), 12, page * 12);
+        skinHits = await db.searchSkins(query, 12, (page - 1) * 12);
       } catch (err) {
         ApiError.log('Could not search for skins', { err, query });
+
+        skinHits = { skins: [], time: 0, moreAvailable: false };
       }
-
-      // if (queryArgs[0].length <= 16) {
-      //   try {
-      //     const indirectHits = await db.searchProfile(queryArgs[0], 'start', 4, 0);
-
-      //     for (const hit of indirectHits) {
-      //       if (directProfileHit && directProfileHit.id == hit.id) continue;
-
-      //       const profile = await new Promise<MinecraftUser>((resolve, reject) => {
-      //         getByUUID(hit.id, req, (err, user) => {
-      //           if (err || !user) return reject(err || new Error('WTF just happened? This should be dead-code'));
-
-      //           resolve(user);
-      //         });
-      //       });
-
-      //       if (profile.name.toLowerCase().indexOf(queryArgs[0].toLowerCase()) != -1) {
-      //         indirectProfileHits.push({ id: profile.id, name: profile.name });
-      //       }
-      //     }
-      //   } catch (err) {
-      //     ApiError.log('Could not search for profiles (indirect)', err);
-      //   }
-      // }
 
       const result: SkinDBSearch = {
         profiles: {
@@ -308,6 +286,7 @@ router.all('/search', (req, res, next) => {
         },
         skins: {
           hits: skinHits.skins,
+          time: skinHits.time,
           page,
           hasNextPage: skinHits.moreAvailable
         }
