@@ -183,7 +183,6 @@ export class dbUtils {
           resolve(res.rows.length > 0 ? res.rows[0] : null);
         });
     });
-    //
   }
 
   addSkin(originalPng: Buffer, cleanPng: Buffer, cleanPngHash: string, originalURL: string | null, textureValue: string | null,

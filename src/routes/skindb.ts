@@ -132,7 +132,7 @@ router.all('/import', (req, res, next) => {
                   if (!json.url) return next(new ErrorBuilder().unknown());  // FIXME: why does TypeScript need this line? o.0
 
                   importSkinByURL(MinecraftUser.getSecureURL(json.url), userAgent, (err, skin, exactMatch) => {
-                    if (err || !skin) return next(err || new ErrorBuilder().serverErr(undefined, `Could not import uploaded skin-URL`));
+                    if (err || !skin) return next(err || new ErrorBuilder().serverErr(undefined, `Could not import skin-URL`));
 
                     return setCaching(res, false, false)
                       .status(exactMatch ? 200 : 201)

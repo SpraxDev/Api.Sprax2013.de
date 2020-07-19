@@ -1,4 +1,5 @@
-import fs = require('fs');
+import { readFileSync } from 'fs';
+
 const gl = require('gl')(64, 64, { preserveDrawingBuffer: true });
 
 const vertexShaderSource: string =
@@ -30,10 +31,8 @@ void main(){
 }
 `;
 
-//---MODEL---
-
+/* MODEL */
 class Model {
-
     vdata: Float32Array;
     idata: Uint16Array;
     readonly texture: WebGLTexture;
@@ -46,7 +45,7 @@ class Model {
         let maxValue = 0;
         idata.forEach(v => maxValue = Math.max(v, maxValue));
         if (maxValue > (Math.pow(2, 16) - 1)) {
-            throw new Error('Model contains to many different vertices');
+            throw new Error('Model contains too many different vertices');
         }
         this.textureWidth = width;
         this.textureHeight = height;
@@ -73,10 +72,9 @@ class Model {
         gl.enableVertexAttribArray(1);
         gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 24, 16);
     }
-
 }
 
-//---CAMERA---
+/* CAMERA */
 
 function multiplyMatrixAndPoint(matrix: number[], point: number[]) {
     // Give a simple variable name to each part of the matrix, a column and row number
@@ -312,7 +310,12 @@ class Camera {
             0, 0, 1, 0,
             this.postPosition.x, this.postPosition.y, 0, 1
         ];
-        const mvpMatrix = multiplyMatrices(scale, multiplyMatrices(postTranslate, multiplyMatrices(projection, multiplyMatrices(rotateZ, multiplyMatrices(rotateX, multiplyMatrices(rotateY, translate))))));
+        const mvpMatrix = multiplyMatrices(scale,
+            multiplyMatrices(postTranslate,
+                multiplyMatrices(projection,
+                    multiplyMatrices(rotateZ,
+                        multiplyMatrices(rotateX,
+                            multiplyMatrices(rotateY, translate))))));
         return new Float32Array(mvpMatrix);
     }
 
@@ -335,10 +338,9 @@ class Camera {
         this.postPosition = pos;
         this.mvp = this.calcMvp();
     }
-
 }
 
-//---CONTEXT---
+/* CONTEXT */
 
 interface vec4 { x: number, y: number, z: number, w: number }
 interface vec3 { x: number, y: number, z: number }
@@ -350,7 +352,7 @@ function getOfArray(array: any[], index: number) {
 }
 
 function modelFileToBufferData(filename: string) {
-    const file: string = fs.readFileSync(filename, 'utf-8');
+    const file: string = readFileSync(filename, 'utf-8');
     const lines: string[] = file.split(/\r?\n/g);
 
     const positions: vec4[] = [];
