@@ -378,10 +378,10 @@ export class dbUtils {
       let end;
       const start = Date.now();
 
+      // TODO: When searching for '2339435377653188287' the skin is found twice
       // TODO: Currently missing in query:
       //        ,COUNT(*) OVER () AS total
-      //        SELECT DISTINCT
-      this.pool.query(`SELECT s.*,weight FROM skin_tags_merged JOIN skins s on skin_tags_merged.skin_id =s.id WHERE websearch_to_tsquery('english',$1) @@ to_tsvector('english',search_term) ORDER BY weight DESC LIMIT $2 OFFSET $3;`,
+      this.pool.query(`SELECT skins.* FROM(SELECT skin_id FROM skin_tags_merged WHERE websearch_to_tsquery('english',$1) @@search_tsv GROUP BY skin_id,votes ORDER BY votes DESC)x JOIN skins ON skins.id =skin_id LIMIT $2 OFFSET $3;`,
         [searchQuery, typeof limit == 'number' ? limit + 1 : limit, offset], (err, res) => {
           if (err) return reject(err);
 
