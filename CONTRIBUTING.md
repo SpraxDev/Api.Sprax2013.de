@@ -21,7 +21,8 @@ We actively welcome your pull requests:
 6. Issue that pull request!
 
 ## Any contributions you make will be under the MIT Software License
-In short, when you submit code changes, your submissions are understood to be under the same [MIT License](https://choosealicense.com/licenses/mit/) that covers the project.
+In short, when you submit code changes, your submissions are understood to be under the same
+[MIT License](https://choosealicense.com/licenses/mit/) that covers the project.
 Feel free to contact the maintainers if that's a concern.
 
 ## Report bugs using GitHub's [issues](https://github.com/SpraxDev/Api.Sprax2013.de/issues)
@@ -50,9 +51,13 @@ People *love* thorough bug reports. I'm not even kidding.
 By contributing, you agree that your contributions will be licensed under its [MIT License](./LICENSE.md).
 
 ## Enforcement
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting the project team at developer@sprax2013.de. All complaints will be reviewed and investigated and will result in a response that is deemed necessary and appropriate to the circumstances. The project team is obligated to maintain confidentiality with regard to the reporter of an incident. Further details of specific enforcement policies may be posted separately.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting the project team at developer@sprax2013.de.
+All complaints will be reviewed and investigated and will result in a response that is deemed necessary and appropriate to the circumstances.
+The project team is obligated to maintain confidentiality with regard to the reporter of an incident.
+Further details of specific enforcement policies may be posted separately.
 
-Project maintainers who do not follow or enforce the Code of Conduct in good faith may face temporary or permanent repercussions as determined by other members of the project's leadership.
+Project maintainers who do not follow or enforce the Code of Conduct in good faith may face temporary or permanent repercussions as determined
+by other members of the project's leadership.
 
 ## References
 This document was adapted from [briandk](https://gist.github.com/briandk/3d2e8b3ec8daf5a27a62), who originally adapted it from Facebook's Draft.
