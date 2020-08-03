@@ -8,13 +8,13 @@ assignees: ''
 ---
 
 **Describe the bug**
-A clear and concise description of what the bug is.
+A clear and concise description of the bug.
 
 **To Reproduce**
 Steps to reproduce the behavior:
 1. Go to ...
 2. Click on ....
-4. ...
+3. ...
 
 **Expected behavior**
 A clear and concise description of what you expected to happen.
