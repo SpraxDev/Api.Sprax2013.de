@@ -1,6 +1,7 @@
 import crypto = require('crypto');
 import request = require('request');
 import sharp = require('sharp');
+import punycode = require('punycode');
 
 import { EOL } from 'os';
 import { Request, Response } from 'express';
@@ -9,7 +10,8 @@ import { Color } from '../global';
 import { errorLogStream, cfg, appVersion } from '..';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-  UUID_PATTERN_ADD_DASH = /(.{8})(.{4})(.{4})(.{4})(.{12})/;
+  UUID_PATTERN_ADD_DASH = /(.{8})(.{4})(.{4})(.{4})(.{12})/,
+  FQDN_PATTERN = /^(?=.{1,253})(?!.*--.*)(?:(?![0-9-])[a-z0-9-]{1,63}(?<!-)\.){1,}(?:(?![0-9-])[a-z0-9-]{1,63}(?<!-))\.?$/i;
 
 export class Image {
   img: { data: Buffer, info: sharp.OutputInfo };
@@ -799,6 +801,19 @@ export function isUUID(str: string): boolean {
 
 export function addHyphensToUUID(str: string): string {
   return str.replace(/-/g, '').replace(UUID_PATTERN_ADD_DASH, '$1-$2-$3-$4-$5');
+}
+
+export function convertFQDNtoASCII(str: string): string {
+  return punycode.toASCII(str);
+}
+
+/**
+ * Checks if a given string is a valid FQDN (Domain) based on RFC1034 and RFC2181
+ *
+ * @author https://regex101.com/library/SuU6Iq
+ */
+export function isValidFQDN(str: string): boolean {
+  return FQDN_PATTERN.test(str);
 }
 
 /**

@@ -10,7 +10,7 @@ import { db } from '../index';
 import { getHttp } from '../utils/web';
 import { importByTexture, importCapeByURL } from './skindb';
 import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
-import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL, generateHash } from '../utils/utils';
+import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL, generateHash, isValidFQDN, convertFQDNtoASCII } from '../utils/utils';
 
 const uuidCache = new nCache({ stdTTL: 59, useClones: false }), /* key:${name_lower};${at||''}, value: { id: string, name: string } | Error | null */
   userCache = new nCache({ stdTTL: 59, useClones: false }), /* key: profile.id, value: MinecraftUser | Error | null */
@@ -709,7 +709,6 @@ router.all('/servers/blocked', (req, res, next) => {  // TODO: return object (ke
   });
 });
 
-// FIXME: Route needs a lot of time for the first response
 router.all('/servers/blocked/known', (req, res, next) => {
   restful(req, res, {
     get: () => {
@@ -719,24 +718,21 @@ router.all('/servers/blocked/known', (req, res, next) => {
 
         const result: { [key: string]: string | null } = {};
 
-        let waiting = 0;
-        for (const hash of hashes) {
-          waiting++;
-          db.getHost(hash, (err, host) => {
-            if (host != null) {
-              result[hash] = host;
-            }
-
-            waiting--;
-
-            if (waiting == 0) {
-              return setCaching(res, true, true, 60 * 30)
-                .send(result);
-            }
-
-            if (err) return next(err);
-          });
+        if (!db.isAvailable()) {
+          return setCaching(res, true, true, 120)
+            .send(result);
         }
+
+        db.getHost(hashes)
+          .then((known) => {
+            for (const elem of known) {
+              result[elem.hash] = elem.host;
+            }
+
+            return setCaching(res, true, true, 60 * 30)
+              .send(result);
+          })
+          .catch(next);
       });
     }
   });
@@ -745,24 +741,32 @@ router.all('/servers/blocked/known', (req, res, next) => {
 router.all('/servers/blocked/check', (req, res, next) => {
   restful(req, res, {
     get: () => {
-      const host: string = (req.query.host as string || '').trim().toLowerCase();
+      let host: string = (req.query.host as string || '').trim().toLowerCase();
 
       if (!host) return next(new ErrorBuilder().invalidParams('query', [{ param: 'host', condition: 'host.length > 0' }]));
 
-      const hosts: { [key: string]: string } = {};
+      // Try removing port
+      if (host.lastIndexOf(':') != -1) {
+        host = host.substring(0, host.lastIndexOf(':'));
+      }
 
-      hosts[host] = generateHash(host, 'sha1');
+      const hosts: { [key: string]: string } = {};
 
       let tempHost: string = host,
         tempHostIndex: number;
       if (net.isIPv4(host)) {
+        hosts[host] = generateHash(host, 'sha1');
+
         while ((tempHostIndex = tempHost.lastIndexOf('.')) >= 0) {
           tempHost = tempHost.substring(0, tempHostIndex);
 
           hosts[`${tempHost}.*`] = generateHash(`${tempHost}.*`, 'sha1');
         }
-      } else if (host.indexOf('.') >= 0) {
+      } else if (isValidFQDN(convertFQDNtoASCII(host))) {
+        if (host.endsWith('.')) host = tempHost = convertFQDNtoASCII(host.substring(0, host.length - 1));
+
         hosts[`*.${host}`] = generateHash(`*.${host}`, 'sha1');
+        hosts[host] = generateHash(host, 'sha1');
 
         while ((tempHostIndex = tempHost.indexOf('.')) >= 0) {
           tempHost = tempHost.substring(tempHostIndex + 1);
@@ -773,37 +777,32 @@ router.all('/servers/blocked/check', (req, res, next) => {
         return next(new ErrorBuilder().invalidParams('query', [{ param: 'host', condition: 'A valid IPv4 or domain' }]));
       }
 
-      let waiting = 0;
+      if (db.isAvailable()) {
+        const dbHosts = [];
+        for (const host in hosts) {
+          dbHosts.push({ host, hash: hosts[host] });
+        }
 
-      for (const host in hosts) {
-        let hash = hosts[host];
-
-        waiting++;
-        db.addHost(host, hash, (err) => {
-          waiting--;
-
-          if (waiting == 0) {
-            return getBlockedServers((err, hashes) => {
-              if (err) return next(err);
-              if (!hashes) return next(new ErrorBuilder().notFound('List of blocked servers', true));
-              if (res.headersSent) return;
-
-              const result: { [key: string]: boolean } = {};
-
-              for (const key in hosts) {
-                if (hosts.hasOwnProperty(key)) {
-                  result[key] = hashes.includes(hosts[key]);
-                }
-              }
-
-              return setCaching(res, true, true, 60 * 15)
-                .send(result);
-            });
-          }
-
-          if (err) return next(err);
-        });
+        // We won't wait for the database to finish, so we can send the response
+        db.addHosts(dbHosts)
+          .catch((err) => ApiError.log('Could not import hosts', { err, hosts }));
       }
+
+      getBlockedServers((err, hashes) => {
+        if (err) return next(err);
+        if (!hashes) return next(new ErrorBuilder().notFound('List of blocked servers', true));
+
+        const result: { [key: string]: boolean } = {};
+
+        for (const key in hosts) {
+          if (hosts.hasOwnProperty(key)) {
+            result[key] = hashes.includes(hosts[key]);
+          }
+        }
+
+        return setCaching(res, true, true, 60 * 15)
+          .send(result);
+      });
     }
   });
 });

@@ -713,19 +713,52 @@ export class dbUtils {
 
   /* Hosts */
 
-  addHost(host: string, sha1: string, callback: (err: Error | null) => void): void {
-    if (this.pool == null) return callback(null);
+  async addHosts(hosts: { hash: string, host: string }[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+      if (hosts.length == 0) return resolve();
 
-    this.pool.query('INSERT INTO hosts(host,hash) VALUES($1,$2) ON CONFLICT DO NOTHING;', [host, sha1], (err, _res) => {
-      return callback(err || null);
+      let query = 'INSERT INTO hosts(host,hash) VALUES';
+      const queryArgs = [];
+
+      let argI = 0;
+      for (let i = 0; i < hosts.length; i++) {
+        const elem = hosts[i];
+
+        if (i > 0) {
+          query += ', ';
+        }
+
+        query += `($${++argI},$${++argI})`;
+        queryArgs.push(elem.host);
+        queryArgs.push(elem.hash);
+      }
+      query += ' ON CONFLICT DO NOTHING;';
+
+      this.pool.query(query, queryArgs, (err, _res) => {
+        if (err) return reject(err);
+
+        resolve();
+      });
     });
   }
 
-  getHost(sha1: string, callback: (err: Error | null, host: string | null) => void): void {
-    if (this.pool == null) return callback(null, null);
+  async getHost(sha1: string[] | string): Promise<{ hash: string, host: string }[]> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return resolve([]);
+      if (!Array.isArray(sha1)) sha1 = [sha1];
 
-    this.pool.query('SELECT host FROM hosts WHERE hash =$1;', [sha1], (err, res) => {
-      return callback(err || null, res.rows.length > 0 ? res.rows[0].host : null);
+      this.pool.query('SELECT host,hash FROM hosts WHERE hash = ANY($1) ORDER BY host;', [sha1], (err, res) => {
+        if (err) return reject(err);
+
+        const result: { hash: string, host: string }[] = [];
+
+        for (const row of res.rows) {
+          result.push({ hash: row.hash, host: row.host });
+        }
+
+        resolve(result);
+      });
     });
   }
 
