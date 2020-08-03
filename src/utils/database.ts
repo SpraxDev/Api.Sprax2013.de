@@ -430,7 +430,7 @@ export class dbUtils {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
 
-      this.pool.query('SELECT skin_id, COUNT(*) as count FROM skin_history JOIN skins ON skin_history.skin_id = skins.id WHERE duplicate_of IS NULL AND skins.added >= CURRENT_TIMESTAMP - interval \'7 DAYS\' GROUP BY skin_id ORDER BY count DESC LIMIT 10;', [], (err, res) => {
+      this.pool.query('SELECT * FROM recent_top_skins ORDER BY count DESC LIMIT 10;', [], (err, res) => {
         if (err) return reject(err);
 
         let result = [];

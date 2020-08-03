@@ -161,7 +161,7 @@ router.all('/skin/:skinID', (req, res, next) => {
                             skin,
                             tags,
                             aiTags,
-                            tagVotes: tagVotes,
+                            tagVotes,
                             seenOn,
                             profileVotes
                           };
