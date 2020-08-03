@@ -791,6 +791,16 @@ export function setCaching(res: Response, cacheResource: boolean = true, publicR
   return res.set('Cache-Control', value);
 }
 
+export function compareString(a: string, b: string) {
+  const aLower = a.toLowerCase(),
+    bLower = b.toLowerCase();
+
+  if (aLower == bLower) return 0;
+  if (aLower > bLower) return 1;
+
+  return -1;
+}
+
 export function isUUID(str: string): boolean {
   if (typeof str !== 'string') return false;
 

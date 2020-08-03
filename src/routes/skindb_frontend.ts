@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 import { db } from '..';
 import { getByUUID, getByUsername } from './minecraft';
-import { restful, isUUID, ErrorBuilder, isNumber, setCaching, ApiError } from '../utils/utils';
+import { restful, isUUID, ErrorBuilder, isNumber, setCaching, ApiError, compareString } from '../utils/utils';
 import { SkinDBAccount, SkinDBSkin, SkinDBSearch, SkinDBIndex, Skin, SkinDBSkins } from '../global';
 
 /* Routes */
@@ -156,6 +156,10 @@ router.all('/skin/:skinID', (req, res, next) => {
                               sum
                             });
                           }
+
+                          tags.sort((a, b) => compareString(a.name, b.name));
+                          aiTags.sort((a, b) => compareString(a.name, b.name));
+                          tagVotes.sort((a, b) => a.sum - b.sum);
 
                           const result: SkinDBSkin = {
                             skin,
