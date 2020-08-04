@@ -172,16 +172,39 @@ export class dbUtils {
     });
   }
 
-  async getSkinByURL(url: string): Promise<Skin> {
+  async getSkinByURL(url: string): Promise<Skin | null> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
 
-      this.pool.query('SELECT * FROM skins WHERE original_url =$1;',
-        [url], (err, res) => {
-          if (err) return reject(err);
+      this.pool.query('SELECT * FROM skins WHERE original_url =$1;', [url], (err, res) => {
+        if (err) return reject(err);
 
-          resolve(res.rows.length > 0 ? res.rows[0] : null);
-        });
+        resolve(res.rows.length == 0 ? null : RowUtils.toSkin(res.rows[0]));
+      });
+    });
+  }
+
+  async getSkinsByHash(hash: string | string[]): Promise<{ skins: Skin[], time: number }> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+      if (!Array.isArray(hash)) hash = [hash];
+
+      let end;
+      const start = Date.now();
+
+      this.pool.query('SELECT * FROM skins WHERE clean_hash =ANY($1);', [hash], (err, res) => {
+        if (err) return reject(err);
+
+        const result = [];
+
+        for (const row of res.rows) {
+          result.push(RowUtils.toSkin(row));
+        }
+
+        end = Date.now();
+
+        resolve({ skins: result, time: end - start });
+      });
     });
   }
 
