@@ -5,7 +5,7 @@ import path = require('path');
 
 import { Router, Request, Response } from 'express';
 
-import { createCamera, createModel } from '../utils/modelRender';
+import { createCamera, createModel, Camera, Model } from '../utils/modelRender';
 import { db } from '../index';
 import { getHttp } from '../utils/web';
 import { importByTexture, importCapeByURL } from './skindb';
@@ -1164,8 +1164,8 @@ function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean
   skin.toCleanSkin((err) => {
     if (err) throw err;
     if (is3d) {
-      let cam;
-      let model;
+      let cam: Camera;
+      let model: Model;
 
       if (area == SkinArea.BODY) {
         if (overlay) {

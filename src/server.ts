@@ -56,7 +56,7 @@ app.use((_req, res, next) => {
 
 /* Prepare Request */
 app.use(express.raw({ type: ['image/png'], limit: '3MB' }));  // recode to send custom error messages
-app.use(express.json());
+app.use(express.json());  // TODO: Throws 500 http status code on invalid json instead of 400
 
 /* Webserver routes */
 app.use('/mojang', (_req, _res, next) => next(new ApiError('Please use /mc instead of /mojang', 410)));  // Temporary

@@ -32,7 +32,7 @@ void main(){
 `;
 
 /* MODEL */
-class Model {
+export class Model {
     vdata: Float32Array;
     idata: Uint16Array;
     readonly texture: WebGLTexture;
@@ -76,7 +76,7 @@ class Model {
 
 /* CAMERA */
 
-function multiplyMatrixAndPoint(matrix: number[], point: number[]) {
+function multiplyMatrixAndPoint(matrix: number[], point: number[]): number[] {
     // Give a simple variable name to each part of the matrix, a column and row number
     let c0r0 = matrix[0], c1r0 = matrix[1], c2r0 = matrix[2], c3r0 = matrix[3];
     let c0r1 = matrix[4], c1r1 = matrix[5], c2r1 = matrix[6], c3r1 = matrix[7];
@@ -104,7 +104,7 @@ function multiplyMatrixAndPoint(matrix: number[], point: number[]) {
     return [resultX, resultY, resultZ, resultW];
 }
 
-function multiplyMatrices(matrixA: number[], matrixB: number[]) {
+function multiplyMatrices(matrixA: number[], matrixB: number[]): number[] {
     // Slice the second matrix up into rows
     let row0 = [matrixB[0], matrixB[1], matrixB[2], matrixB[3]];
     let row1 = [matrixB[4], matrixB[5], matrixB[6], matrixB[7]];
@@ -126,7 +126,7 @@ function multiplyMatrices(matrixA: number[], matrixB: number[]) {
     ];
 }
 
-class Camera {
+export class Camera {
     readonly frameBuffer: WebGLFramebuffer;
     readonly texture: WebGLTexture;
     readonly shader: WebGLProgram;
@@ -207,7 +207,7 @@ class Camera {
         return shader;
     }
 
-    render(model: Model, texture: Uint8Array, clearBuffer: boolean = true) {
+    render(model: Model, texture: Uint8Array, clearBuffer: boolean = true): Uint8Array {
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.frameBuffer);
         gl.viewport(0, 0, this.width, this.height);
         gl.bindBuffer(gl.ARRAY_BUFFER, model.vertexBuffer);
@@ -348,10 +348,10 @@ interface vec2 { x: number, y: number }
 interface Vertex { position: vec4, texCoord: vec2 }
 
 function getOfArray(array: any[], index: number) {
-    return array[(index < 0) ? array.length + index : index - 1]
+    return array[(index < 0) ? array.length + index : index - 1];
 }
 
-function modelFileToBufferData(filename: string) {
+function modelFileToBufferData(filename: string): { indexBuffer: number[], vertexBuffer: number[] } {
     const file: string = readFileSync(filename, 'utf-8');
     const lines: string[] = file.split(/\r?\n/g);
 
@@ -445,7 +445,7 @@ function modelFileToBufferData(filename: string) {
     return { indexBuffer, vertexBuffer: resultVertexBuffer };
 }
 
-export function createModel(filename: string, textureWidth: number, textureHeight: number) {
+export function createModel(filename: string, textureWidth: number, textureHeight: number): Model {
     const data = modelFileToBufferData(filename);
     const vertexData = new Float32Array(data.vertexBuffer);
     const indexData = new Uint16Array(data.indexBuffer);
@@ -453,6 +453,6 @@ export function createModel(filename: string, textureWidth: number, textureHeigh
     return new Model(vertexData, indexData, textureWidth, textureHeight);
 }
 
-export function createCamera(width: number, height: number) {
+export function createCamera(width: number, height: number): Camera {
     return new Camera(width, height);
 }

@@ -434,6 +434,9 @@ export class Image {
     }
   }
 
+  /**
+   * Full alpha color or full alpha black on first skin layer
+   */
   ensureSkinAlpha() {
     if (!this.hasSkinDimensions()) throw new Error('Image does not have valid skin dimensions');
     if (this.img.info.height != 64) throw new Error('Legacy skin dimensions are not supported');
