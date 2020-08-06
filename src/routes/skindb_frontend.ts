@@ -1,9 +1,10 @@
 import { Router } from 'express';
 
 import { db } from '..';
-import { getByUUID, getByUsername } from './minecraft';
+import { getByUUID, getByUsername, getUserAgent } from './minecraft';
 import { restful, isUUID, ErrorBuilder, isNumber, setCaching, ApiError, compareString, Image, generateHash } from '../utils/utils';
 import { SkinDBAccount, SkinDBSkin, SkinDBSearch, SkinDBIndex, Skin, SkinDBSkins } from '../global';
+import { importByTexture, importSkinByBuffer } from './skindb';
 
 /* Routes */
 const router = Router();
@@ -237,39 +238,47 @@ router.all('/search', (req, res, next) => {
           if (err || !queryImg) return next(err || new ErrorBuilder().invalidBody([{ param: 'body', condition: 'Valid png (max. 3MB)' }]));
           if (!queryImg.hasSkinDimensions()) return next(new ErrorBuilder().invalidBody([{ param: 'body', condition: 'Valid skin file (wrong image dimensions)' }]));
 
-          queryImg.toCleanSkin((err) => {
-            if (err) return next(err);
+          getUserAgent(null)
+            .then((userAgent) => {
+              importSkinByBuffer(req.body, null, userAgent, (err, skin) => {
+                if (err || !skin) return next(err || new ErrorBuilder().unknown());
 
-            queryImg.generateSkinAlternatives()
-              .then((variations) => {
-                const hashes = [generateHash(queryImg.img.data)];
+                queryImg.toCleanSkin((err) => {
+                  if (err) return next(err);
 
-                for (const varImg of variations) {
-                  hashes.push(generateHash(varImg.img.data));
-                }
+                  queryImg.generateSkinAlternatives()
+                    .then((variations) => {
+                      const hashes = [generateHash(queryImg.img.data)];
 
-                db.getSkinsByHash(hashes)
-                  .then((dbRes) => {
-                    result = {
-                      profiles: {
-                        direct: directProfileHit,
-                        indirect: indirectProfileHits
-                      },
-                      skins: {
-                        hasNextPage: false,
-                        hits: dbRes.skins,
-                        page,
-                        time: dbRes.time
+                      for (const varImg of variations) {
+                        hashes.push(generateHash(varImg.img.data));
                       }
-                    }
 
-                    setCaching(res, true, false, 60, 60)
-                      .send(result);
-                  })
-                  .catch(next);
-              })
-              .catch(next);
-          });
+                      db.getSkinsByHash(hashes)
+                        .then((dbRes) => {
+                          result = {
+                            profiles: {
+                              direct: directProfileHit,
+                              indirect: indirectProfileHits
+                            },
+                            skins: {
+                              hasNextPage: false,
+                              hits: dbRes.skins,
+                              page,
+                              time: dbRes.time
+                            }
+                          }
+
+                          setCaching(res, true, false, 60, 60)
+                            .send(result);
+                        })
+                        .catch(next);
+                    })
+                    .catch(next);
+                });
+              }, undefined, undefined, true);
+            })
+            .catch(next);
         });
       } else {
         const query = req.query.q as string | undefined;

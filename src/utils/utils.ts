@@ -113,20 +113,26 @@ export class Image {
     return { r, g, b, alpha: alpha * 255 };
   }
 
-  toPngBuffer(callback: (err: Error | null, png: Buffer | null) => void, width?: number, height?: number): void {
-    const result = sharp(this.img.data, {
-      raw: {
-        channels: 4,
-        width: this.img.info.width,
-        height: this.img.info.height
+  async toPngBuffer(width?: number, height?: number): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const result = sharp(this.img.data, {
+        raw: {
+          channels: 4,
+          width: this.img.info.width,
+          height: this.img.info.height
+        }
+      }).png();
+
+      if (width || height) {
+        result.resize(width || this.img.info.width, height || this.img.info.height, { kernel: 'nearest', fit: 'outside' });
       }
-    }).png();
 
-    if (width || height) {
-      result.resize(width || this.img.info.width, height || this.img.info.height, { kernel: 'nearest', fit: 'outside' });
-    }
+      result.toBuffer((err, buffer, _info) => {
+        if (err) return reject(err);
 
-    result.toBuffer((err, buffer, _info) => callback(err, buffer));
+        resolve(buffer);
+      });
+    });
   }
 
   resize(width: number, height: number, callback: (err: Error | null, png: Image | null) => void): void {
@@ -318,14 +324,14 @@ export class Image {
    *
    * Creates an png Buffer to use
    */
-  toCleanSkinBuffer(callback: (err: Error | null, png: Buffer | null) => void): void {
-    this.toCleanSkin((err) => {
-      if (err) return callback(err, null);
+  async toCleanSkinBuffer(): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      this.toCleanSkin((err) => {
+        if (err) return reject(err);
 
-      this.toPngBuffer((err, png) => {
-        if (err) return callback(err, null);
-
-        callback(null, png);
+        this.toPngBuffer()
+          .then(resolve)
+          .catch(reject);
       });
     });
   }

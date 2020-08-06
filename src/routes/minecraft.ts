@@ -372,12 +372,12 @@ router.all('/skin/:user?', (req, res, next) => {
                     Image.fromImg(httpRes.body, (err, img) => {
                       if (err || !img) return next(err);
 
-                      img.toCleanSkinBuffer((err, png) => {
-                        if (err) return next(err);
-
-                        sendDownloadHeaders(res, mimeType, download, mcUser.name);
-                        setCaching(res, true, true, 60).send(png);
-                      });
+                      img.toCleanSkinBuffer()
+                        .then((png) => {
+                          sendDownloadHeaders(res, mimeType, download, mcUser.name);
+                          setCaching(res, true, true, 60).send(png);
+                        })
+                        .catch(next);
                     });
                   } else {
                     sendDownloadHeaders(res, mimeType, download, mcUser.name);
@@ -408,12 +408,12 @@ router.all('/skin/:user?', (req, res, next) => {
                 Image.fromImg(httpRes.body, (err, img) => {
                   if (err || !img) return next(err);
 
-                  img.toCleanSkinBuffer((err, png) => {
-                    if (err) return next(err);
-
-                    sendDownloadHeaders(res, mimeType, download, getFileNameFromURL(skinURL));
-                    setCaching(res, true, true, 60 * 60).send(png);
-                  });
+                  img.toCleanSkinBuffer()
+                    .then((png) => {
+                      sendDownloadHeaders(res, mimeType, download, getFileNameFromURL(skinURL));
+                      setCaching(res, true, true, 60 * 60).send(png);
+                    })
+                    .catch(next);
                 });
               } else {
                 sendDownloadHeaders(res, mimeType, download, getFileNameFromURL(skinURL));
@@ -627,7 +627,9 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
           return callback(new ErrorBuilder().serviceUnavailable('Rendering LabyMod-Capes is currently not supported'), null); // TODO
         }
 
-        img.toPngBuffer((err, png) => callback(err, png), size, size);
+        img.toPngBuffer(size, size).
+          then((png) => callback(null, png))
+          .catch((err) => callback(err, null));
       }, { r: 0, g: 0, b: 0, alpha: 255 });
     });
   };
@@ -958,21 +960,25 @@ export function getByUUID(uuid: string, req: Request | null, callback: (err: Err
 
       // TODO: hier bin ich grad (delete this line if you forgot what it is for)
       getHttp(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?unsigned=false`)
-        .then((httpRes) => {
+        .then(async (httpRes) => {
           if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 204) {
             ApiError.log(`Mojang returned ${httpRes.res.statusCode} on profile lookup for ${uuid}`);
 
-            db.getProfile(uuid, (err, profile) => {
-              if (err) ApiError.log('Could not fetch profile from database', err);
+            let profile: MinecraftProfile | null = null;
 
-              if (profile) {
-                getNameHistory(profile, (err, nameHistory) => {
-                  if (err) return callback(err, null); // Error
+            try {
+              profile = await db.getProfile(uuid, true);
+            } catch (err) {
+              ApiError.log('Could not fetch profile from database', err);
+            }
 
-                  getUserAgent(req, (err, userAgent) => {
-                    if (err || !userAgent) return callback(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`), null);
+            if (profile) {
+              getNameHistory(profile, (err, nameHistory) => {
+                if (err) return callback(err, null); // Error
 
-                    const mcUser = nameHistory ? new MinecraftUser(profile, nameHistory, userAgent, true) : null;
+                getUserAgent(req)
+                  .then((userAgent) => {
+                    const mcUser = nameHistory ? new MinecraftUser(profile as MinecraftProfile, nameHistory, userAgent, true) : null;
 
                     if (mcUser) {
                       uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
@@ -985,32 +991,32 @@ export function getByUUID(uuid: string, req: Request | null, callback: (err: Err
                     userCache.set(uuid, err || mcUser);
 
                     if (!waitForImport) return callback(err || null, mcUser); // Error, Not Found or Success
-                  });
-                });
-              } else {
-                ApiError.log(`Contacting api.ashcon.app for profile lookup: ${uuid}`);
+                  })
+                  .catch((err) => callback(err, null));
+              });
+            } else {
+              ApiError.log(`Contacting api.ashcon.app for profile lookup: ${uuid}`);
 
-                // Contact fallback api (should not be necessary but is better than returning an 429 or 500
-                getHttp(`https://api.ashcon.app/mojang/v2/user/${uuid}`, false) // FIXME: This api never returns legacy-field
-                  .then((httpRes) => {
-                    if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 404) {
-                      return callback(new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.res.statusCode) || httpRes.res.statusCode})`, true), null);
-                    }
-                    if (httpRes.res.statusCode == 404) return callback(null, null);
+              // Contact fallback api (should not be necessary but is better than returning an 429 or 500
+              getHttp(`https://api.ashcon.app/mojang/v2/user/${uuid}`, false) // FIXME: This api never returns legacy-field
+                .then((httpRes) => {
+                  if (httpRes.res.statusCode != 200 && httpRes.res.statusCode != 404) {
+                    return callback(new ErrorBuilder().serverErr(`The server got rejected (${HttpError.getName(httpRes.res.statusCode) || httpRes.res.statusCode})`, true), null);
+                  }
+                  if (httpRes.res.statusCode == 404) return callback(null, null);
 
-                    const json = JSON.parse(httpRes.body.toString('utf-8'));
+                  const json = JSON.parse(httpRes.body.toString('utf-8'));
 
-                    const nameHistory: MinecraftNameHistoryElement[] = [];
-                    for (const elem of json.username_history) {
-                      nameHistory.push({
-                        name: elem.username,
-                        changedToAt: elem.changed_at ? new Date(elem.changed_at).getTime() : undefined
-                      });
-                    }
+                  const nameHistory: MinecraftNameHistoryElement[] = [];
+                  for (const elem of json.username_history) {
+                    nameHistory.push({
+                      name: elem.username,
+                      changedToAt: elem.changed_at ? new Date(elem.changed_at).getTime() : undefined
+                    });
+                  }
 
-                    getUserAgent(req, (err, userAgent) => {
-                      if (err || !userAgent) return callback(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`), null);
-
+                  getUserAgent(req)
+                    .then((userAgent) => {
                       const mcUser: MinecraftUser = new MinecraftUser({
                         id: json.uuid.replace(/-/g, ''),
                         name: json.username,
@@ -1033,34 +1039,34 @@ export function getByUUID(uuid: string, req: Request | null, callback: (err: Err
                       userCache.set(uuid, mcUser);
 
                       if (!waitForImport) return callback(null, mcUser); // Success
-                    });
-                  })
-                  .catch((err) => callback(err, null));
-              }
-            });
+                    })
+                    .catch((err) => callback(err, null));
+                })
+                .catch((err) => callback(err, null));
+            }
           } else {
             const profile: MinecraftProfile | null = httpRes.res.statusCode == 200 ? JSON.parse(httpRes.body.toString('utf-8')) : null;
 
             getNameHistory(profile, (err, nameHistory) => {
               if (err) return callback(err, null); // Error
 
-              getUserAgent(null, (err, userAgent) => {
-                if (err || !userAgent) return callback(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`), null);
+              getUserAgent(null)
+                .then((userAgent) => {
+                  const mcUser = profile && nameHistory ? new MinecraftUser(profile, nameHistory, userAgent, true) : null;
 
-                const mcUser = profile && nameHistory ? new MinecraftUser(profile, nameHistory, userAgent, true) : null;
+                  if (mcUser) {
+                    uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
+                  }
 
-                if (mcUser) {
-                  uuidCache.set(`${mcUser.name.toLowerCase()};`, { id: mcUser.id, name: mcUser.name });
-                }
+                  if (waitForImport) {
+                    userCacheWaitingForImportQueue.push({ key: uuid, callback }); // Error, Not Found or Success
+                  }
 
-                if (waitForImport) {
-                  userCacheWaitingForImportQueue.push({ key: uuid, callback }); // Error, Not Found or Success
-                }
+                  userCache.set(uuid, err || mcUser);
 
-                userCache.set(uuid, err || mcUser);
-
-                if (!waitForImport) return callback(err || null, mcUser); // Error, Not Found or Success
-              });
+                  if (!waitForImport) return callback(err || null, mcUser); // Error, Not Found or Success
+                })
+                .catch((err) => callback(err, null));
             });
           }
         })
@@ -1128,28 +1134,27 @@ function getBlockedServers(callback: (err: Error | null, hashes: string[] | null
 }
 
 // TODO put inside global and change the UserAgent-interface to an class
-export function getUserAgent(req: Request | null, callback: (err: Error | null, userAgent: UserAgent | null) => void): void {
-  if (!db.isAvailable()) return callback(null, { id: -1, name: 'SpraxAPI', internal: true });
+export async function getUserAgent(req: Request | null): Promise<UserAgent> {
+  return new Promise((resolve, reject) => {
+    if (!db.isAvailable()) return resolve({ id: -1, name: 'SpraxAPI', internal: true });
 
-  const agentName = req && req.headers['user-agent'] ? req.headers['user-agent'] : 'SpraxAPI',
-    isInternalAgent = req ? !req.headers['user-agent'] : true;
+    const agentName = req && req.headers['user-agent'] ? req.headers['user-agent'] : 'SpraxAPI',
+      isInternalAgent = req ? !req.headers['user-agent'] : true;
 
-  const cacheKey = `${agentName};${isInternalAgent}`;
-  const cacheValue: UserAgent | Error | null | undefined = userAgentCache.get(cacheKey);
+    const cacheKey = `${agentName};${isInternalAgent}`;
+    const cacheValue: UserAgent | undefined = userAgentCache.get(cacheKey);
 
-  if (cacheValue == undefined) {
-    db.getUserAgent(agentName, isInternalAgent, (err, userAgent) => {
-      if (err || !userAgent) return callback(err, null);
+    if (cacheValue != undefined) {
+      return resolve(cacheValue); // Hit cache
+    }
 
-      userAgentCache.set(cacheKey, userAgent);
-      return callback(null, userAgent);
-    });
-  } else {
-    if (!cacheValue) return callback(null, null); // Not Found
-    if (cacheValue instanceof Error) return callback(cacheValue, null); // Error
-
-    return callback(null, cacheValue); // Hit cache
-  }
+    db.getUserAgent(agentName, isInternalAgent)
+      .then((userAgent) => {
+        userAgentCache.set(cacheKey, userAgent);
+        return resolve(userAgent);
+      })
+      .catch(reject);
+  });
 }
 
 /**
@@ -1185,9 +1190,9 @@ function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean
       return Image.fromRaw(Buffer.from(cam.render(model, skin.img.data)), cam.width, cam.height, 4, (err, img) => {
         if (err || !img) return callback(err || new Error());
 
-        img.toPngBuffer((err, png) => {
-          return callback(err || undefined, png || undefined);
-        }, size, size);
+        img.toPngBuffer(size, size)
+          .then((png) => callback(undefined, png))
+          .catch((err) => callback(err));
       });
     } else if (!is3d) {
       const dimensions: { x: number, y: number } =
@@ -1231,7 +1236,9 @@ function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean
           }
         }
 
-        return img.toPngBuffer((err, png) => callback(err || undefined, png || undefined), size, size);
+        return img.toPngBuffer(size, size)
+          .then((png) => callback(undefined, png))
+          .catch((err) => callback(err));
       });
     }
   });
@@ -1244,8 +1251,8 @@ function renderBlock(texture: Image, size: number = 512, callback: (err?: Error,
   return Image.fromRaw(Buffer.from(cam.render(model, texture.img.data)), cam.width, cam.height, 4, (err, img) => {
     if (err || !img) return callback(err || new Error());
 
-    img.toPngBuffer((err, png) => {
-      return callback(err || undefined, png || undefined);
-    }, size, size);
+    img.toPngBuffer(size, size)
+      .then((png) => callback(undefined, png))
+      .catch((err) => callback(err));
   });
 }

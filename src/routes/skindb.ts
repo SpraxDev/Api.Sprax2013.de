@@ -81,20 +81,20 @@ router.all('/import', (req, res, next) => {
           if (err || !img) return next(new ErrorBuilder().invalidBody([{ param: 'body', condition: 'Valid png' }]));
           if (!img.hasSkinDimensions()) return next(new ErrorBuilder().invalidBody([{ param: 'body', condition: 'Valid minecraft skin dimensions 64x32px or 64x64px' }]));
 
-          getUserAgent(req, (err, userAgent) => {
-            if (err || !userAgent) return next(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`));
+          getUserAgent(req)
+            .then((userAgent) => {
+              importSkinByBuffer(req.body, null, userAgent, (err, skin, exactMatch) => {
+                if (err || !skin) return next(err || new ErrorBuilder().serverErr(undefined, `Could not import uploaded skin by Buffer`));
 
-            importSkinByBuffer(req.body, null, userAgent, (err, skin, exactMatch) => {
-              if (err || !skin) return next(err || new ErrorBuilder().serverErr(undefined, `Could not import uploaded skin by Buffer`));
-
-              return setCaching(res, false, false)
-                .status(exactMatch ? 200 : 201)
-                .send({
-                  result: exactMatch ? 'Skin already in database' : 'Skin added to database',
-                  skinID: skin.id
-                });
-            });
-          });
+                return setCaching(res, false, false)
+                  .status(exactMatch ? 200 : 201)
+                  .send({
+                    result: exactMatch ? 'Skin already in database' : 'Skin added to database',
+                    skinID: skin.id
+                  });
+              });
+            })
+            .catch(next);
         });
       } else if (contentType == 'application/json') {
         const json: { url?: string, raw?: { value: string, signature?: string } } = req.body;
@@ -103,23 +103,24 @@ router.all('/import', (req, res, next) => {
           if (!json.raw.value) return next(new ErrorBuilder().invalidBody([{ param: 'JSON-Body: json.raw.value', condition: 'Valid skin value from mojang profile' }]));
           if (json.raw.signature && !isFromYggdrasil(json.raw.value, json.raw.signature)) json.raw.signature = undefined;
 
-          getUserAgent(req, (err, userAgent) => {
-            if (err || !userAgent) return next(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`));
-            if (!json.raw) return next(new ErrorBuilder().unknown());  // FIXME: why does TypeScript need this line? o.0
+          getUserAgent(req)
+            .then((userAgent) => {
+              if (!json.raw) return next(new ErrorBuilder().unknown());  // FIXME: why does TypeScript need this line? o.0
 
-            importByTexture(json.raw.value, json.raw.signature || null, userAgent)
-              .then((result) => {
-                return setCaching(res, false, false)
-                  .status(202) // TODO report if skin added to db or already was in db
-                  .send({
-                    result: null, // TODO report if skin added to db or already was in db
-                    skinID: result.skin?.id
-                  });
-              })
-              .catch((err) => {
-                next(err)
-              });
-          });
+              importByTexture(json.raw.value, json.raw.signature || null, userAgent)
+                .then((result) => {
+                  return setCaching(res, false, false)
+                    .status(202) // TODO report if skin added to db or already was in db
+                    .send({
+                      result: null, // TODO report if skin added to db or already was in db
+                      skinID: result.skin?.id
+                    });
+                })
+                .catch((err) => {
+                  next(err)
+                });
+            })
+            .catch(next);
         } else if (json.url) {
           if (!MinecraftUser.getSecureURL(json.url).toLowerCase().startsWith('https://textures.minecraft.net/texture/'))
             return next(new ErrorBuilder().invalidBody([{ param: 'JSON-Body: json.url', condition: 'Valid textures.minecraft.net URL' }]));
@@ -127,21 +128,22 @@ router.all('/import', (req, res, next) => {
           db.getSkinByURL(MinecraftUser.getSecureURL(json.url).toLowerCase())
             .then((skin) => {
               if (!skin) {
-                getUserAgent(req, (err, userAgent) => {
-                  if (err || !userAgent) return next(err || new ErrorBuilder().serverErr(undefined, `Could not fetch User-Agent`));
-                  if (!json.url) return next(new ErrorBuilder().unknown());  // FIXME: why does TypeScript need this line? o.0
+                getUserAgent(req)
+                  .then((userAgent) => {
+                    if (!json.url) return next(new ErrorBuilder().unknown());  // FIXME: why does TypeScript need this line? o.0
 
-                  importSkinByURL(MinecraftUser.getSecureURL(json.url), userAgent, (err, skin, exactMatch) => {
-                    if (err || !skin) return next(err || new ErrorBuilder().serverErr(undefined, `Could not import skin-URL`));
+                    importSkinByURL(MinecraftUser.getSecureURL(json.url), userAgent, (err, skin, exactMatch) => {
+                      if (err || !skin) return next(err || new ErrorBuilder().serverErr(undefined, `Could not import skin-URL`));
 
-                    return setCaching(res, false, false)
-                      .status(exactMatch ? 200 : 201)
-                      .send({
-                        result: exactMatch ? 'Skin already in database' : 'Skin added to database',
-                        skinID: skin.id
-                      });
-                  });
-                });
+                      return setCaching(res, false, false)
+                        .status(exactMatch ? 200 : 201)
+                        .send({
+                          result: exactMatch ? 'Skin already in database' : 'Skin added to database',
+                          skinID: skin.id
+                        });
+                    });
+                  })
+                  .catch(next);
               } else {
                 return setCaching(res, false, false)
                   .status(200)
@@ -180,14 +182,15 @@ router.use('/cdn/skins/:id?/:type?', (req, res, next) => {
     .then((skin) => {
       if (!skin) return next(new ErrorBuilder().notFound('Skin for given ID'));
 
-      db.getSkinImage(skin.duplicateOf || skin.id, originalType ? 'original' : 'clean', (err, img) => {
-        if (err) return next(err);
-        if (!img) return next(new ErrorBuilder().serverErr(`Could not find any image in db for skin (id=${skin.id})`, true));
+      db.getSkinImage(skin.duplicateOf || skin.id, originalType ? 'original' : 'clean')
+        .then((img) => {
+          if (!img) return next(new ErrorBuilder().serverErr(`Could not find any image in db for skin (id=${skin.id})`, true));
 
-        setCaching(res, true, true, 60 * 60 * 24 * 30 /*30d*/)
-          .type('png')
-          .send(img);
-      });
+          setCaching(res, true, true, 60 * 60 * 24 * 30 /*30d*/)
+            .type('png')
+            .send(img);
+        })
+        .catch(next);
     })
     .catch((err) => {
       next(err);
@@ -205,19 +208,21 @@ router.use('/cdn/capes/:id?', (req, res, next) => {
 
   if (!db.isAvailable()) return next(new ErrorBuilder().serviceUnavailable('Currently not connected to a database'));
 
-  db.getCape(id, (err, cape) => {
-    if (err) return next(err);
-    if (!cape) return next(new ErrorBuilder().notFound('Cape for given ID'));
+  db.getCape(id)
+    .then((cape) => {
+      if (!cape) return next(new ErrorBuilder().notFound('Cape for given ID'));
 
-    db.getCapeImage(cape.duplicateOf || cape.id, (err, img) => {
-      if (err) return next(err);
-      if (!img) return next(new ErrorBuilder().serverErr(`Could not find any image in db for cape (id=${cape.id})`, true));
+      db.getCapeImage(cape.duplicateOf || cape.id)
+        .then((img) => {
+          if (!img) return next(new ErrorBuilder().serverErr(`Could not find any image in db for cape (id=${cape.id})`, true));
 
-      setCaching(res, true, true, 60 * 60 * 24 * 30 /*30d*/)
-        .type('png')
-        .send(img);
-    });
-  });
+          setCaching(res, true, true, 60 * 60 * 24 * 30 /*30d*/)
+            .type('png')
+            .send(img);
+        })
+        .catch(next);
+    })
+    .catch(next);
 });
 
 // router.all('/search', (req, res, next) => {
@@ -309,16 +314,17 @@ router.all('/ai/:model?', async (req, res, next) => {
         return next(new ErrorBuilder().serviceUnavailable('The requested AI model failed to initialize'));
       }
 
-      db.getSkinImage(querySkinID, 'clean', (err, skin) => {
-        if (err) return next(err);
-        if (!skin) return next(new ErrorBuilder().serverErr(`Could not find any image in db for skin (id=${querySkinID})`, true));
+      db.getSkinImage(querySkinID, 'clean')
+        .then((skin) => {
+          if (!skin) return next(new ErrorBuilder().serverErr(`Could not find any image in db for skin (id=${querySkinID})`, true));
 
-        model.predict(skin)
-          .then((result) => {
-            return res.send(result);
-          })
-          .catch(next);
-      });
+          model.predict(skin)
+            .then((result) => {
+              return res.send(result);
+            })
+            .catch(next);
+        })
+        .catch(next);
     }
   });
 });
@@ -390,57 +396,58 @@ export function importSkinByURL(skinURL: string, userAgent: UserAgent, callback:
     .catch((err) => callback(err, null, false));
 }
 
-export function importSkinByBuffer(skinBuffer: Buffer, skinURL: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void, textureValue: string | null = null, textureSignature: string | null = null): void {
+export function importSkinByBuffer(skinBuffer: Buffer, skinURL: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void, textureValue: string | null = null, textureSignature: string | null = null, waitForAlternativeVersions: boolean = false): void {
   if (textureValue && textureSignature && !isFromYggdrasil(textureValue, textureSignature)) return callback(new Error('Texture signature is invalid!'), null, false);
 
   Image.fromImg(skinBuffer, (err, img) => {
     if (err || !img) return callback(err, null, false);
 
-    img.toPngBuffer((err, orgSkin) => {
-      if (err || !orgSkin) return callback(err, null, false);
+    img.toPngBuffer()
+      .then((orgSkin) => {
+        img.toCleanSkinBuffer()
+          .then((cleanSkin) => {
+            db.addSkin(orgSkin, cleanSkin, generateHash(img.img.data), skinURL, textureValue, textureSignature, userAgent)
+              .then((dbSkin) => {
+                if (textureValue && textureSignature) {
+                  const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
+                  getByUUID(json.profileId, null, (err, user) => {
+                    if (err || !user) return;  // Error or invalid uuid
 
-      img.toCleanSkinBuffer((err, cleanSkin) => {
-        if (err || !cleanSkin) return callback(err, null, false);
-
-        db.addSkin(orgSkin, cleanSkin, generateHash(img.img.data), skinURL, textureValue, textureSignature, userAgent, (err, skin, exactMatch) => {
-          if (err || !skin) return callback(err, null, false);
-
-          if (textureValue && textureSignature) {
-            const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
-            getByUUID(json.profileId, null, (err, user) => {
-              if (err || !user) return;  // Error or invalid uuid
-
-              db.addSkinToUserHistory(user, skin, new Date(json.timestamp))
-                .catch((err) => ApiError.log(`Could not update skin-history in database`, { skin: skin.id, profile: user.id, stack: err.stack }));
-            });
-          }
-
-          callback(null, skin, exactMatch); // returning before starting background task
-
-          (async function () {
-            Image.fromImg(skinBuffer, async (err, img) => {
-              if (err || !img) return ApiError.log('Could not import alternative version for an skin', err);
-
-              const alternateVersions: Image[] = await img.generateSkinAlternatives();
-
-              for (const img of alternateVersions) {
-                img.toPngBuffer((err, orgSkin) => {
-                  if (err || !orgSkin) return ApiError.log('Could not import alternative version for an skin', err);
-
-                  img.toCleanSkinBuffer((err, cleanSkin) => {
-                    if (err || !cleanSkin) return ApiError.log('Could not import alternative version for an skin', err);
-
-                    db.addSkin(orgSkin, cleanSkin, generateHash(img.img.data), null, null, null, userAgent, (err, _exactMatch) => {
-                      if (err) return ApiError.log('Could not import alternative version for an skin', err);
-                    });
+                    db.addSkinToUserHistory(user, dbSkin.skin, new Date(json.timestamp))
+                      .catch((err) => ApiError.log(`Could not update skin-history in database`, { skin: dbSkin.skin.id, profile: user.id, stack: err.stack }));
                   });
-                });
-              }
-            });
-          })();
-        });
-      });
-    });
+                }
+
+                if (!waitForAlternativeVersions) {
+                  callback(null, dbSkin.skin, dbSkin.exactMatch); // returning before starting background task
+                }
+
+                (async function () {
+                  Image.fromImg(skinBuffer, async (err, img) => {
+                    if (err || !img) return ApiError.log('Could not import alternative version for an skin', err);
+
+                    const alternateVersions: Image[] = await img.generateSkinAlternatives();
+
+                    for (const img of alternateVersions) {
+                      try {
+                        await db.addSkin(await img.toPngBuffer(), await img.toCleanSkinBuffer(),
+                          generateHash(img.img.data), null, null, null, userAgent);
+                      } catch (err) {
+                        ApiError.log('Could not import alternative version for an skin', err)
+                      }
+                    }
+
+                    if (waitForAlternativeVersions) {
+                      callback(null, dbSkin.skin, dbSkin.exactMatch);
+                    }
+                  });
+                })();
+              })
+              .catch((err) => callback(err, null, false));
+          })
+          .catch((err) => callback(err, null, false));
+      })
+      .catch((err) => callback(err, null, false));
   });
 }
 
@@ -452,25 +459,27 @@ export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: 
           Image.fromImg(httpRes.body, (err, img) => {
             if (err || !img) return reject(err);
 
-            img.toPngBuffer((err, capePng) => {
-              if (err || !capePng) return reject(err);
+            img.toPngBuffer()
+              .then((capePng) => {
+                db.addCape(capePng, generateHash(img.img.data), capeType, capeURL,
+                  capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent)
+                  .then((cape) => {
+                    if (capeType == 'MOJANG' && textureValue && textureSignature) {
+                      const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
 
-              db.addCape(capePng, generateHash(img.img.data), capeType, capeURL, capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent, (err, cape) => {
-                if (err || !cape) return reject(err);
+                      getByUUID(json.profileId, null, (err, user) => {
+                        if (err || !user) return;  // Error or invalid uuid
 
-                if (capeType == 'MOJANG' && textureValue && textureSignature) {
-                  const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
-                  getByUUID(json.profileId, null, (err, user) => {
-                    if (err || !user) return;  // Error or invalid uuid
+                        db.addCapeToUserHistory(user, cape, new Date(json.timestamp))
+                          .catch((err) => ApiError.log(`Could not update cape-history in database`, { profile: json.profileId, cape: cape.id, stack: err.stack }));
+                      });
+                    }
 
-                    db.addCapeToUserHistory(user, cape, new Date(json.timestamp))
-                      .catch((err) => ApiError.log(`Could not update cape-history in database`, { profile: json.profileId, cape: cape.id, stack: err.stack }));
-                  });
-                }
-
-                return resolve(cape);
-              });
-            });
+                    return resolve(cape);
+                  })
+                  .catch(reject);
+              })
+              .catch(reject);
           });
         } else if (httpRes.res.statusCode != 404) {
           reject(new Error(`Importing cape by URL returned status ${httpRes.res.statusCode}`));

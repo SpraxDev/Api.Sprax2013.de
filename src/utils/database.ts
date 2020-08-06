@@ -89,13 +89,16 @@ export class dbUtils {
     });
   }
 
-  getProfile(id: string, callback: (err: Error | null, profile: MinecraftProfile | null) => void): void {
-    if (this.pool == null) return callback(null, null);
+  async getProfile(id: string, onlyRecent: boolean = false): Promise<MinecraftProfile | null> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
 
-    this.pool.query(`SELECT raw_json FROM "profiles" WHERE id =$1 AND raw_json IS NOT NULL AND last_update >= NOW() - INTERVAL '120 seconds';`, [id], (err, res) => {
-      if (err) return callback(err, null);
+      this.pool.query(`SELECT raw_json FROM "profiles" WHERE id =$1 AND raw_json IS NOT NULL ${onlyRecent ? `AND last_update >= NOW() - INTERVAL '120 seconds'` : ''};`,
+        [id], (err, res) => {
+          if (err) return reject(err);
 
-      callback(null, res.rows.length > 0 ? res.rows[0].raw_json : null);
+          resolve(res.rows.length > 0 ? res.rows[0].raw_json : null);
+        });
     });
   }
 
@@ -121,38 +124,40 @@ export class dbUtils {
 
   /* UserAgent */
 
-  getUserAgent(name: string, internal: boolean, callback: (err: Error | null, userAgent: UserAgent | null) => void): void {
-    if (this.pool == null) return callback(null, null);
+  async getUserAgent(name: string, internal: boolean): Promise<UserAgent> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
 
-    this.pool.connect((err, client, done) => {
-      if (err) return callback(err, null);
+      this.pool.connect((err, client, done) => {
+        if (err) return reject(err);
 
-      client.query('BEGIN', (err) => {
-        if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+        client.query('BEGIN', (err) => {
+          if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-        client.query(`SELECT * FROM user_agents WHERE name =$1 AND internal =$2;`, [name, internal], (err, res) => {
-          if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+          client.query(`SELECT * FROM user_agents WHERE name =$1 AND internal =$2;`, [name, internal], (err, res) => {
+            if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-          if (res.rows.length > 0) {
-            client.query('COMMIT', (err) => {
-              done();
-              if (err) return callback(err, null);
+            if (res.rows.length > 0) {
+              client.query('COMMIT', (err) => {
+                done();
+                if (err) return reject(err);
 
-              callback(null, RowUtils.toUserAgent(res.rows[0]));
-            });
-          } else {
-            client.query(`INSERT INTO user_agents(name,internal) VALUES($1,$2) RETURNING *;`,
-              [name, internal], (err, res) => {
-                if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
-
-                client.query('COMMIT', (err) => {
-                  done();
-                  if (err) return callback(err, null);
-
-                  callback(null, RowUtils.toUserAgent(res.rows[0]));
-                });
+                resolve(RowUtils.toUserAgent(res.rows[0]));
               });
-          }
+            } else {
+              client.query(`INSERT INTO user_agents(name,internal) VALUES($1,$2) RETURNING *;`,
+                [name, internal], (err, res) => {
+                  if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+
+                  client.query('COMMIT', (err) => {
+                    done();
+                    if (err) return reject(err);
+
+                    resolve(RowUtils.toUserAgent(res.rows[0]));
+                  });
+                });
+            }
+          });
         });
       });
     });
@@ -208,86 +213,100 @@ export class dbUtils {
     });
   }
 
-  addSkin(originalPng: Buffer, cleanPng: Buffer, cleanPngHash: string, originalURL: string | null, textureValue: string | null,
-    textureSignature: string | null, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void): void {
-    if (this.pool == null) return callback(null, null, false);
-    if (originalURL && !originalURL.toLowerCase().startsWith('https://textures.minecraft.net/texture/')) return callback(new Error(`The provided originalURL(=${originalURL}) does not start with 'https://textures.minecraft.net/texture/'`), null, false);
-    if (!textureValue && textureSignature) return callback(new Error('Only provide textureSignature with its textureValue!'), null, false);
+  async addSkin(originalPng: Buffer, cleanPng: Buffer, cleanPngHash: string, originalURL: string | null, textureValue: string | null,
+    textureSignature: string | null, userAgent: UserAgent): Promise<{ skin: Skin, exactMatch: boolean }> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
 
-    this.pool.connect((err, client, done) => {
-      if (err) return callback(err, null, false);
+      if (originalURL &&
+        !originalURL.toLowerCase().startsWith('https://textures.minecraft.net/texture/')) return reject(new Error(`The provided originalURL(=${originalURL}) does not start with 'https://textures.minecraft.net/texture/'`));
+      if (!textureValue && textureSignature) return reject(new Error('Only provide textureSignature with its textureValue!'));
 
-      client.query('BEGIN', (err) => {
-        if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
+      this.pool.connect((err, client, done) => {
+        if (err) return reject(err);
 
-        client.query('LOCK TABLE skins IN EXCLUSIVE MODE;', (err) => {
-          if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
+        client.query('BEGIN', (err) => {
+          if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-          // only on file-upload original_url should be missing, so check clean_hash in these cases
-          // We don't need an (clean) identical version with and without url
-          const fieldName: string = originalURL ? 'original_url' : 'clean_hash',
-            args = originalURL ? [originalURL] : [cleanPngHash];
+          client.query('LOCK TABLE skins IN EXCLUSIVE MODE;', (err) => {
+            if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-          client.query(`SELECT * FROM skins WHERE ${fieldName} =$1 LIMIT 1;`, args, async (err, res) => {
-            if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
+            // only on file-upload original_url should be missing, so check clean_hash in these cases
+            // We don't need an (clean) identical version with and without url
+            const fieldName: string = originalURL ? 'original_url' : 'clean_hash',
+              args = originalURL ? [originalURL] : [cleanPngHash];
 
-            if (res.rows.length > 0) { // Exact same Skin-URL already in db
-              let commit = false;
-              if ((textureValue && !res.rows[0].texture_value) ||
-                (textureValue && textureSignature && !res.rows[0].texture_signature)) {
-                let err;
-                try {
-                  res = await client.query('UPDATE skins SET texture_value =$1,texture_signature =$2 WHERE id =$3 RETURNING *;', [textureValue, textureSignature, res.rows[0].id]);
-                  commit = true;
-                } catch (ex) {
-                  err = ex;
+            client.query(`SELECT * FROM skins WHERE ${fieldName} =$1 LIMIT 1;`, args, async (err, res) => {
+              if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+
+              if (res.rows.length > 0) { // Exact same Skin-URL already in db
+                let commit = false;
+                if ((textureValue && !res.rows[0].texture_value) ||
+                  (textureValue && textureSignature && !res.rows[0].texture_signature)) {
+                  let err;
+                  try {
+                    res = await client.query('UPDATE skins SET texture_value =$1,texture_signature =$2 WHERE id =$3 RETURNING *;',
+                      [textureValue, textureSignature, res.rows[0].id]);
+                    commit = true;
+                  } catch (ex) {
+                    err = ex;
+                  }
+
+                  if (this.shouldAbortTransaction(client, done, err)) return reject(err);
                 }
 
-                if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
-              }
+                client.query(commit ? 'COMMIT' : 'ROLLBACK', (err) => {
+                  done();
+                  if (err) return reject(err);
 
-              client.query(commit ? 'COMMIT' : 'ROLLBACK', (err) => {
-                done();
-                if (err) return callback(err, null, false);
+                  resolve({
+                    skin: RowUtils.toSkin(res.rows[0]),
+                    exactMatch: true
+                  });
+                });
+              } else {
+                client.query(`SELECT * FROM skins WHERE clean_hash =$1 AND duplicate_of IS NULL LIMIT 1;`, [cleanPngHash], (err, res) => {
+                  if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                callback(null, RowUtils.toSkin(res.rows[0]), true);
-              });
-            } else {
-              client.query(`SELECT * FROM skins WHERE clean_hash =$1 AND duplicate_of IS NULL LIMIT 1;`, [cleanPngHash], (err, res) => {
-                if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
+                  const duplicateID: number | null = res.rows.length > 0 ? res.rows[0].id : null,
+                    isDuplicate = res.rows.length > 0;
 
-                const duplicateID: number | null = res.rows.length > 0 ? res.rows[0].id : null,
-                  isDuplicate = res.rows.length > 0;
+                  client.query(`INSERT INTO skins(duplicate_of,original_url,texture_value,texture_signature,clean_hash,added_by)VALUES($1,$2,$3,$4,$5,$6) RETURNING *;`,
+                    [duplicateID, originalURL, textureValue, textureSignature, (isDuplicate ? null : cleanPngHash), userAgent.id], (err, res) => {
+                      if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                client.query(`INSERT INTO skins(duplicate_of,original_url,texture_value,texture_signature,clean_hash,added_by)VALUES($1,$2,$3,$4,$5,$6) RETURNING *;`,
-                  [duplicateID, originalURL, textureValue, textureSignature, (isDuplicate ? null : cleanPngHash), userAgent.id], (err, res) => {
-                    if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
+                      const resultSkin: Skin = RowUtils.toSkin(res.rows[0]);
 
-                    const resultSkin: Skin = RowUtils.toSkin(res.rows[0]);
+                      if (!isDuplicate) {
+                        client.query(`INSERT INTO skin_images(skin_id,original,clean)VALUES($1,$2,$3);`,
+                          [resultSkin.id, originalPng, cleanPng], (err, _res) => {
+                            if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                    if (!isDuplicate) {
-                      client.query(`INSERT INTO skin_images(skin_id,original,clean)VALUES($1,$2,$3);`,
-                        [resultSkin.id, originalPng, cleanPng], (err, _res) => {
-                          if (this.shouldAbortTransaction(client, done, err)) return callback(err, null, false);
+                            client.query('COMMIT', (err) => {
+                              done();
+                              if (err) return reject(err);
 
-                          client.query('COMMIT', (err) => {
-                            done();
-                            if (err) return callback(err, null, false);
+                              resolve({
+                                skin: resultSkin,
+                                exactMatch: false
+                              });
+                            });
+                          });
+                      } else {
+                        client.query('COMMIT', (err) => {
+                          done();
+                          if (err) return reject(err);
 
-                            callback(null, resultSkin, false);
+                          resolve({
+                            skin: resultSkin,
+                            exactMatch: false
                           });
                         });
-                    } else {
-                      client.query('COMMIT', (err) => {
-                        done();
-                        if (err) return callback(err, null, false);
-
-                        callback(null, resultSkin, false);
-                      });
-                    }
-                  });
-              });
-            }
+                      }
+                    });
+                });
+              }
+            });
           });
         });
       });
@@ -469,13 +488,15 @@ export class dbUtils {
     });
   }
 
-  getSkinImage(skinID: string, type: 'clean' | 'original', callback: (err: Error | null, img: Buffer | null) => void): void {
-    if (this.pool == null) return callback(null, null);
+  async getSkinImage(skinID: string, type: 'clean' | 'original'): Promise<Buffer | null> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
 
-    this.pool.query(`SELECT ${type == 'original' ? 'original' : 'clean'} as img FROM skin_images WHERE skin_id =$1;`, [skinID], (err, res) => {
-      if (err) return callback(err, null);
+      this.pool.query(`SELECT ${type == 'original' ? 'original' : 'clean'} as img FROM skin_images WHERE skin_id =$1;`, [skinID], (err, res) => {
+        if (err) return reject(err);
 
-      callback(null, res.rows.length > 0 ? res.rows[0].img : null);
+        resolve(res.rows.length > 0 ? res.rows[0].img : null);
+      });
     });
   }
 
@@ -604,66 +625,69 @@ export class dbUtils {
 
   /* Cape */
 
-  addCape(capePng: Buffer, pngHash: string, type: CapeType, originalURL: string, textureValue: string | null, textureSignature: string | null, userAgent: UserAgent, callback: (err: Error | null, cape: Cape | null) => void): void {
-    if (this.pool == null) return callback(null, null);
-    if (type != CapeType.MOJANG && (textureValue || textureSignature)) return callback(new Error('Only provide textureValue and -Signature for Mojang-Capes!'), null);
-    if (!textureValue && textureSignature) return callback(new Error('Only provide textureSignature with its textureValue!'), null);
+  async addCape(capePng: Buffer, pngHash: string, type: CapeType, originalURL: string,
+    textureValue: string | null, textureSignature: string | null, userAgent: UserAgent): Promise<Cape> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+      if (type != CapeType.MOJANG && (textureValue || textureSignature)) return reject(new Error('Only provide textureValue and -Signature for Mojang-Capes!'));
+      if (!textureValue && textureSignature) return reject(new Error('Only provide textureSignature with its textureValue!'));
 
-    this.pool.connect((err, client, done) => {
-      if (err) return callback(err, null);
+      this.pool.connect((err, client, done) => {
+        if (err) return reject(err);
 
-      client.query('BEGIN', (err) => {
-        if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+        client.query('BEGIN', (err) => {
+          if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-        client.query('LOCK TABLE capes IN EXCLUSIVE MODE;', (err) => {
-          if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+          client.query('LOCK TABLE capes IN EXCLUSIVE MODE;', (err) => {
+            if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-          client.query(`SELECT * FROM capes WHERE clean_hash =$1 AND type =$2 LIMIT 1;`, [pngHash, type], (err, res) => {
-            if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+            client.query(`SELECT * FROM capes WHERE clean_hash =$1 AND type =$2 LIMIT 1;`, [pngHash, type], (err, res) => {
+              if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-            if (res.rows.length > 0) { // Exact same Cape-URL already in db
-              client.query('COMMIT', (err) => {
-                done();
-                if (err) return callback(err, null);
+              if (res.rows.length > 0) { // Exact same Cape-URL already in db
+                client.query('COMMIT', (err) => {
+                  done();
+                  if (err) return reject(err);
 
-                callback(null, RowUtils.toCape(res.rows[0]));
-              });
-            } else {
-              client.query(`SELECT * FROM capes WHERE clean_hash =$1 AND duplicate_of IS NULL LIMIT 1;`, [pngHash], (err, res) => {
-                if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+                  resolve(RowUtils.toCape(res.rows[0]));
+                });
+              } else {
+                client.query(`SELECT * FROM capes WHERE clean_hash =$1 AND duplicate_of IS NULL LIMIT 1;`, [pngHash], (err, res) => {
+                  if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                const duplicateID: number | null = res.rows.length > 0 ? res.rows[0].id : null,
-                  isDuplicate = res.rows.length > 0;
+                  const duplicateID: number | null = res.rows.length > 0 ? res.rows[0].id : null,
+                    isDuplicate = res.rows.length > 0;
 
-                client.query(`INSERT INTO capes(type,duplicate_of,original_url,added_by,clean_hash,texture_value,texture_signature)VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *;`,
-                  [type, duplicateID, originalURL, userAgent.id, (isDuplicate ? null : pngHash), textureValue, textureSignature], (err, res) => {
-                    if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+                  client.query(`INSERT INTO capes(type,duplicate_of,original_url,added_by,clean_hash,texture_value,texture_signature)VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *;`,
+                    [type, duplicateID, originalURL, userAgent.id, (isDuplicate ? null : pngHash), textureValue, textureSignature], (err, res) => {
+                      if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                    const resultCape: Cape = RowUtils.toCape(res.rows[0]);
+                      const resultCape: Cape = RowUtils.toCape(res.rows[0]);
 
-                    if (!isDuplicate) {
-                      client.query(`INSERT INTO cape_images(cape_id,original)VALUES($1,$2);`,
-                        [resultCape.id, capePng], (err, _res) => {
-                          if (this.shouldAbortTransaction(client, done, err)) return callback(err, null);
+                      if (!isDuplicate) {
+                        client.query(`INSERT INTO cape_images(cape_id,original)VALUES($1,$2);`,
+                          [resultCape.id, capePng], (err, _res) => {
+                            if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                          client.query('COMMIT', (err) => {
-                            done();
-                            if (err) return callback(err, null);
+                            client.query('COMMIT', (err) => {
+                              done();
+                              if (err) return reject(err);
 
-                            callback(null, resultCape);
+                              resolve(resultCape);
+                            });
                           });
-                        });
-                    } else {
-                      client.query('COMMIT', (err) => {
-                        done();
-                        if (err) return callback(err, null);
+                      } else {
+                        client.query('COMMIT', (err) => {
+                          done();
+                          if (err) return reject(err);
 
-                        callback(null, resultCape);
-                      });
-                    }
-                  });
-              });
-            }
+                          resolve(resultCape);
+                        });
+                      }
+                    });
+                });
+              }
+            });
           });
         });
       });
@@ -714,23 +738,27 @@ export class dbUtils {
     });
   }
 
-  getCape(capeID: string, callback: (err: Error | null, cape: Cape | null) => void): void {
-    if (this.pool == null) return callback(null, null);
+  async getCape(capeID: string): Promise<Cape | null> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
 
-    this.pool.query(`SELECT * FROM capes WHERE id =$1;`, [capeID], (err, res) => {
-      if (err) return callback(err, null);
+      this.pool.query(`SELECT * FROM capes WHERE id =$1;`, [capeID], (err, res) => {
+        if (err) return reject(err);
 
-      callback(null, res.rows.length == 0 ? null : RowUtils.toCape(res.rows[0]));
+        resolve(res.rows.length == 0 ? null : RowUtils.toCape(res.rows[0]));
+      });
     });
   }
 
-  getCapeImage(skinID: string, callback: (err: Error | null, img: Buffer | null) => void): void {
-    if (this.pool == null) return callback(null, null);
+  async getCapeImage(skinID: string): Promise<Buffer | null> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
 
-    this.pool.query(`SELECT original FROM cape_images WHERE cape_id =$1;`, [skinID], (err, res) => {
-      if (err) return callback(err, null);
+      this.pool.query(`SELECT original FROM cape_images WHERE cape_id =$1;`, [skinID], (err, res) => {
+        if (err) return reject(err);
 
-      callback(null, res.rows.length > 0 ? res.rows[0].original : null);
+        resolve(res.rows.length > 0 ? res.rows[0].original : null);
+      });
     });
   }
 
@@ -791,10 +819,14 @@ export class dbUtils {
     return this.pool != null;
   }
 
-  isReady(callback: (err: Error | null) => void): void {
-    if (this.pool == null) return callback(null);
+  async isReady(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject();
 
-    this.pool.query('SELECT NOW();', (err, _res) => callback(err));
+      this.pool.query('SELECT NOW();')
+        .then(() => resolve())
+        .catch((err) => reject(err));
+    });
   }
 
   /**
@@ -804,7 +836,7 @@ export class dbUtils {
     return this.pool;
   }
 
-  shutdown(): Promise<void> {
+  async shutdown(): Promise<void> {
     if (this.pool == null) return new Promise((resolve, _reject) => { resolve(); });
 
     const result = this.pool.end();
