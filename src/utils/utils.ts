@@ -89,6 +89,25 @@ export class Image {
   }
 
   /**
+   * Full alpha or no alpha in skin overlay
+   */
+  async resetSkinOverlayAlpha() {
+    const black = { r: 0, g: 0, b: 0, alpha: 0 };
+
+    for (const area of Image.secondSkinLayerAreas) {
+      for (let i = 0; i < area.w; i++) {
+        for (let j = 0; j < area.h; j++) {
+          const x = area.x + i,
+            y = area.y + j;
+          const color: Color = this.getColor(x, y);
+
+          this.setColor(x, y, color.alpha > 0 ? { r: color.r, g: color.g, b: color.b, alpha: 255 } : black);
+        }
+      }
+    }
+  }
+
+  /**
    * Combine (additive) two RGBA colors
    *
    * **Having alpha 0 will return the other color or a color with all 0**

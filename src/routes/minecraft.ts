@@ -1187,6 +1187,8 @@ function renderSkin(skin: Image, area: SkinArea, overlay: boolean, alex: boolean
 
       if (!cam || !model) return callback(new Error(`This combination of SkinArea(=${area}), overlay(=${overlay}), alex(=${alex}) and is3d(=${is3d}) is not supported (please create an issue on GitHub)`));
 
+      skin.resetSkinOverlayAlpha();
+
       return Image.fromRaw(Buffer.from(cam.render(model, skin.img.data)), cam.width, cam.height, 4, (err, img) => {
         if (err || !img) return callback(err || new Error());
 
