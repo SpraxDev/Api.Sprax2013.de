@@ -4,7 +4,7 @@ import { db } from '..';
 import { getByUUID, getByUsername, getUserAgent } from './minecraft';
 import { restful, isUUID, ErrorBuilder, isNumber, setCaching, ApiError, compareString, Image, generateHash } from '../utils/utils';
 import { SkinDBAccount, SkinDBSkin, SkinDBSearch, SkinDBIndex, Skin, SkinDBSkins } from '../global';
-import { importByTexture, importSkinByBuffer } from './skindb';
+import { importSkinByBuffer } from './skindb';
 
 /* Routes */
 const router = Router();
