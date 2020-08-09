@@ -23,8 +23,9 @@
     "debug": "ts-node src/index-debug.ts"
   },
   "author": {
-    "name": "Sprax2013",
-    "url": "https://Sprax2013.de"
+    "name": "Christian Koop",
+    "url": "https://Sprax2013.de",
+    "email": "developer@sprax2013.de"
   },
   "contributors": [
     {
