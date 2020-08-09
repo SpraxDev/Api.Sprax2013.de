@@ -8,7 +8,7 @@ export interface SpraxAPIcfg {
 
     readonly host: string,
     readonly port: number
-  };
+  }
 
   readonly trustProxy: boolean;
 
@@ -31,7 +31,7 @@ export interface SpraxAPIdbCfg {
 
   readonly databases: {
     readonly skindb: string;
-  };
+  }
 }
 
 export interface UserAgent {
@@ -139,7 +139,7 @@ export interface CleanMinecraftUser {
     capeURL: string | null;
     texture_value: string | null;
     texture_signature: string | null
-  };
+  }
   name_history?: MinecraftNameHistoryElement[];
 }
 
