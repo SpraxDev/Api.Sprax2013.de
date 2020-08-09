@@ -109,7 +109,7 @@ export const webAccessLogStream = rfs.createStream('access.log', { interval: '1d
   server = createServer(require('./server').app);
 
   server.on('error', (err: { syscall: string, code: string }) => {
-    if (err.syscall !== 'listen') {
+    if (err.syscall != 'listen') {
       throw err;
     }
 
@@ -151,12 +151,13 @@ export const webAccessLogStream = rfs.createStream('access.log', { interval: '1d
 
     if (fs.existsSync(unixSocketPath)) {
       let isRunning: boolean = false;
-      if (!fs.existsSync(unixSocketPIDPath) || !(isRunning = isProcessRunning(parseInt(fs.readFileSync(unixSocketPIDPath, 'utf-8'))))) {
+      let runningPID: number = -1;
+      if (!fs.existsSync(unixSocketPIDPath) || !(isRunning = isProcessRunning(runningPID = parseInt(fs.readFileSync(unixSocketPIDPath, 'utf-8'))))) {
         fs.unlinkSync(unixSocketPath);
       }
 
       if (isRunning) {
-        console.error(`It looks like the process that created '${unixSocketPath}' is still running!`);
+        console.error(`The process (PID: ${runningPID}) that created '${unixSocketPath}' is still running!`);
         process.exit(1);
       }
     }
