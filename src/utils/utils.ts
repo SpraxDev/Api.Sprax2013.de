@@ -784,17 +784,17 @@ export class HttpError {
 export function restful(req: Request, res: Response, handlers: { [key: string]: () => void }): void {
   const method = (req.method || '').toLowerCase();
 
-  if (method in handlers) {
-    handlers[method]();
-  } else {
-    const allowedMethods: string[] = Object.keys(handlers);
-    if ('get' in handlers && !('head' in handlers)) {
-      allowedMethods.push('head');
-    }
+  if (method in handlers) return handlers[method]();
+  if (method == 'head' && 'get' in handlers) return handlers['get']();
 
-    res.set('Allow', allowedMethods.join(', ').toUpperCase())
-      .sendStatus(405); // TODO: send error-custom body
+  const allowedMethods: string[] = Object.keys(handlers);
+  if (!allowedMethods.includes('head')) {
+    allowedMethods.push('head');
   }
+
+  res.set('Allow', allowedMethods.join(', ').toUpperCase());
+  res.sendStatus(405);
+  // return next(ApiError.create(ApiErrs.METHOD_NOT_ALLOWED, { allowedMethods }));   // TODO: send error-custom body
 }
 
 export function setCaching(res: Response, cacheResource: boolean = true, publicResource: boolean = true, duration?: number, proxyDuration?: number | undefined): Response {
