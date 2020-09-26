@@ -65,14 +65,14 @@ This API provides data in JSON format. I can't even display an ad in some corner
 <table>
   <tr>
     <td>
-      <a href="https://www.cloudflare.com/" title="Improve API Performance and Security">
+      <a href="https://www.cloudflare.com/" title="Improve API performance and availability">
         <img src="https://www.cloudflare.com/img/logo-cloudflare-dark.svg" width="100px" alt="CloudFlare branding"><!--
         --><br><!--
         --><sub><b>CloudFlare Free</b></sub>
       </a>
     </td>
     <td>
-      <a href="https://www.jetbrains.com/" title="Provide greate Tools/IDEs to use">
+      <a href="https://www.jetbrains.com/" title="Provide greate IDEs">
         <img src="https://i.imgur.com/RISnfij.png" width="100px"  alt="JetBrains branding"><!--
         --><br><!--
         --><sub><b>JetBrains OS License</b></sub>
