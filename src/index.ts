@@ -141,11 +141,11 @@ export const errorLogStream = createRotatingFileStream('error.log', {
 
   if (cfg.listen.usePath) {
     const unixSocketPath = cfg.listen.path,
-      unixSocketPIDPath = cfg.listen.path + '.pid',
-      parentDir = require('path').dirname(unixSocketPath);
+        unixSocketPIDPath = cfg.listen.path + '.pid',
+        parentDir = require('path').dirname(unixSocketPath);
 
     if (!fs.existsSync(parentDir)) {
-      fs.mkdirSync(parentDir, { recursive: true });
+      fs.mkdirSync(parentDir, {recursive: true});
     }
 
     const isProcessRunning = (pid: number): boolean => {

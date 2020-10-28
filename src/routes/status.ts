@@ -9,9 +9,9 @@ router.all('/', (req, res, _next) => {
   restful(req, res, {
     get: () => {
       setCaching(res, false, true)
-        .send({
-          api: 'OK'
-        });
+          .send({
+            api: 'OK'
+          });
     }
   });
 });

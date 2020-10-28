@@ -42,9 +42,9 @@ export class AiModel {
             this.model = model;
             this.modelDir = undefined;
 
-          resolve();
-        })
-        .catch(reject);
+            resolve();
+          })
+          .catch(reject);
     });
   }
 
@@ -72,23 +72,26 @@ export class AiModel {
       });
       tf.dispose(inputImage);
 
-      (logits as tf.Tensor<tf.Rank>).data()
-        .then((values) => {
-          const classes = [];
+      (logits as tf.Tensor).data()
+          .then((values) => {
+            const classes = [];
 
-          for (let i = 0; i < values.length; i++) {
-            classes.push({
-              className: this.metadata.labels[i],
-              probability: values[i]
+            for (let i = 0; i < values.length; i++) {
+              classes.push({
+                className: this.metadata.labels[i],
+                probability: values[i]
+              });
+            }
+
+            // Highest probability first
+            classes.sort((o1, o2) => {
+              return o2.probability - o1.probability;
             });
-          }
 
-          classes.sort((o1, o2) => { return o2.probability - o1.probability; });  // Highest probability first
-
-          resolve(classes);
-        })
-        .catch(reject)
-        .finally(() => tf.dispose(logits));
+            resolve(classes);
+          })
+          .catch(reject)
+          .finally(() => tf.dispose(logits));
     });
   }
 }

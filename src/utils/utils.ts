@@ -9,39 +9,39 @@ import { Color } from '../global';
 import { appVersion, cfg, errorLogStream } from '..';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-  UUID_PATTERN_ADD_DASH = /(.{8})(.{4})(.{4})(.{4})(.{12})/,
-  FQDN_PATTERN = /^(?=.{1,253})(?!.*--.*)(?:(?![0-9-])[a-z0-9-]{1,63}(?<!-)\.){1,}(?:(?![0-9-])[a-z0-9-]{1,63}(?<!-))\.?$/i;
+    UUID_PATTERN_ADD_DASH = /(.{8})(.{4})(.{4})(.{4})(.{12})/,
+    FQDN_PATTERN = /^(?=.{1,253})(?!.*--.*)(?:(?![0-9-])[a-z0-9-]{1,63}(?<!-)\.){1,}(?:(?![0-9-])[a-z0-9-]{1,63}(?<!-))\.?$/i;
 
 export class Image {
   img: { data: Buffer, info: sharp.OutputInfo };
 
   static firstSkinLayerAreas = [
-    { x: 8, y: 0, w: 16, h: 8 },
-    { x: 0, y: 8, w: 32, h: 8 },
+    {x: 8, y: 0, w: 16, h: 8},
+    {x: 0, y: 8, w: 32, h: 8},
 
-    { x: 0, y: 20, w: 56, h: 12 },
-    { x: 4, y: 16, w: 8, h: 4 },
-    { x: 20, y: 16, w: 16, h: 4 },
-    { x: 44, y: 16, w: 8, h: 4 },
+    {x: 0, y: 20, w: 56, h: 12},
+    {x: 4, y: 16, w: 8, h: 4},
+    {x: 20, y: 16, w: 16, h: 4},
+    {x: 44, y: 16, w: 8, h: 4},
 
-    { x: 16, y: 52, w: 16, h: 12 },
-    { x: 32, y: 52, w: 16, h: 12 },
-    { x: 20, y: 48, w: 8, h: 4 },
-    { x: 36, y: 48, w: 8, h: 4 }];
+    {x: 16, y: 52, w: 16, h: 12},
+    {x: 32, y: 52, w: 16, h: 12},
+    {x: 20, y: 48, w: 8, h: 4},
+    {x: 36, y: 48, w: 8, h: 4}];
 
   static secondSkinLayerAreas = [
-    { x: 40, y: 0, w: 16, h: 8 },
-    { x: 32, y: 8, w: 32, h: 8 },
+    {x: 40, y: 0, w: 16, h: 8},
+    {x: 32, y: 8, w: 32, h: 8},
 
-    { x: 0, y: 36, w: 56, h: 12 },
-    { x: 4, y: 32, w: 8, h: 4 },
-    { x: 20, y: 32, w: 16, h: 4 },
-    { x: 44, y: 32, w: 8, h: 4 },
+    {x: 0, y: 36, w: 56, h: 12},
+    {x: 4, y: 32, w: 8, h: 4},
+    {x: 20, y: 32, w: 16, h: 4},
+    {x: 44, y: 32, w: 8, h: 4},
 
-    { x: 0, y: 52, w: 16, h: 12 },
-    { x: 48, y: 52, w: 16, h: 12 },
-    { x: 4, y: 48, w: 8, h: 4 },
-    { x: 52, y: 48, w: 8, h: 4 }];
+    {x: 0, y: 52, w: 16, h: 12},
+    {x: 48, y: 52, w: 16, h: 12},
+    {x: 4, y: 48, w: 8, h: 4},
+    {x: 52, y: 48, w: 8, h: 4}];
 
   /**
    * Use `Image.fromImg`
@@ -50,7 +50,8 @@ export class Image {
     this.img = rgbaArr;
   }
 
-  static empty(width: number, height: number, callback: (err: Error | null, img: Image | null) => void, background: { r: number, g: number, b: number, alpha: number } = { r: 0, g: 0, b: 0, alpha: 0 }): void {
+  static empty(width: number, height: number, callback: (err: Error | null, img: Image | null) => void,
+               background: { r: number, g: number, b: number, alpha: number } = {r: 0, g: 0, b: 0, alpha: 0}): void {
     sharp({
       create: {
         background,
@@ -59,48 +60,48 @@ export class Image {
         height
       }
     }).raw()
-      .toBuffer({ resolveWithObject: true })
-      .then((res) => callback(null, new Image(res)))
-      .catch((err) => callback(err, null));
+        .toBuffer({resolveWithObject: true})
+        .then((res) => callback(null, new Image(res)))
+        .catch((err) => callback(err, null));
   }
 
   static fromRaw(rgba: Buffer, width: number, height: number, channels: 1 | 2 | 3 | 4, callback: (err?: Error, img?: Image) => void): void {
-    const result = sharp(rgba, { raw: { width, height, channels } })
-      .ensureAlpha();
+    const result = sharp(rgba, {raw: {width, height, channels}})
+        .ensureAlpha();
 
-    result.toBuffer({ resolveWithObject: true })
-      .then((res) => callback(undefined, new Image(res)))
-      .catch((err) => callback(err));
+    result.toBuffer({resolveWithObject: true})
+        .then((res) => callback(undefined, new Image(res)))
+        .catch((err) => callback(err));
   }
 
   static fromImg(img: string | Buffer, callback: (err: Error | null, rawImg: Image | null) => void, width?: number, height?: number): void {
     const result = sharp(img)
-      .ensureAlpha()
-      .raw();
+        .ensureAlpha()
+        .raw();
 
     if (width && height) {
-      result.resize(width, height, { kernel: 'nearest', fit: 'outside' });
+      result.resize(width, height, {kernel: 'nearest', fit: 'outside'});
     }
 
-    result.toBuffer({ resolveWithObject: true })
-      .then((res) => callback(null, new Image(res)))
-      .catch((err) => callback(err, null));
+    result.toBuffer({resolveWithObject: true})
+        .then((res) => callback(null, new Image(res)))
+        .catch((err) => callback(err, null));
   }
 
   /**
    * Full alpha or no alpha in skin overlay
    */
   async resetSkinOverlayAlpha() {
-    const black = { r: 0, g: 0, b: 0, alpha: 0 };
+    const black = {r: 0, g: 0, b: 0, alpha: 0};
 
     for (const area of Image.secondSkinLayerAreas) {
       for (let i = 0; i < area.w; i++) {
         for (let j = 0; j < area.h; j++) {
           const x = area.x + i,
-            y = area.y + j;
+              y = area.y + j;
           const color: Color = this.getColor(x, y);
 
-          this.setColor(x, y, color.alpha > 0 ? { r: color.r, g: color.g, b: color.b, alpha: 255 } : black);
+          this.setColor(x, y, color.alpha > 0 ? {r: color.r, g: color.g, b: color.b, alpha: 255} : black);
         }
       }
     }
@@ -113,22 +114,22 @@ export class Image {
    */
   static mergeColors(col1: Color, col2: Color): Color {
     const col1Alpha = col1.alpha / 255,
-      col2Alpha = col2.alpha / 255;
+        col2Alpha = col2.alpha / 255;
 
     if (col1Alpha <= 0 && col2Alpha <= 0) {
-      return { r: 0, g: 0, b: 0, alpha: 0 };
+      return {r: 0, g: 0, b: 0, alpha: 0};
     } else if (col1Alpha <= 0) {
-      return { r: col2.r, g: col2.g, b: col2.b, alpha: col2.alpha };
+      return {r: col2.r, g: col2.g, b: col2.b, alpha: col2.alpha};
     } else if (col2Alpha <= 0) {
-      return { r: col1.r, g: col1.g, b: col1.b, alpha: col1.alpha };
+      return {r: col1.r, g: col1.g, b: col1.b, alpha: col1.alpha};
     }
 
     const alpha = 1 - (1 - col2Alpha) * (1 - col1Alpha),
-      r = Math.round((col2.r * col2Alpha / alpha) + (col1.r * col1Alpha * (1 - col2Alpha) / alpha)),
-      g = Math.round((col2.g * col2Alpha / alpha) + (col1.g * col1Alpha * (1 - col2Alpha) / alpha)),
-      b = Math.round((col2.b * col2Alpha / alpha) + (col1.b * col1Alpha * (1 - col2Alpha) / alpha));
+        r = Math.round((col2.r * col2Alpha / alpha) + (col1.r * col1Alpha * (1 - col2Alpha) / alpha)),
+        g = Math.round((col2.g * col2Alpha / alpha) + (col1.g * col1Alpha * (1 - col2Alpha) / alpha)),
+        b = Math.round((col2.b * col2Alpha / alpha) + (col1.b * col1Alpha * (1 - col2Alpha) / alpha));
 
-    return { r, g, b, alpha: alpha * 255 };
+    return {r, g, b, alpha: alpha * 255};
   }
 
   async toPngBuffer(width?: number, height?: number): Promise<Buffer> {
@@ -142,7 +143,10 @@ export class Image {
       }).png();
 
       if (width || height) {
-        result.resize(width || this.img.info.width, height || this.img.info.height, { kernel: 'nearest', fit: 'outside' });
+        result.resize(width || this.img.info.width, height || this.img.info.height, {
+          kernel: 'nearest',
+          fit: 'outside'
+        });
       }
 
       result.toBuffer((err, buffer, _info) => {
@@ -163,13 +167,13 @@ export class Image {
         height: this.img.info.height
       }
     })
-      .resize(width, height, { kernel: 'nearest', fit: 'outside' })
+        .resize(width, height, {kernel: 'nearest', fit: 'outside'})
 
-      .raw()
-      .toBuffer({ resolveWithObject: true })
+        .raw()
+        .toBuffer({resolveWithObject: true})
 
-      .then((res) => callback(null, new Image(res)))
-      .catch((err) => callback(err, null));
+        .then((res) => callback(null, new Image(res)))
+        .catch((err) => callback(err, null));
   }
 
   getColor(x: number, y: number): Color {
@@ -181,7 +185,7 @@ export class Image {
       g: this.img.data[(x * 4) + (y * (this.img.info.width * 4)) + 1],
       b: this.img.data[(x * 4) + (y * (this.img.info.width * 4)) + 2],
       alpha: this.img.data[(x * 4) + (y * (this.img.info.width * 4)) + 3]
-    }
+    };
   }
 
   setColor(x: number, y: number, color: Color): void {
@@ -198,7 +202,7 @@ export class Image {
     for (let i = 0; i < imgToDraw.img.info.width; i++) {
       for (let j = 0; j < imgToDraw.img.info.height; j++) {
         const targetX = x + i,
-          targetY = y + j;
+            targetY = y + j;
 
         if (targetX <= this.img.info.width && targetY <= this.img.info.height) {
           this.setColor(targetX, targetY, imgToDraw.getColor(i, j));
@@ -211,11 +215,11 @@ export class Image {
     for (let i = 0; i < width; i++) {
       for (let j = 0; j < height; j++) {
         const newTargetX = targetX + i,
-          newTargetY = targetY + j;
+            newTargetY = targetY + j;
 
         const color: Color = imgToDraw.getColor(subX + i, subY + j);
         if (newTargetX <= this.img.info.width && newTargetY <= this.img.info.height && color.alpha > 0) {
-          let newColor = { r: color.r, g: color.g, b: color.b, alpha: ignoreAlpha ? 255 : color.alpha };
+          let newColor = {r: color.r, g: color.g, b: color.b, alpha: ignoreAlpha ? 255 : color.alpha};
 
           if (mode == 'add') {
             newColor = Image.mergeColors(this.getColor(newTargetX, newTargetY), newColor);
@@ -234,7 +238,7 @@ export class Image {
     for (let i = 0; i < width; i++) {
       for (let j = 0; j < height; j++) {
         const newX = targetX + width - i - 1,
-          newY = targetY + j;
+            newY = targetY + j;
 
         const color = imgToDraw.getColor(originX + i, originY + j);
         if (newX <= this.img.info.width && newY <= this.img.info.height && color.alpha > 0) {
@@ -257,7 +261,7 @@ export class Image {
    */
   trimTransparency(callback: (err?: Error, newImage?: Image) => void) {
     let startingX = 0, endingX = this.img.info.width,
-      startingY = 0, endingY = this.img.info.height;
+        startingY = 0, endingY = this.img.info.height;
 
     // Top
     for (let y = 0; y < this.img.info.height; y++) {
@@ -348,8 +352,8 @@ export class Image {
         if (err) return reject(err);
 
         this.toPngBuffer()
-          .then(resolve)
-          .catch(reject);
+            .then(resolve)
+            .catch(reject);
       });
     });
   }
@@ -393,39 +397,39 @@ export class Image {
         }
       }
     })
-      .raw()
-      .toBuffer({ resolveWithObject: true })
+        .raw()
+        .toBuffer({resolveWithObject: true})
 
-      .then((res) => {
-        const newImg: Image = new Image(res);
+        .then((res) => {
+          const newImg: Image = new Image(res);
 
-        newImg.drawImg(this, 0, 0);
+          newImg.drawImg(this, 0, 0);
 
-        newImg.drawSubImgFlipped(this, 8, 16, 4, 4, 24, 48);
-        newImg.drawSubImgFlipped(this, 4, 16, 4, 4, 20, 48);
-        newImg.drawSubImgFlipped(this, 44, 16, 4, 4, 36, 48);
-        newImg.drawSubImgFlipped(this, 48, 16, 4, 4, 40, 48);
-        newImg.drawSubImgFlipped(this, 4, 20, 4, 12, 20, 52);
-        newImg.drawSubImgFlipped(this, 8, 20, 4, 12, 16, 52);
-        newImg.drawSubImgFlipped(this, 12, 20, 4, 12, 28, 52);
-        newImg.drawSubImgFlipped(this, 0, 20, 4, 12, 24, 52);
+          newImg.drawSubImgFlipped(this, 8, 16, 4, 4, 24, 48);
+          newImg.drawSubImgFlipped(this, 4, 16, 4, 4, 20, 48);
+          newImg.drawSubImgFlipped(this, 44, 16, 4, 4, 36, 48);
+          newImg.drawSubImgFlipped(this, 48, 16, 4, 4, 40, 48);
+          newImg.drawSubImgFlipped(this, 4, 20, 4, 12, 20, 52);
+          newImg.drawSubImgFlipped(this, 8, 20, 4, 12, 16, 52);
+          newImg.drawSubImgFlipped(this, 12, 20, 4, 12, 28, 52);
+          newImg.drawSubImgFlipped(this, 0, 20, 4, 12, 24, 52);
 
-        newImg.drawSubImgFlipped(this, 44, 20, 4, 12, 36, 52);
-        newImg.drawSubImgFlipped(this, 48, 20, 4, 12, 32, 52);
-        newImg.drawSubImgFlipped(this, 52, 20, 4, 12, 44, 52);
-        newImg.drawSubImgFlipped(this, 40, 20, 4, 12, 40, 52);
+          newImg.drawSubImgFlipped(this, 44, 20, 4, 12, 36, 52);
+          newImg.drawSubImgFlipped(this, 48, 20, 4, 12, 32, 52);
+          newImg.drawSubImgFlipped(this, 52, 20, 4, 12, 44, 52);
+          newImg.drawSubImgFlipped(this, 40, 20, 4, 12, 40, 52);
 
-        this.img = newImg.img;
-        callback(null);
-      })
-      .catch((err) => callback(err));
+          this.img = newImg.img;
+          callback(null);
+        })
+        .catch((err) => callback(err));
   }
 
   removeUnusedSkinParts() {
     if (!this.hasSkinDimensions()) throw new Error('Image does not have valid skin dimensions');
     if (this.img.info.height != 64) throw new Error('Legacy skin dimensions are not supported');
 
-    const noColor: Color = { r: 0, g: 0, b: 0, alpha: 0 };
+    const noColor: Color = {r: 0, g: 0, b: 0, alpha: 0};
 
     this.drawRect(0, 0, 8, 8, noColor);
     this.drawRect(24, 0, 16, 8, noColor);
@@ -465,16 +469,16 @@ export class Image {
     if (!this.hasSkinDimensions()) throw new Error('Image does not have valid skin dimensions');
     if (this.img.info.height != 64) throw new Error('Legacy skin dimensions are not supported');
 
-    const black = { r: 0, g: 0, b: 0, alpha: 255 };
+    const black = {r: 0, g: 0, b: 0, alpha: 255};
 
     for (const area of Image.firstSkinLayerAreas) {
       for (let i = 0; i < area.w; i++) {
         for (let j = 0; j < area.h; j++) {
           const x = area.x + i,
-            y = area.y + j;
+              y = area.y + j;
           const color: Color = this.getColor(x, y);
 
-          this.setColor(x, y, color.alpha > 0 ? { r: color.r, g: color.g, b: color.b, alpha: 255 } : black);
+          this.setColor(x, y, color.alpha > 0 ? {r: color.r, g: color.g, b: color.b, alpha: 255} : black);
         }
       }
     }
@@ -486,7 +490,7 @@ export class Image {
         const buffer = Buffer.alloc(this.img.data.byteLength);
         this.img.data.copy(buffer);
 
-        return new Image({ data: buffer, info: Object.assign({}, this.img.info) });
+        return new Image({data: buffer, info: Object.assign({}, this.img.info)});
       };
 
       let waitingFor = 0;
@@ -500,12 +504,12 @@ export class Image {
         }
       };
 
-      const noColor = { r: 0, g: 0, b: 0, alpha: 0 };
+      const noColor = {r: 0, g: 0, b: 0, alpha: 0};
 
       waitingFor += 3;
       const noOverlay = getClone(),
-        overlayIsFirstLayer = getClone(),
-        overlayOnTopOfFirstLayer = getClone();
+          overlayIsFirstLayer = getClone(),
+          overlayOnTopOfFirstLayer = getClone();
 
       noOverlay.toCleanSkin((err) => {
         if (err) reject(err);
@@ -526,28 +530,28 @@ export class Image {
       const moveSecondLayer = (img: Image, mergeColors: boolean) => {
         for (let i = 0; i < Image.firstSkinLayerAreas.length; i++) {
           const firstLayerArea = Image.firstSkinLayerAreas[i],
-            secondLayerArea = Image.secondSkinLayerAreas[i];
+              secondLayerArea = Image.secondSkinLayerAreas[i];
 
           for (let j = 0; j < firstLayerArea.w; j++) {
             for (let k = 0; k < firstLayerArea.h; k++) {
               const fX = firstLayerArea.x + j,
-                fY = firstLayerArea.y + k,
-                sX = secondLayerArea.x + j,
-                sY = secondLayerArea.y + k;
+                  fY = firstLayerArea.y + k,
+                  sX = secondLayerArea.x + j,
+                  sY = secondLayerArea.y + k;
 
               const color = mergeColors ?
-                Image.mergeColors(img.getColor(fX, fY), img.getColor(sX, sY)) :
-                img.getColor(sX, sY);
+                  Image.mergeColors(img.getColor(fX, fY), img.getColor(sX, sY)) :
+                  img.getColor(sX, sY);
 
               // Move pixel from overlay to first layer
-              img.setColor(fX, fY, { r: color.r, g: color.g, b: color.b, alpha: 255 });
+              img.setColor(fX, fY, {r: color.r, g: color.g, b: color.b, alpha: 255});
 
               // Remove overlay pixel
               img.setColor(sX, sY, noColor);
             }
           }
         }
-      }
+      };
 
       overlayIsFirstLayer.toCleanSkin((err) => {
         if (err) reject(err);
@@ -595,7 +599,7 @@ export class ApiError extends Error {
     console.error('An error occurred:', msg, typeof obj != 'undefined' ? obj : '', process.env.NODE_ENV != 'production' ? stack : '');
 
     if (errorLogStream) {
-      errorLogStream.write(`[${new Date().toUTCString()}] ${JSON.stringify({ msg, obj, stack })}` + EOL);
+      errorLogStream.write(`[${new Date().toUTCString()}] ${JSON.stringify({msg, obj, stack})}` + EOL);
     }
 
     // Contact Discord-WebHook
@@ -628,18 +632,20 @@ export class ApiError extends Error {
           ]
         })
       }, (err: Error, res, body) => {
-        if (err) return ApiError.log('Could not execute Discord-WebHook', { msg: err.message }, true);
+        if (err) return ApiError.log('Could not execute Discord-WebHook', {msg: err.message}, true);
         if (res.statusCode != 204) return ApiError.log(`Could not execute Discord-WebHook: ${body}`, undefined, true);
       });
     }
   }
 }
+
 setInterval(() => ApiError.discordHookCounter = 0, 60 * 1000);
 
 export class ErrorBuilder {
   logged: boolean = false;
 
-  constructor() { }
+  constructor() {
+  }
 
   log(msg: string, obj?: any): this {
     ApiError.log(msg, obj);
@@ -820,7 +826,7 @@ export function setCaching(res: Response, cacheResource: boolean = true, publicR
 
 export function compareString(a: string, b: string) {
   const aLower = a.toLowerCase(),
-    bLower = b.toLowerCase();
+      bLower = b.toLowerCase();
 
   if (aLower == bLower) return 0;
   if (aLower > bLower) return 1;

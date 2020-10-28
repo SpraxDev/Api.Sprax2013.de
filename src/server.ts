@@ -14,9 +14,9 @@ app.disable('x-powered-by');
 app.set('trust proxy', cfg.trustProxy);
 
 /* Logging webserver request */
-app.use(morgan(cfg.logging.accessLogFormat, { stream: webAccessLogStream }));
+app.use(morgan(cfg.logging.accessLogFormat, {stream: webAccessLogStream}));
 if (process.env.NODE_ENV == 'production') {
-  app.use(morgan('dev', { skip: (_req, res) => res.statusCode < 500 }));
+  app.use(morgan('dev', {skip: (_req, res) => res.statusCode < 500}));
 } else {
   app.use(morgan('dev'));
 }
@@ -55,7 +55,7 @@ app.use((_req, res, next) => {
 });
 
 /* Prepare Request */
-app.use(express.raw({ type: ['image/png'], limit: '3MB' }));  // recode to send custom error messages
+app.use(express.raw({type: ['image/png'], limit: '3MB'}));  // recode to send custom error messages
 app.use(express.json());  // TODO: Throws 500 http status code on invalid json instead of 400
 
 /* Webserver routes */
@@ -79,7 +79,7 @@ app.use((err: any, _req: express.Request, res: express.Response, next: express.N
 
   if (!(err instanceof Error)) {
     err = new ErrorBuilder().log('Error handler got unknown err-object', err).unknown();
-  } else if (err instanceof Error && !(err instanceof ApiError)) {
+  } else if (!(err instanceof ApiError)) {
     err = ApiError.fromError(err);
   }
 
@@ -90,9 +90,9 @@ app.use((err: any, _req: express.Request, res: express.Response, next: express.N
   if (res.headersSent) return next(err);  // Calls express default handler
 
   res.status(err.httpCode)
-    .send({
-      error: HttpError.getName(err.httpCode) || err.httpCode,
-      message: err.message,
-      details: err.details
-    });
+      .send({
+        error: HttpError.getName(err.httpCode) || err.httpCode,
+        message: err.message,
+        details: err.details
+      });
 });

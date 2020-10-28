@@ -21,7 +21,7 @@ export class dbUtils {
         user: dbCfg.user,
         password: dbCfg.password,
         database: dbCfg.databases.skindb,
-        ssl: dbCfg.ssl ? { rejectUnauthorized: false } : false,
+        ssl: dbCfg.ssl ? {rejectUnauthorized: false} : false,
         max: dbCfg.connectionPoolSize
       });
 
@@ -33,6 +33,7 @@ export class dbUtils {
 
   /* Profiles */
 
+  // TODO: Don't have one large function for the whole user but allow stuff to be updated independently
   async updateUser(mcUser: MinecraftUser): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
@@ -50,34 +51,34 @@ export class dbUtils {
             [mcUser.id.toLowerCase(), mcUser.name.toLowerCase(), mcUser.toOriginal(), false], (err, _res) => {
               if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-              let queryStr = 'INSERT INTO name_history(profile_id,name,changed_to_at) VALUES';
-              const queryArgs: (string | Date)[] = [mcUser.id];
+                let queryStr = 'INSERT INTO name_history(profile_id,name,changed_to_at) VALUES';
+                const queryArgs: (string | Date)[] = [mcUser.id];
 
-              let counter = 2;
-              for (const elem of mcUser.nameHistory) {
-                if (counter > 2) queryStr += ', ';
+                let counter = 2;
+                for (const elem of mcUser.nameHistory) {
+                  if (counter > 2) queryStr += ', ';
 
-                queryStr += `($1,$${counter++},${typeof elem.changedToAt == 'number' ? `$${counter++}` : `'-infinity'`})`;
+                  queryStr += `($1,$${counter++},${typeof elem.changedToAt == 'number' ? `$${counter++}` : `'-infinity'`})`;
 
-                queryArgs.push(elem.name);
+                  queryArgs.push(elem.name);
 
-                if (typeof elem.changedToAt == 'number') {
-                  queryArgs.push(new Date(elem.changedToAt));
+                  if (typeof elem.changedToAt == 'number') {
+                    queryArgs.push(new Date(elem.changedToAt));
+                  }
                 }
-              }
 
-              // Store Name-History
-              client.query(`${queryStr} ON CONFLICT DO NOTHING;`, queryArgs, (err, _res) => {
-                if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+                // Store Name-History
+                client.query(`${queryStr} ON CONFLICT DO NOTHING;`, queryArgs, (err, _res) => {
+                  if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                client.query('COMMIT', (err) => {
-                  done();
-                  if (err) return reject(err);
+                  client.query('COMMIT', (err) => {
+                    done();
+                    if (err) return reject(err);
 
-                  resolve();
+                    resolve();
+                  });
                 });
               });
-            });
         });
       });
     });
@@ -88,11 +89,11 @@ export class dbUtils {
       if (this.pool == null) return reject(new Error('No database connected'));
 
       this.pool.query('UPDATE profiles SET deleted =$2,last_update =CURRENT_TIMESTAMP WHERE id =$1;',
-        [id.toLowerCase(), deleted], (err, _res) => {
-          if (err) return reject(err);
+          [id.toLowerCase(), deleted], (err, _res) => {
+            if (err) return reject(err);
 
-          resolve();
-        });
+            resolve();
+          });
     });
   }
 
@@ -100,12 +101,12 @@ export class dbUtils {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
 
-      this.pool.query(`SELECT raw_json FROM "profiles" WHERE id =$1 AND raw_json IS NOT NULL ${onlyRecent ? `AND last_update >= NOW() - INTERVAL '120 seconds'` : ''};`,
-        [id], (err, res) => {
-          if (err) return reject(err);
+      this.pool.query(`SELECT raw_json FROM "profiles" WHERE id =$1 AND raw_json IS NOT NULL ${onlyRecent ? `AND last_update >= NOW() - INTERVAL '60 seconds'` : ''};`,
+          [id], (err, res) => {
+            if (err) return reject(err);
 
-          resolve(res.rows.length > 0 ? res.rows[0].raw_json : null);
-        });
+            resolve(res.rows.length > 0 ? res.rows[0].raw_json : null);
+          });
     });
   }
 
@@ -115,17 +116,17 @@ export class dbUtils {
       if (!name) return reject(new Error('name may not be empty'));
 
       this.pool.query('SELECT p.raw_json,nh.name as matched_name FROM name_history nh JOIN profiles p ON nh.profile_id =p.id WHERE lower(name) LIKE lower($1) LIMIT $2 OFFSET $3;',
-        [`${name}%`, limit, offset])
-        .then((res) => {
-          const result: { profile: MinecraftProfile, matched_name: string }[] = [];
+          [`${name}%`, limit, offset])
+          .then((res) => {
+            const result: { profile: MinecraftProfile, matched_name: string }[] = [];
 
-          for (const row of res.rows) {
-            result.push({ profile: row.raw_json, matched_name: row.matched_name });
-          }
+            for (const row of res.rows) {
+              result.push({profile: row.raw_json, matched_name: row.matched_name});
+            }
 
-          resolve(result);
-        })
-        .catch(reject);
+            resolve(result);
+          })
+          .catch(reject);
     });
   }
 
@@ -153,16 +154,16 @@ export class dbUtils {
               });
             } else {
               client.query(`INSERT INTO user_agents(name,internal) VALUES($1,$2) RETURNING *;`,
-                [name, internal], (err, res) => {
-                  if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+                  [name, internal], (err, res) => {
+                    if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                  client.query('COMMIT', (err) => {
-                    done();
-                    if (err) return reject(err);
+                    client.query('COMMIT', (err) => {
+                      done();
+                      if (err) return reject(err);
 
-                    resolve(RowUtils.toUserAgent(res.rows[0]));
+                      resolve(RowUtils.toUserAgent(res.rows[0]));
+                    });
                   });
-                });
             }
           });
         });
@@ -215,18 +216,18 @@ export class dbUtils {
 
         end = Date.now();
 
-        resolve({ skins: result, time: end - start });
+        resolve({skins: result, time: end - start});
       });
     });
   }
 
   async addSkin(originalPng: Buffer, cleanPng: Buffer, cleanPngHash: string, originalURL: string | null, textureValue: string | null,
-    textureSignature: string | null, userAgent: UserAgent): Promise<{ skin: Skin, exactMatch: boolean }> {
+                textureSignature: string | null, userAgent: UserAgent): Promise<{ skin: Skin, exactMatch: boolean }> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
 
       if (originalURL &&
-        !originalURL.toLowerCase().startsWith('https://textures.minecraft.net/texture/')) return reject(new Error(`The provided originalURL(=${originalURL}) does not start with 'https://textures.minecraft.net/texture/'`));
+          !originalURL.toLowerCase().startsWith('https://textures.minecraft.net/texture/')) return reject(new Error(`The provided originalURL(=${originalURL}) does not start with 'https://textures.minecraft.net/texture/'`));
       if (!textureValue && textureSignature) return reject(new Error('Only provide textureSignature with its textureValue!'));
 
       this.pool.connect((err, client, done) => {
@@ -241,7 +242,7 @@ export class dbUtils {
             // only on file-upload original_url should be missing, so check clean_hash in these cases
             // We don't need an (clean) identical version with and without url
             const fieldName: string = originalURL ? 'original_url' : 'clean_hash',
-              args = originalURL ? [originalURL] : [cleanPngHash];
+                args = originalURL ? [originalURL] : [cleanPngHash];
 
             client.query(`SELECT * FROM skins WHERE ${fieldName} =$1 LIMIT 1;`, args, async (err, res) => {
               if (this.shouldAbortTransaction(client, done, err)) return reject(err);
@@ -249,11 +250,11 @@ export class dbUtils {
               if (res.rows.length > 0) { // Exact same Skin-URL already in db
                 let commit = false;
                 if ((textureValue && !res.rows[0].texture_value) ||
-                  (textureValue && textureSignature && !res.rows[0].texture_signature)) {
+                    (textureValue && textureSignature && !res.rows[0].texture_signature)) {
                   let err;
                   try {
                     res = await client.query('UPDATE skins SET texture_value =$1,texture_signature =$2 WHERE id =$3 RETURNING *;',
-                      [textureValue, textureSignature, res.rows[0].id]);
+                        [textureValue, textureSignature, res.rows[0].id]);
                     commit = true;
                   } catch (ex) {
                     err = ex;
@@ -276,41 +277,41 @@ export class dbUtils {
                   if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
                   const duplicateID: number | null = res.rows.length > 0 ? res.rows[0].id : null,
-                    isDuplicate = res.rows.length > 0;
+                      isDuplicate = res.rows.length > 0;
 
                   client.query(`INSERT INTO skins(duplicate_of,original_url,texture_value,texture_signature,clean_hash,added_by)VALUES($1,$2,$3,$4,$5,$6) RETURNING *;`,
-                    [duplicateID, originalURL, textureValue, textureSignature, (isDuplicate ? null : cleanPngHash), userAgent.id], (err, res) => {
-                      if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+                      [duplicateID, originalURL, textureValue, textureSignature, (isDuplicate ? null : cleanPngHash), userAgent.id], (err, res) => {
+                        if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                      const resultSkin: Skin = RowUtils.toSkin(res.rows[0]);
+                        const resultSkin: Skin = RowUtils.toSkin(res.rows[0]);
 
-                      if (!isDuplicate) {
-                        client.query(`INSERT INTO skin_images(skin_id,original,clean)VALUES($1,$2,$3);`,
-                          [resultSkin.id, originalPng, cleanPng], (err, _res) => {
-                            if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+                        if (!isDuplicate) {
+                          client.query(`INSERT INTO skin_images(skin_id,original,clean)VALUES($1,$2,$3);`,
+                              [resultSkin.id, originalPng, cleanPng], (err, _res) => {
+                                if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                            client.query('COMMIT', (err) => {
-                              done();
-                              if (err) return reject(err);
+                                client.query('COMMIT', (err) => {
+                                  done();
+                                  if (err) return reject(err);
 
-                              resolve({
-                                skin: resultSkin,
-                                exactMatch: false
+                                  resolve({
+                                    skin: resultSkin,
+                                    exactMatch: false
+                                  });
+                                });
                               });
+                        } else {
+                          client.query('COMMIT', (err) => {
+                            done();
+                            if (err) return reject(err);
+
+                            resolve({
+                              skin: resultSkin,
+                              exactMatch: false
                             });
                           });
-                      } else {
-                        client.query('COMMIT', (err) => {
-                          done();
-                          if (err) return reject(err);
-
-                          resolve({
-                            skin: resultSkin,
-                            exactMatch: false
-                          });
-                        });
-                      }
-                    });
+                        }
+                      });
                 });
               }
             });
@@ -334,30 +335,30 @@ export class dbUtils {
             if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
             client.query(`SELECT EXISTS(SELECT * FROM(SELECT sh.* FROM skin_history sh JOIN skins s ON sh.skin_id =s.id WHERE profile_id =$1 AND sh.added <= ${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$3'} ORDER BY sh.added DESC LIMIT 1)x WHERE x.skin_id =$2) as before, EXISTS(SELECT * FROM(SELECT sh.* FROM skin_history sh JOIN skins s ON sh.skin_id =s.id WHERE profile_id =$1 AND sh.added > ${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$3'} ORDER BY sh.added DESC LIMIT 1)x WHERE x.skin_id =$2) as after;`,
-              [mcUser.id, skin.duplicateOf || skin.id, timestamp != 'now' ? timestamp : undefined], (err, res) => {
-                if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+                [mcUser.id, skin.duplicateOf || skin.id, timestamp != 'now' ? timestamp : undefined], (err, res) => {
+                  if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                if (res.rows[0].before || res.rows[0].after) { // Skin hasn't changed
-                  client.query('ROLLBACK', (err) => {
-                    done();
-                    if (err) return reject(err);
+                  if (res.rows[0].before || res.rows[0].after) { // Skin hasn't changed
+                    client.query('ROLLBACK', (err) => {
+                      done();
+                      if (err) return reject(err);
 
-                    resolve();
-                  });
-                } else {
-                  client.query(`INSERT INTO skin_history(profile_id,skin_id,added) VALUES($1,$2,${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$3'}) ON CONFLICT DO NOTHING;`,
-                    [mcUser.id, skin.duplicateOf || skin.id, timestamp != 'now' ? timestamp : undefined], (err, _res) => {
-                      if (this.shouldAbortTransaction(client, done, err)) return reject(err);
-
-                      client.query('COMMIT', (err) => {
-                        done();
-                        if (err) return reject(err);
-
-                        resolve();
-                      });
+                      resolve();
                     });
-                }
-              });
+                  } else {
+                    client.query(`INSERT INTO skin_history(profile_id,skin_id,added) VALUES($1,$2,${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$3'}) ON CONFLICT DO NOTHING;`,
+                        [mcUser.id, skin.duplicateOf || skin.id, timestamp != 'now' ? timestamp : undefined], (err, _res) => {
+                          if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+
+                          client.query('COMMIT', (err) => {
+                            done();
+                            if (err) return reject(err);
+
+                            resolve();
+                          });
+                        });
+                  }
+                });
           });
         });
       });
@@ -399,30 +400,30 @@ export class dbUtils {
       if (this.pool == null) return reject(new Error('No database connected'));
 
       this.pool.query(`SELECT * FROM skins ORDER BY added ${sortASC ? '' : 'DESC'} LIMIT $1 OFFSET $2;`,
-        [typeof limit == 'number' ? limit + 1 : limit, offset], (err, res) => {
-          if (err) return reject(err);
+          [typeof limit == 'number' ? limit + 1 : limit, offset], (err, res) => {
+            if (err) return reject(err);
 
-          const result = [];
+            const result = [];
 
-          for (const row of res.rows) {
-            result.push(RowUtils.toSkin(row));
-          }
+            for (const row of res.rows) {
+              result.push(RowUtils.toSkin(row));
+            }
 
-          let moreAvailable = limit == 'ALL';
-          if (!moreAvailable && result.length > limit) {
-            result.pop();
-            moreAvailable = true;
-          }
+            let moreAvailable = limit == 'ALL';
+            if (!moreAvailable && result.length > limit) {
+              result.pop();
+              moreAvailable = true;
+            }
 
-          resolve({ skins: result, moreAvailable });
-        });
+            resolve({skins: result, moreAvailable});
+          });
     });
   }
 
   async searchSkins(searchQuery: string, limit: number | 'ALL' = 6, offset: number = 0): Promise<{ skins: Skin[], time: number, moreAvailable: boolean }> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
-      if (searchQuery.trim().length == 0) return resolve({ skins: [], time: 0, moreAvailable: false });
+      if (searchQuery.trim().length == 0) return resolve({skins: [], time: 0, moreAvailable: false});
 
       let end;
       const start = Date.now();
@@ -431,26 +432,26 @@ export class dbUtils {
       // TODO: Currently missing in query:
       //        ,COUNT(*) OVER () AS total
       this.pool.query(`SELECT skins.* FROM(SELECT skin_id FROM skin_tags_merged WHERE websearch_to_tsquery('english',$1) @@search_tsv GROUP BY skin_id,votes ORDER BY votes DESC)x JOIN skins ON skins.id =skin_id LIMIT $2 OFFSET $3;`,
-        [searchQuery, typeof limit == 'number' ? limit + 1 : limit, offset], (err, res) => {
-          if (err) return reject(err);
+          [searchQuery, typeof limit == 'number' ? limit + 1 : limit, offset], (err, res) => {
+            if (err) return reject(err);
 
-          // const total = res.rows.length > 0 ? res.rows[0].total : 0;
-          const result = [];
+            // const total = res.rows.length > 0 ? res.rows[0].total : 0;
+            const result = [];
 
-          for (const row of res.rows) {
-            result.push(RowUtils.toSkin(row));
-          }
+            for (const row of res.rows) {
+              result.push(RowUtils.toSkin(row));
+            }
 
-          let moreAvailable = limit == 'ALL'; // total > offset + result.length
-          if (!moreAvailable && result.length > limit) {
-            result.pop();
-            moreAvailable = true;
-          }
+            let moreAvailable = limit == 'ALL'; // total > offset + result.length
+            if (!moreAvailable && result.length > limit) {
+              result.pop();
+              moreAvailable = true;
+            }
 
-          end = Date.now();
+            end = Date.now();
 
-          resolve({ skins: result, time: end - start, moreAvailable });
-        });
+            resolve({skins: result, time: end - start, moreAvailable});
+          });
     });
   }
 
@@ -516,14 +517,22 @@ export class dbUtils {
       this.pool.query('SELECT * FROM tags WHERE lower(name) =lower($1) LIMIT 1;', [name], (err, res) => {
         if (err) return reject(err);
 
-        if (res.rows.length > 0) return resolve({ id: res.rows[0].id, name: res.rows[0].name, duplicateOf: res.rows[0].duplicate_of });
+        if (res.rows.length > 0) return resolve({
+          id: res.rows[0].id,
+          name: res.rows[0].name,
+          duplicateOf: res.rows[0].duplicate_of
+        });
         if (!createWhenMissing) return resolve(null);
 
         if (this.pool == null) return reject(new Error('No database connected'));
         this.pool.query('INSERT INTO tags(name) VALUES($1) ON CONFLICT DO NOTHING RETURNING *;', [name], (err, res) => {
           if (err) return reject(err);
 
-          return resolve(res.rows.length > 0 ? { id: res.rows[0].id, name: res.rows[0].name, duplicateOf: res.rows[0].duplicate_of } : null);
+          return resolve(res.rows.length > 0 ? {
+            id: res.rows[0].id,
+            name: res.rows[0].name,
+            duplicateOf: res.rows[0].duplicate_of
+          } : null);
         });
       });
     });
@@ -570,16 +579,16 @@ export class dbUtils {
       if (this.pool == null) return reject(new Error('No database connected'));
 
       this.pool.query('SELECT tag_id,name,SUM(CASE WHEN vote THEN 1 ELSE -1 END) as sum FROM tag_votes JOIN tags ON tag_votes.tag_id =tags.id WHERE skin_id =$1 GROUP BY tag_id,name;',
-        [skinID], (err, res) => {
-          if (err) return reject(err);
+          [skinID], (err, res) => {
+            if (err) return reject(err);
 
-          const tags = [];
-          for (const row of res.rows) {
-            tags.push(RowUtils.toTagWithSum(row));
-          }
+            const tags = [];
+            for (const row of res.rows) {
+              tags.push(RowUtils.toTagWithSum(row));
+            }
 
-          resolve(tags);
-        });
+            resolve(tags);
+          });
     });
   }
 
@@ -588,11 +597,11 @@ export class dbUtils {
       if (this.pool == null) return reject(new Error('No database connected'));
 
       this.pool.query('INSERT INTO tag_votes(skin_id,tag_id,profile_id,vote) VALUES($1,$2,$3,$4) ON CONFLICT(skin_id,tag_id,profile_id) DO UPDATE SET vote =$4;',
-        [skinID, tagID, profileID, vote], (err, _res) => {
-          if (err) return reject(err);
+          [skinID, tagID, profileID, vote], (err, _res) => {
+            if (err) return reject(err);
 
-          resolve();
-        });
+            resolve();
+          });
     });
   }
 
@@ -601,19 +610,19 @@ export class dbUtils {
       if (this.pool == null) return reject(new Error('No database connected'));
 
       this.pool.query('SELECT tag_id,vote FROM tag_votes WHERE skin_id =$1 AND profile_id =$2;',
-        [skinID, profileID], (err, res) => {
-          if (err) return reject(err);
+          [skinID, profileID], (err, res) => {
+            if (err) return reject(err);
 
-          const result = [];
-          for (const row of res.rows) {
-            result.push({
-              id: row.tag_id,
-              vote: row.vote
-            });
-          }
+            const result = [];
+            for (const row of res.rows) {
+              result.push({
+                id: row.tag_id,
+                vote: row.vote
+              });
+            }
 
-          resolve(result);
-        });
+            resolve(result);
+          });
     });
   }
 
@@ -622,18 +631,18 @@ export class dbUtils {
       if (this.pool == null) return reject(new Error('No database connected'));
 
       this.pool.query('DELETE FROM tag_votes WHERE skin_id =$1 AND tag_id =$2 AND profile_id =$3;',
-        [skinID, tagID, profileID], (err, _res) => {
-          if (err) return reject(err);
+          [skinID, tagID, profileID], (err, _res) => {
+            if (err) return reject(err);
 
-          resolve();
-        });
+            resolve();
+          });
     });
   }
 
   /* Cape */
 
   async addCape(capePng: Buffer, pngHash: string, type: CapeType, originalURL: string,
-    textureValue: string | null, textureSignature: string | null, userAgent: UserAgent): Promise<Cape> {
+                textureValue: string | null, textureSignature: string | null, userAgent: UserAgent): Promise<Cape> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
       if (type != CapeType.MOJANG && (textureValue || textureSignature)) return reject(new Error('Only provide textureValue and -Signature for Mojang-Capes!'));
@@ -663,35 +672,35 @@ export class dbUtils {
                   if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
                   const duplicateID: number | null = res.rows.length > 0 ? res.rows[0].id : null,
-                    isDuplicate = res.rows.length > 0;
+                      isDuplicate = res.rows.length > 0;
 
                   client.query(`INSERT INTO capes(type,duplicate_of,original_url,added_by,clean_hash,texture_value,texture_signature)VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *;`,
-                    [type, duplicateID, originalURL, userAgent.id, (isDuplicate ? null : pngHash), textureValue, textureSignature], (err, res) => {
-                      if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+                      [type, duplicateID, originalURL, userAgent.id, (isDuplicate ? null : pngHash), textureValue, textureSignature], (err, res) => {
+                        if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                      const resultCape: Cape = RowUtils.toCape(res.rows[0]);
+                        const resultCape: Cape = RowUtils.toCape(res.rows[0]);
 
-                      if (!isDuplicate) {
-                        client.query(`INSERT INTO cape_images(cape_id,original)VALUES($1,$2);`,
-                          [resultCape.id, capePng], (err, _res) => {
-                            if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+                        if (!isDuplicate) {
+                          client.query(`INSERT INTO cape_images(cape_id,original)VALUES($1,$2);`,
+                              [resultCape.id, capePng], (err, _res) => {
+                                if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                            client.query('COMMIT', (err) => {
-                              done();
-                              if (err) return reject(err);
+                                client.query('COMMIT', (err) => {
+                                  done();
+                                  if (err) return reject(err);
 
-                              resolve(resultCape);
-                            });
+                                  resolve(resultCape);
+                                });
+                              });
+                        } else {
+                          client.query('COMMIT', (err) => {
+                            done();
+                            if (err) return reject(err);
+
+                            resolve(resultCape);
                           });
-                      } else {
-                        client.query('COMMIT', (err) => {
-                          done();
-                          if (err) return reject(err);
-
-                          resolve(resultCape);
-                        });
-                      }
-                    });
+                        }
+                      });
                 });
               }
             });
@@ -715,30 +724,30 @@ export class dbUtils {
             if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
             client.query(`SELECT EXISTS(SELECT * FROM(SELECT ch.* FROM cape_history ch JOIN capes c ON ch.cape_id =c.id WHERE profile_id =$1 AND c.type =$2 AND ch.added <= ${timestamp != 'now' ? '$4' : 'CURRENT_TIMESTAMP'} ORDER BY ch.added DESC LIMIT 1)x WHERE x.cape_id =$3) as before, EXISTS(SELECT * FROM(SELECT ch.* FROM cape_history ch JOIN capes c ON ch.cape_id =c.id WHERE profile_id =$1 AND c.type =$2 AND ch.added > ${timestamp != 'now' ? '$4' : 'CURRENT_TIMESTAMP'} ORDER BY ch.added DESC LIMIT 1)x WHERE x.cape_id =$3) as after;`,
-              [mcUser.id, cape.type, cape.duplicateOf || cape.id, timestamp != 'now' ? timestamp : undefined], (err, res) => {
-                if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+                [mcUser.id, cape.type, cape.duplicateOf || cape.id, timestamp != 'now' ? timestamp : undefined], (err, res) => {
+                  if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
-                if (res.rows[0].before || res.rows[0].after) { // Cape hasn't changed
-                  client.query('ROLLBACK', (err) => {
-                    done();
-                    if (err) return reject(err);
+                  if (res.rows[0].before || res.rows[0].after) { // Cape hasn't changed
+                    client.query('ROLLBACK', (err) => {
+                      done();
+                      if (err) return reject(err);
 
-                    resolve();
-                  });
-                } else {
-                  client.query(`INSERT INTO cape_history(profile_id,cape_id,added) VALUES($1,$2,${timestamp != 'now' ? '$3' : 'CURRENT_TIMESTAMP'}) ON CONFLICT DO NOTHING;`,
-                    [mcUser.id, cape.duplicateOf || cape.id, timestamp != 'now' ? timestamp : undefined], (err, _res) => {
-                      if (this.shouldAbortTransaction(client, done, err)) return reject(err);
-
-                      client.query('COMMIT', (err) => {
-                        done();
-                        if (err) return reject(err);
-
-                        resolve();
-                      });
+                      resolve();
                     });
-                }
-              });
+                  } else {
+                    client.query(`INSERT INTO cape_history(profile_id,cape_id,added) VALUES($1,$2,${timestamp != 'now' ? '$3' : 'CURRENT_TIMESTAMP'}) ON CONFLICT DO NOTHING;`,
+                        [mcUser.id, cape.duplicateOf || cape.id, timestamp != 'now' ? timestamp : undefined], (err, _res) => {
+                          if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+
+                          client.query('COMMIT', (err) => {
+                            done();
+                            if (err) return reject(err);
+
+                            resolve();
+                          });
+                        });
+                  }
+                });
           });
         });
       });
@@ -812,7 +821,7 @@ export class dbUtils {
         const result: { hash: string, host: string }[] = [];
 
         for (const row of res.rows) {
-          result.push({ hash: row.hash, host: row.host });
+          result.push({hash: row.hash, host: row.host});
         }
 
         resolve(result);
@@ -831,8 +840,8 @@ export class dbUtils {
       if (this.pool == null) return reject();
 
       this.pool.query('SELECT NOW();')
-        .then(() => resolve())
-        .catch((err) => reject(err));
+          .then(() => resolve())
+          .catch((err) => reject(err));
     });
   }
 
@@ -844,7 +853,9 @@ export class dbUtils {
   }
 
   async shutdown(): Promise<void> {
-    if (this.pool == null) return new Promise((resolve, _reject) => { resolve(); });
+    if (this.pool == null) return new Promise((resolve, _reject) => {
+      resolve();
+    });
 
     const result = this.pool.end();
     this.pool = null;
