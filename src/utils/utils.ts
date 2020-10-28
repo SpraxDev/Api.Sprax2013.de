@@ -835,8 +835,6 @@ export function compareString(a: string, b: string) {
 }
 
 export function isUUID(str: string): boolean {
-  if (typeof str !== 'string') return false;
-
   str = str.toLowerCase();
 
   return str.length >= 32 && str.length <= 36 && (UUID_PATTERN.test(str) || UUID_PATTERN.test(str.replace(/-/g, '').replace(UUID_PATTERN_ADD_DASH, '$1-$2-$3-$4-$5')));
@@ -886,9 +884,6 @@ export function getFileNameFromURL(str: string, stripFileExtension: boolean = fa
  * Checks if string only contains numbers (negative numbers are not allowed)
  */
 export function isNumber(str: string): boolean {
-  if (typeof str == 'number') return !Number.isNaN(str) && Number.isFinite(str);
-  if (typeof str != 'string') return false;
-
   return /^[0-9]+$/.test(str);
 }
 
@@ -896,7 +891,6 @@ export function toBoolean(input: string | number | boolean): boolean {
   if (input) {
     if (typeof input == 'string') return input == '1' || input.toLowerCase() == 'true' || input.toLowerCase() == 't';
     if (typeof input == 'number') return input == 1;
-    if (typeof input == 'boolean') return input;
   }
 
   return false;
