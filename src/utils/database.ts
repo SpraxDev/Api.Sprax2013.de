@@ -2,6 +2,7 @@ import { Pool, PoolClient } from 'pg';
 import {
   Cape,
   CapeType,
+  MinecraftNameHistoryElement,
   MinecraftProfile,
   MinecraftUser,
   Skin,
@@ -47,9 +48,9 @@ export class dbUtils {
           if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
           // Store latest profile
-          client.query('INSERT INTO profiles(id,name_lower,raw_json,deleted) VALUES($1,$2,$3,$4) ON CONFLICT(id) DO UPDATE SET name_lower =$2, raw_json =$3, last_update =CURRENT_TIMESTAMP;',
-            [mcUser.id.toLowerCase(), mcUser.name.toLowerCase(), mcUser.toOriginal(), false], (err, _res) => {
-              if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+          client.query('INSERT INTO profiles(id,name_lower,raw_json,deleted) VALUES($1,$2,$3,$4) ON CONFLICT(id) DO UPDATE SET name_lower =$2, raw_json =$3, last_update =CURRENT_TIMESTAMP,last_name_history_update=CURRENT_TIMESTAMP;',
+              [mcUser.id.toLowerCase(), mcUser.name.toLowerCase(), mcUser.toOriginal(), false], (err, _res) => {
+                if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
                 let queryStr = 'INSERT INTO name_history(profile_id,name,changed_to_at) VALUES';
                 const queryArgs: (string | Date)[] = [mcUser.id];
@@ -97,6 +98,19 @@ export class dbUtils {
     });
   }
 
+  async getProfileByName(username: string): Promise<MinecraftProfile | null> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query(`SELECT raw_json FROM "profiles" WHERE name_lower =lower($1) AND raw_json IS NOT NULL;`,
+          [username], (err, res) => {
+            if (err) return reject(err);
+
+            resolve(res.rows.length > 0 ? res.rows[0].raw_json : null);
+          });
+    });
+  }
+
   async getProfile(id: string, onlyRecent: boolean = false): Promise<MinecraftProfile | null> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
@@ -127,6 +141,45 @@ export class dbUtils {
             resolve(result);
           })
           .catch(reject);
+    });
+  }
+
+  async getNameHistory(id: string, limit?: number): Promise<MinecraftNameHistoryElement[] | null> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query('SELECT name,changed_to_at FROM name_history WHERE profile_id=$1 ' +
+          `ORDER BY changed_to_at DESC${limit != undefined ? ` LIMIT ${limit}}` : ''};`,
+          [id], (err, res) => {
+            if (err) return reject(err);
+
+            if (res.rows.length == 0) return resolve(null);
+
+            const result: MinecraftNameHistoryElement[] = [];
+
+            for (const row of res.rows) {
+              result.push({
+                name: row.name,
+                // if it is a number, it is not a timestamp but '-Infinity' meaning this is the first name of an account
+                changedToAt: row.changed_to_at instanceof Date ? row.changed_to_at.getTime() : undefined
+              });
+            }
+
+            return resolve(result);
+          });
+    });
+  }
+
+  async isNameHistoryUpToDate(id: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      if (this.pool == null) return reject(new Error('No database connected'));
+
+      this.pool.query(`SELECT EXISTS(SELECT FROM profiles WHERE id=$1 AND last_name_history_update >= NOW() - INTERVAL '14 days');`,
+          [id], (err, res) => {
+            if (err) return reject(err);
+
+            return resolve(res.rows.length != 0 && res.rows[0].exists);
+          });
     });
   }
 
@@ -321,7 +374,7 @@ export class dbUtils {
     });
   }
 
-  async addSkinToUserHistory(mcUser: MinecraftUser, skin: Skin, timestamp: Date | 'now'): Promise<void> {
+  async addSkinToUserHistory(uuid: string, skin: Skin, timestamp: Date | 'now'): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
 
@@ -335,7 +388,7 @@ export class dbUtils {
             if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
             client.query(`SELECT EXISTS(SELECT * FROM(SELECT sh.* FROM skin_history sh JOIN skins s ON sh.skin_id =s.id WHERE profile_id =$1 AND sh.added <= ${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$3'} ORDER BY sh.added DESC LIMIT 1)x WHERE x.skin_id =$2) as before, EXISTS(SELECT * FROM(SELECT sh.* FROM skin_history sh JOIN skins s ON sh.skin_id =s.id WHERE profile_id =$1 AND sh.added > ${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$3'} ORDER BY sh.added DESC LIMIT 1)x WHERE x.skin_id =$2) as after;`,
-                [mcUser.id, skin.duplicateOf || skin.id, timestamp != 'now' ? timestamp : undefined], (err, res) => {
+                [uuid, skin.duplicateOf || skin.id, timestamp != 'now' ? timestamp : undefined], (err, res) => {
                   if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
                   if (res.rows[0].before || res.rows[0].after) { // Skin hasn't changed
@@ -347,7 +400,7 @@ export class dbUtils {
                     });
                   } else {
                     client.query(`INSERT INTO skin_history(profile_id,skin_id,added) VALUES($1,$2,${timestamp == 'now' ? 'CURRENT_TIMESTAMP' : '$3'}) ON CONFLICT DO NOTHING;`,
-                        [mcUser.id, skin.duplicateOf || skin.id, timestamp != 'now' ? timestamp : undefined], (err, _res) => {
+                        [uuid, skin.duplicateOf || skin.id, timestamp != 'now' ? timestamp : undefined], (err, _res) => {
                           if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
                           client.query('COMMIT', (err) => {

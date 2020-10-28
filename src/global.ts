@@ -129,6 +129,11 @@ export interface Color {
 }
 
 /* Minecraft */
+export interface MinecraftUUIDResponse {
+  name: string;
+  id: string;
+}
+
 export interface CleanMinecraftUser {
   id: string;
   id_hyphens: string;
@@ -158,10 +163,10 @@ export class MinecraftUser {
   nameHistory: MinecraftNameHistoryElement[];
   userAgent: UserAgent;
 
-  constructor(profile: MinecraftProfile, nameHistory: MinecraftNameHistoryElement[], userAgent: UserAgent, profileFromMojang: boolean = false) {
+  constructor(profile: MinecraftProfile, nameHistory: MinecraftNameHistoryElement[], userAgent: UserAgent) {
     this.id = profile.id;
     this.name = profile.name;
-    this.legacy = profile.legacy || (profileFromMojang ? false : null);
+    this.legacy = profile.legacy ?? null;
     this.nameHistory = nameHistory;
     this.userAgent = userAgent;
 
@@ -259,7 +264,7 @@ export interface MinecraftProfile {
   id: string,
   name: string,
   properties: MinecraftProfileProperty[],
-  legacy?: boolean
+  legacy?: boolean | null
 }
 
 export interface MinecraftProfileProperty {

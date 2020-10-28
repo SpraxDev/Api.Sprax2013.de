@@ -6,9 +6,11 @@ import { createServer, Server } from 'http';
 
 import { dbUtils } from './utils/database';
 import { SpraxAPIcfg, SpraxAPIdbCfg } from './global';
+import { CacheUtils } from './utils/CacheUtils';
 
 let server: Server | null;
 export let db: dbUtils;
+export let cache: CacheUtils;
 export let cfg: SpraxAPIcfg = {
   listen: {
     usePath: false,
@@ -60,10 +62,18 @@ fs.writeFileSync(joinPath(process.cwd(), 'storage', 'db.json'), JSON.stringify(d
 function shutdownHook() {
   console.log('Shutting down...');
 
-  const ready = async () => {
+  const ready = async (): Promise<never> => {
     try {
       if (db) {
         await db.shutdown();
+      }
+    } catch (ex) {
+      console.error(ex);
+    }
+
+    try {
+      if (cache) {
+        await cache.shutdown();
       }
     } catch (ex) {
       console.error(ex);
@@ -76,8 +86,10 @@ function shutdownHook() {
     server.close((err) => {
       if (err && err.message != 'Server is not running.') console.error(err);
 
-      ready();
+      ready()
+          .catch(console.error);
     });
+
     server = null;
   }
 }
@@ -90,6 +102,7 @@ process.on('SIGUSR2', shutdownHook);  // The package 'nodemon' is using this sig
 
 /* Prepare webserver */
 db = new dbUtils(dbCfg);
+cache = new CacheUtils();
 
 export const webAccessLogStream = createRotatingFileStream('access.log', {
   interval: '1d',

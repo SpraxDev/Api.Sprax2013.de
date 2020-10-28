@@ -4,11 +4,11 @@ import { readdirSync, readFileSync } from 'fs';
 import { join as joinPath } from 'path';
 
 import { AiModel } from '../utils/ai_predict';
-import { db } from '..';
+import { cache, db } from '..';
 import { ApiError, ErrorBuilder, generateHash, Image, isNumber, restful, setCaching } from '../utils/utils';
-import { getByUUID, getUserAgent, isUUIDCached } from './minecraft';
+import { getByUUID, getUserAgent } from './minecraft';
 import { Cape, CapeType, MinecraftProfileTextureProperty, MinecraftUser, Skin, UserAgent } from '../global';
-import { getHttp } from '../utils/web';
+import { httpGet } from '../utils/web';
 
 const yggdrasilPublicKey = readFileSync(joinPath(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));
 
@@ -16,14 +16,14 @@ const yggdrasilPublicKey = readFileSync(joinPath(__dirname, '..', '..', 'resourc
 
 const AI_MODELS: { [key: string]: null | AiModel | Error } = {};
 
-async function initAiModels() {
+async function initAiModels(): Promise<void> {
   const baseDir = joinPath(__dirname, '..', '..', 'resources', 'ai_models');
 
   const aiModelDirs = readdirSync(baseDir, {withFileTypes: true})
-      .filter(dirent => dirent.isDirectory())
-      .map(dirent => dirent.name);
+      .filter(dirEntry => dirEntry.isDirectory())
+      .map(dirEntry => dirEntry.name);
 
-  // Set to null as soon as possible, so when a requst comes in it does not responde with an 'unknown model'
+  // Set to null as soon as possible, so when a request comes in it does not respond with an 'unknown model'
   for (const dirName of aiModelDirs) {
     AI_MODELS[dirName.toUpperCase()] = null;
   }
@@ -57,15 +57,17 @@ async function initAiModels() {
       } catch (err) {
         AI_MODELS[aiKey] = err;
 
-        console.error(`Could not load AI-Model '${dirName}': ${err instanceof Error ? err.message : err}`);
+        console.error(`Could not load AI-Model '${dirName}': ${err instanceof Error ? err.message : err}`); // TODO: Log error
       }
     }
   });
 }
 
-initAiModels();
+initAiModels()
+    .catch(console.error);  // TODO: Log error
 
 /* Routes */
+
 const router = Router();
 export const skindbExpressRouter = router;
 
@@ -266,46 +268,46 @@ router.use('/cdn/capes/:id?', (req, res, next) => {
 
 // router.all('/search', (req, res, next) => {
 //   // Currently supported: user (uuid, name)
-
+//
 //   restful(req, res, {
 //     get: () => {
 //       if (typeof req.query.q != 'string') return next(new ErrorBuilder().invalidParams('query', [{ param: 'q', condition: 'Is string' }]));
 //       if (!req.query.q || req.query.q.trim() <= 128) return next(new ErrorBuilder().invalidParams('query', [{ param: 'q', condition: 'q.length > 0 and q.length <= 128' }]));
-
+//
 //       const query: string = req.query.q.trim();
 //       let waitingFor = 0;
-
+//
 //       const result: { profiles?: { direct?: CleanMinecraftUser[], indirect?: CleanMinecraftUser[] } } = {};
-
+//
 //       const sendResponse = (): void => {
 //         if (waitingFor == 0) {
 //           res.send(result);
 //         }
 //       };
-
+//
 //       if (query.length <= 16) {
 //         waitingFor++;
-
+//
 //         getByUsername(query, null, (err, apiRes) => {
 //           if (err) ApiError.log(`Searching by username for ${query} failed`, err);
-
+//
 //           if (apiRes) {
 //             getByUUID(apiRes.id, req, (err, mcUser) => {
 //               if (err) ApiError.log(`Searching by username for ${query} failed`, err);
-
+//
 //               if (mcUser) {
 //                 if (!result.profiles) result.profiles = {};
 //                 if (!result.profiles.direct) result.profiles.direct = [];
-
+//
 //                 result.profiles.direct.push(mcUser.toCleanJSON());
 //               }
-
+//
 //               waitingFor--;
 //               sendResponse();
 //             });
 //           } else {
 //             waitingFor--;
-
+//
 //             if (waitingFor == 0) {
 //               res.send(result);
 //             }
@@ -313,22 +315,22 @@ router.use('/cdn/capes/:id?', (req, res, next) => {
 //         });
 //       } else if (isUUID(query)) {
 //         waitingFor++;
-
+//
 //         getByUUID(query, req, (err, mcUser) => {
 //           if (err) ApiError.log(`Searching by uuid for ${query} failed`, err);
-
+//
 //           if (mcUser) {
 //             if (!result.profiles) result.profiles = {};
 //             if (!result.profiles.direct) result.profiles.direct = [];
-
+//
 //             result.profiles.direct.push(mcUser.toCleanJSON());
 //           }
-
+//
 //           waitingFor--;
 //           sendResponse();
 //         });
 //       }
-
+//
 //       sendResponse();
 //     }
 //   });
@@ -384,6 +386,7 @@ router.all('/ai/:model?', async (req, res, next) => {
 });
 
 /* Helper */
+
 export async function importByTexture(textureValue: string, textureSignature: string | null, userAgent: UserAgent): Promise<{ skin: Skin | null, cape: Cape | null }> {
   return new Promise((resolve, reject) => {
     const texture = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
@@ -405,11 +408,9 @@ export async function importByTexture(textureValue: string, textureSignature: st
         resolve({skin: resultSkin, cape: resultCape});
 
         // Request profile and insert latest version into db
-        // If it is already cached, it is in the database for sure! We don't want any recursive endless-loop!
-        if (db.isAvailable() && !isUUIDCached(texture.profileId)) {
+        if (db.isAvailable() && !cache.isProfileInRedis(texture.profileId)) {
           // TODO: preserve User-Agent
-          getByUUID(texture.profileId, null, () => {
-          });
+          cache.getProfile(texture.profileId);
         }
       }
     };
@@ -443,9 +444,9 @@ export async function importByTexture(textureValue: string, textureSignature: st
 export function importSkinByURL(skinURL: string, userAgent: UserAgent, callback: (err: Error | null, skin: Skin | null, exactMatch: boolean) => void, textureValue: string | null = null, textureSignature: string | null = null): void {
   if (!skinURL.toLowerCase().startsWith('https://')) throw new Error(`skinURL(=${skinURL}) is not https`);
 
-  getHttp(skinURL, false)
+  httpGet(skinURL)
       .then((httpRes) => {
-        if (httpRes.res.statusCode != 200) return callback(new Error(`Importing skin by URL returned status ${httpRes.res.statusCode}`), null, false);
+        if (httpRes.res.status != 200) return callback(new Error(`Importing skin by URL returned status ${httpRes.res.status}`), null, false);
 
         return importSkinByBuffer(httpRes.body, skinURL, userAgent, callback, textureValue, textureSignature);
       })
@@ -466,18 +467,21 @@ export function importSkinByBuffer(skinBuffer: Buffer, skinURL: string | null, u
                     .then((dbSkin) => {
                       if (textureValue && textureSignature) {
                         const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
-                        getByUUID(json.profileId, null, (err, user) => {
-                          if (err || !user) return;  // Error or invalid uuid
 
-                          db.addSkinToUserHistory(user, dbSkin.skin, new Date(json.timestamp))
-                              .catch((err) => {
-                                ApiError.log(`Could not update skin-history in database`, {
-                                  skin: dbSkin.skin.id,
-                                  profile: user.id,
-                                  stack: err.stack
-                                });
-                              });
-                        });
+                        cache.getProfile(json.profileId)
+                            .then((profile) => {
+                              if (!profile) return;
+
+                              db.addSkinToUserHistory(profile.id, dbSkin.skin, new Date(json.timestamp))
+                                  .catch((err) => {
+                                    ApiError.log(`Could not update skin-history in database`, {
+                                      skin: dbSkin.skin.id,
+                                      profile: profile.id,
+                                      stack: err.stack
+                                    });
+                                  });
+                            })
+                            .catch(console.error);
                       }
 
                       if (!waitForAlternativeVersions) {
@@ -515,9 +519,9 @@ export function importSkinByBuffer(skinBuffer: Buffer, skinURL: string | null, u
 
 export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: UserAgent, textureValue?: string, textureSignature?: string): Promise<Cape | null> {
   return new Promise((resolve, reject) => {
-    getHttp(capeURL, false)
+    httpGet(capeURL)
         .then((httpRes) => {
-          if (httpRes.res.statusCode == 200) {
+          if (httpRes.res.status == 200) {
             Image.fromImg(httpRes.body, (err, img) => {
               if (err || !img) return reject(err);
 
@@ -549,8 +553,8 @@ export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: 
                   })
                   .catch(reject);
             });
-          } else if (httpRes.res.statusCode != 404) {
-            reject(new Error(`Importing cape by URL returned status ${httpRes.res.statusCode}`));
+          } else if (httpRes.res.status != 404) {
+            reject(new Error(`Importing cape by URL returned status ${httpRes.res.status}`));
           } else {
             resolve(null);
           }
