@@ -1,9 +1,19 @@
 import { Router } from 'express';
 
 import { db } from '..';
-import { getByUUID, getByUsername, getUserAgent } from './minecraft';
-import { restful, isUUID, ErrorBuilder, isNumber, setCaching, ApiError, compareString, Image, generateHash } from '../utils/utils';
-import { SkinDBAccount, SkinDBSkin, SkinDBSearch, SkinDBIndex, Skin, SkinDBSkins } from '../global';
+import { getByUsername, getByUUID, getUserAgent } from './minecraft';
+import {
+  ApiError,
+  compareString,
+  ErrorBuilder,
+  generateHash,
+  Image,
+  isNumber,
+  isUUID,
+  restful,
+  setCaching
+} from '../utils/utils';
+import { Skin, SkinDBAccount, SkinDBIndex, SkinDBSearch, SkinDBSkin, SkinDBSkins } from '../global';
 import { importSkinByBuffer } from './skindb';
 
 /* Routes */

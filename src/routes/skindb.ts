@@ -1,26 +1,25 @@
-import crypto = require('crypto');
-import fs = require('fs');
-import path = require('path');
-
+import { createVerify as cryptoCreateVerify } from 'crypto';
 import { Router } from 'express';
+import { readdirSync, readFileSync } from 'fs';
+import { join as joinPath } from 'path';
 
 import { AiModel } from '../utils/ai_predict';
 import { db } from '..';
-import { ErrorBuilder, restful, Image, setCaching, isNumber, generateHash, ApiError } from '../utils/utils';
-import { getUserAgent, getByUUID, isUUIDCached } from './minecraft';
-import { MinecraftUser, UserAgent, Skin, Cape, CapeType, MinecraftProfileTextureProperty } from '../global';
+import { ApiError, ErrorBuilder, generateHash, Image, isNumber, restful, setCaching } from '../utils/utils';
+import { getByUUID, getUserAgent, isUUIDCached } from './minecraft';
+import { Cape, CapeType, MinecraftProfileTextureProperty, MinecraftUser, Skin, UserAgent } from '../global';
 import { getHttp } from '../utils/web';
 
-const yggdrasilPublicKey = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));
+const yggdrasilPublicKey = readFileSync(joinPath(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));
 
 /* AI */
 
 const AI_MODELS: { [key: string]: null | AiModel | Error } = {};
 
 async function initAiModels() {
-  const baseDir = path.join(__dirname, '..', '..', 'resources', 'ai_models');
+  const baseDir = joinPath(__dirname, '..', '..', 'resources', 'ai_models');
 
-  const aiModelDirs = fs.readdirSync(baseDir, { withFileTypes: true })
+  const aiModelDirs = readdirSync(baseDir, {withFileTypes: true})
     .filter(dirent => dirent.isDirectory())
     .map(dirent => dirent.name);
 
@@ -33,7 +32,7 @@ async function initAiModels() {
     let i = 0;
 
     for (const dirName of aiModelDirs) {
-      const dirPath = path.join(baseDir, dirName);
+      const dirPath = joinPath(baseDir, dirName);
       const aiKey = dirName.toUpperCase();
 
       if (AI_MODELS[aiKey] != null) {
@@ -61,6 +60,7 @@ async function initAiModels() {
     }
   });
 }
+
 initAiModels();
 
 /* Routes */
@@ -492,7 +492,7 @@ export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: 
 }
 
 function isFromYggdrasil(data: string, signature: string) {
-  const ver = crypto.createVerify('sha1WithRSAEncryption');
+  const ver = cryptoCreateVerify('sha1WithRSAEncryption');
   ver.update(data);
 
   return ver.verify(yggdrasilPublicKey, Buffer.from(signature, 'base64'));

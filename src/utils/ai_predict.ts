@@ -1,13 +1,14 @@
 import tf = require('@tensorflow/tfjs-node');
-import { createCanvas, Canvas, CanvasRenderingContext2D, Image, loadImage } from 'canvas';
+import { Canvas, CanvasRenderingContext2D, createCanvas, Image, loadImage } from 'canvas';
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { join as joinPath } from 'path';
 
 export class AiModel {
   private readonly canvas: Canvas;
   private readonly ctx: CanvasRenderingContext2D;
   private readonly camera: Camera;
 
+  // noinspection TypeScriptFieldCanBeMadeReadonly
   private modelDir?: string;
 
   private model?: tf.LayersModel;
@@ -16,7 +17,7 @@ export class AiModel {
   constructor(modelDir: string) {
     this.modelDir = modelDir;
 
-    const metaJson = JSON.parse(readFileSync(join(this.modelDir, 'metadata.json'), 'utf-8'));
+    const metaJson = JSON.parse(readFileSync(joinPath(this.modelDir, 'metadata.json'), 'utf-8'));
     if (typeof metaJson.modelRevision != 'number') throw new Error('Model metadata.json is missing property modelRevision (number)');
 
     this.metadata = {
@@ -36,10 +37,10 @@ export class AiModel {
     new Promise((resolve, reject) => {
       if (!this.modelDir) return reject(new Error('This AiModel instance has already been initialized'));
 
-      tf.loadLayersModel('file://' + join(this.modelDir, 'model.json'))
-        .then((model) => {
-          this.model = model;
-          delete this.modelDir;
+      tf.loadLayersModel('file://' + joinPath(this.modelDir, 'model.json'))
+          .then((model) => {
+            this.model = model;
+            this.modelDir = undefined;
 
           resolve();
         })
@@ -103,7 +104,7 @@ class Camera {
    * Captures a frame from the webcam and normalizes it between -1 and 1.
    * Returns a batched image (1-element batch) of shape [1, w, h, c].
    */
-  capture(): tf.Tensor<tf.Rank> {
+  capture(): tf.Tensor {
     return tf.tidy(() => {
       // Reads the image as a Tensor from the webcam <video> element.
       const inputImage = tf.browser.fromPixels(this.webcamElement);  //TODO: use tf.node.decode instead
@@ -124,7 +125,7 @@ class Camera {
   /**
    * Crops an image tensor so we get a square image with no white space.
    *
-   * @param {Tensor3D} img An input image Tensor to crop.
+   * @param img An input image Tensor to crop.
    */
   cropImage(img: tf.Tensor3D): tf.Tensor3D {
     const size = Math.min(img.shape[0], img.shape[1]);

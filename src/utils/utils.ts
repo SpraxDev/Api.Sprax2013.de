@@ -1,13 +1,12 @@
-import crypto = require('crypto');
 import request = require('request');
 import sharp = require('sharp');
-import punycode = require('punycode');
-
-import { EOL } from 'os';
+import { toASCII as punycodeToASCII } from 'punycode';
+import { createHash, HashOptions } from 'crypto';
 import { Request, Response } from 'express';
+import { EOL } from 'os';
 
 import { Color } from '../global';
-import { errorLogStream, cfg, appVersion } from '..';
+import { appVersion, cfg, errorLogStream } from '..';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   UUID_PATTERN_ADD_DASH = /(.{8})(.{4})(.{4})(.{4})(.{12})/,
@@ -842,7 +841,7 @@ export function addHyphensToUUID(str: string): string {
 }
 
 export function convertFQDNtoASCII(str: string): string {
-  return punycode.toASCII(str);
+  return punycodeToASCII(str);
 }
 
 /**
@@ -909,10 +908,10 @@ export function toInt(input: string | number | boolean): number | null {
 /**
  * Defaults to 'sha256' algorithm
  */
-export function generateHash(data: Buffer | string, algorithm: string = 'sha256', options?: crypto.HashOptions): string {
+export function generateHash(data: Buffer | string, algorithm: string = 'sha256', options?: HashOptions): string {
   if (!(data instanceof Buffer)) {
     data = Buffer.from(data);
   }
 
-  return crypto.createHash(algorithm, options).update(data).digest('hex');
+  return createHash(algorithm, options).update(data).digest('hex');
 }

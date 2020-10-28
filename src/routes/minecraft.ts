@@ -1,16 +1,32 @@
-import fs = require('fs');
+// TODO: File is WAY too large
 import nCache = require('node-cache');
-import net = require('net');
-import path = require('path');
+import { readFileSync } from 'fs';
+import { isIPv4 } from 'net';
+import { join as joinPath } from 'path';
+import { Request, Response, Router } from 'express';
 
-import { Router, Request, Response } from 'express';
-
-import { createCamera, createModel, Camera, Model } from '../utils/modelRender';
+import { Camera, createCamera, createModel, Model } from '../utils/modelRender';
 import { db } from '../index';
 import { getHttp } from '../utils/web';
 import { importByTexture, importCapeByURL } from './skindb';
-import { MinecraftProfile, MinecraftUser, MinecraftNameHistoryElement, UserAgent, CapeType, SkinArea } from '../global';
-import { restful, isUUID, toBoolean, Image, ErrorBuilder, ApiError, HttpError, setCaching, isNumber, toInt, isHttpURL, getFileNameFromURL, generateHash, isValidFQDN, convertFQDNtoASCII } from '../utils/utils';
+import { CapeType, MinecraftNameHistoryElement, MinecraftProfile, MinecraftUser, SkinArea, UserAgent } from '../global';
+import {
+  ApiError,
+  convertFQDNtoASCII,
+  ErrorBuilder,
+  generateHash,
+  getFileNameFromURL,
+  HttpError,
+  Image,
+  isHttpURL,
+  isNumber,
+  isUUID,
+  isValidFQDN,
+  restful,
+  setCaching,
+  toBoolean,
+  toInt
+} from '../utils/utils';
 
 const uuidCache = new nCache({ stdTTL: 59, useClones: false }), /* key:${name_lower};${at||''}, value: { id: string, name: string } | Error | null */
   userCache = new nCache({ stdTTL: 59, useClones: false }), /* key: profile.id, value: MinecraftUser | Error | null */
@@ -75,14 +91,14 @@ const rendering = {
   },
 
   models: {
-    modelAlex: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'alex.obj'), 64, 64),
-    modelAlexNoOverlay: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'alexNoOverlay.obj'), 64, 64),
-    modelSteve: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'steve.obj'), 64, 64),
-    modelSteveNoOverlay: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'steveNoOverlay.obj'), 64, 64),
-    modelSteveHead: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'steveHead.obj'), 64, 64),
-    modelSteveHeadNoOverlay: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'steveHeadNoOverlay.obj'), 64, 64),
+    modelAlex: createModel(joinPath(__dirname, '..', '..', 'resources', 'rendering_models', 'alex.obj'), 64, 64),
+    modelAlexNoOverlay: createModel(joinPath(__dirname, '..', '..', 'resources', 'rendering_models', 'alexNoOverlay.obj'), 64, 64),
+    modelSteve: createModel(joinPath(__dirname, '..', '..', 'resources', 'rendering_models', 'steve.obj'), 64, 64),
+    modelSteveNoOverlay: createModel(joinPath(__dirname, '..', '..', 'resources', 'rendering_models', 'steveNoOverlay.obj'), 64, 64),
+    modelSteveHead: createModel(joinPath(__dirname, '..', '..', 'resources', 'rendering_models', 'steveHead.obj'), 64, 64),
+    modelSteveHeadNoOverlay: createModel(joinPath(__dirname, '..', '..', 'resources', 'rendering_models', 'steveHeadNoOverlay.obj'), 64, 64),
 
-    block: createModel(path.join(__dirname, '..', '..', 'resources', 'rendering_models', 'block.obj'), 64, 64)
+    block: createModel(joinPath(__dirname, '..', '..', 'resources', 'rendering_models', 'block.obj'), 64, 64)
   }
 };
 
@@ -180,8 +196,8 @@ userCache.on('set', async (key: string, value: MinecraftUser | Error | null) => 
 
 setInterval(() => { rateLimitedNameHistory = 0 }, 120 * 1000);
 
-const SKIN_STEVE = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'steve.png')),
-  SKIN_ALEX = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'alex.png'));
+const SKIN_STEVE = readFileSync(joinPath(__dirname, '..', '..', 'resources', 'steve.png')),
+    SKIN_ALEX = readFileSync(joinPath(__dirname, '..', '..', 'resources', 'alex.png'));
 
 const whitelistedSkinURLs = ['//textures.minecraft.net/texture/', '//cdn.skindb.net/'];
 
@@ -755,8 +771,8 @@ router.all('/servers/blocked/check', (req, res, next) => {
       const hosts: { [key: string]: string } = {};
 
       let tempHost: string = host,
-        tempHostIndex: number;
-      if (net.isIPv4(host)) {
+          tempHostIndex: number;
+      if (isIPv4(host)) {
         hosts[host] = generateHash(host, 'sha1');
 
         while ((tempHostIndex = tempHost.lastIndexOf('.')) >= 0) {

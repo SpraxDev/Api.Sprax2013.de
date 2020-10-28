@@ -108,7 +108,7 @@ export interface SkinDBIndex {
 
 /**
  * value equals remote database enum
-*/
+ */
 export enum CapeType {
   MOJANG = 'MOJANG',
   OPTIFINE = 'OPTIFINE',
@@ -224,7 +224,7 @@ export class MinecraftUser {
         capeURL: this.capeURL,
 
         texture_value: this.textureValue,
-        texture_signature: this.textureSignature || null,
+        texture_signature: this.textureSignature || null
       },
 
       name_history: this.nameHistory

@@ -1,9 +1,8 @@
-import fs = require('fs');
-import objectAssignDeep = require('object-assign-deep');
-import path = require('path');
-import rfs = require('rotating-file-stream');
-
-import { Server, createServer } from 'http';
+import * as fs from 'fs';
+import { join as joinPath } from 'path';
+import { createStream as createRotatingFileStream } from 'rotating-file-stream';
+import objectAssignDeep from 'object-assign-deep';
+import { createServer, Server } from 'http';
 
 import { dbUtils } from './utils/database';
 import { SpraxAPIcfg, SpraxAPIdbCfg } from './global';
@@ -38,24 +37,24 @@ export let dbCfg: SpraxAPIdbCfg = {
     skindb: 'skindb'
   }
 };
-export const appVersion = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8')).version;
+export const appVersion = JSON.parse(fs.readFileSync(joinPath(__dirname, '..', 'package.json'), 'utf-8')).version;
 
 /* Init configuration files */
 
-if (!fs.existsSync(path.join(process.cwd(), 'storage'))) {
-  fs.mkdirSync(path.join(process.cwd(), 'storage'));
+if (!fs.existsSync(joinPath(process.cwd(), 'storage'))) {
+  fs.mkdirSync(joinPath(process.cwd(), 'storage'));
 }
 
-if (fs.existsSync(path.join(process.cwd(), 'storage', 'config.json'))) {
-  cfg = objectAssignDeep({}, cfg, JSON.parse(fs.readFileSync(path.join(process.cwd(), 'storage', 'config.json'), 'utf-8'))); // Merge existing cfg into default one
+if (fs.existsSync(joinPath(process.cwd(), 'storage', 'config.json'))) {
+  cfg = objectAssignDeep({}, cfg, JSON.parse(fs.readFileSync(joinPath(process.cwd(), 'storage', 'config.json'), 'utf-8'))); // Merge existing cfg into default one
 }
-fs.writeFileSync(path.join(process.cwd(), 'storage', 'config.json'), JSON.stringify(cfg, null, 2));  // Write current config (+ missing default values) to file
+fs.writeFileSync(joinPath(process.cwd(), 'storage', 'config.json'), JSON.stringify(cfg, null, 2));  // Write current config (+ missing default values) to file
 
 // Repeat above for db.json
-if (fs.existsSync(path.join(process.cwd(), 'storage', 'db.json'))) {
-  dbCfg = objectAssignDeep({}, dbCfg, JSON.parse(fs.readFileSync(path.join(process.cwd(), 'storage', 'db.json'), 'utf-8')));
+if (fs.existsSync(joinPath(process.cwd(), 'storage', 'db.json'))) {
+  dbCfg = objectAssignDeep({}, dbCfg, JSON.parse(fs.readFileSync(joinPath(process.cwd(), 'storage', 'db.json'), 'utf-8')));
 }
-fs.writeFileSync(path.join(process.cwd(), 'storage', 'db.json'), JSON.stringify(dbCfg, null, 2));
+fs.writeFileSync(joinPath(process.cwd(), 'storage', 'db.json'), JSON.stringify(dbCfg, null, 2));
 
 /* Register shutdown hook */
 function shutdownHook() {
@@ -92,8 +91,17 @@ process.on('SIGUSR2', shutdownHook);  // The package 'nodemon' is using this sig
 /* Prepare webserver */
 db = new dbUtils(dbCfg);
 
-export const webAccessLogStream = rfs.createStream('access.log', { interval: '1d', maxFiles: 14, path: path.join(process.cwd(), 'logs', 'access'), compress: true }),
-  errorLogStream = rfs.createStream('error.log', { interval: '1d', maxFiles: 90, path: path.join(process.cwd(), 'logs', 'error') });
+export const webAccessLogStream = createRotatingFileStream('access.log', {
+  interval: '1d',
+  maxFiles: 14,
+  path: joinPath(process.cwd(), 'logs', 'access'),
+  compress: true
+});
+export const errorLogStream = createRotatingFileStream('error.log', {
+  interval: '1d',
+  maxFiles: 90,
+  path: joinPath(process.cwd(), 'logs', 'error')
+});
 
 /* Start webserver (and test database connection) */
 (async () => {

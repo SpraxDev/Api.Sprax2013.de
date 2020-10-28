@@ -1,7 +1,14 @@
 import { Pool, PoolClient } from 'pg';
-
-import { ApiError } from './utils';  // TODO: Don't use ./utils.ts because of ./index-debug.ts
-import { SpraxAPIdbCfg, UserAgent, Skin, MinecraftUser, Cape, CapeType, MinecraftProfile } from '../global';
+import {
+  Cape,
+  CapeType,
+  MinecraftProfile,
+  MinecraftUser,
+  Skin,
+  SpraxAPIdbCfg,
+  UserAgent
+} from '../global';
+import { ApiError } from './utils'; // TODO: don't import from utils because of index-debug.ts
 
 export class dbUtils {
   private pool: Pool | null = null;

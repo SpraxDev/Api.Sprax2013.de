@@ -1,4 +1,4 @@
-import { jar, CookieJar, CoreOptions, get, Response } from 'request';
+import { CookieJar, CoreOptions, get, jar, Response } from 'request';
 import { cfg } from '..';
 
 let lastProxy = 0;
