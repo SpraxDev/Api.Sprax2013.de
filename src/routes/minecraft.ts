@@ -550,6 +550,7 @@ router.all('/render/block', (req, res, next) => {
   restful(req, res, {
     get: () => {
       const size: number | null = typeof req.query.size == 'string' ? toInt(req.query.size) : 150;
+      const body = req.body;
 
       if ((req.headers['content-type'] || '').toLowerCase() != 'image/png') {
         return next(new ErrorBuilder().invalidBody([{
@@ -557,7 +558,7 @@ router.all('/render/block', (req, res, next) => {
           condition: 'image/png'
         }]));
       }
-      if (!(req.body instanceof Buffer)) {
+      if (!(body instanceof Buffer)) {
         return next(new ErrorBuilder().invalidBody([{
           param: 'body',
           condition: 'Valid png under 3MB'
@@ -573,7 +574,7 @@ router.all('/render/block', (req, res, next) => {
       const download: boolean = typeof req.query.download == 'string' ? toBoolean(req.query.download) : false;
       const mimeType: string = download ? 'application/octet-stream' : 'png';
 
-      Image.fromImg(req.body, (err, img) => {
+      Image.fromImg(body, (err, img) => {
         if (err || !img) return next(new ErrorBuilder().invalidBody([{param: 'body', condition: 'Valid png'}]));
         if (img.img.info.width != img.img.info.height) {
           return next(new ErrorBuilder().invalidBody([{
@@ -593,7 +594,7 @@ router.all('/render/block', (req, res, next) => {
           renderBlock(img, size, (err, png) => {
             if (err || !png) return next(err || new Error());
 
-            sendDownloadHeaders(res, mimeType, download, `block-${(req.body as Buffer).length}`);
+            sendDownloadHeaders(res, mimeType, download, `block-${body.length}`);
             setCaching(res, false, false).send(png);
           });
         });

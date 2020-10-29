@@ -346,9 +346,12 @@ router.all('/search', (req, res, next) => {
               .catch(next);
         });
       } else {
-        const query = req.query.q as string | undefined;
+        const query = req.query.q;
 
-        if (!query) return next(new ErrorBuilder().invalidParams('query', [{param: 'q', condition: 'Valid string'}]));
+        if (!query || typeof query != 'string') return next(new ErrorBuilder().invalidParams('query', [{
+          param: 'q',
+          condition: 'Valid string'
+        }]));
         if (req.query.page && !isNumber(req.query.page as string)) {
           return next(new ErrorBuilder().invalidParams('query', [{
             param: 'page',

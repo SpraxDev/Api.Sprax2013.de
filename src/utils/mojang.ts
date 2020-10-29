@@ -165,7 +165,9 @@ async function fetchNameHistoryFallback(cleanUUID: string): Promise<MinecraftNam
             });
           }
 
-          return resolve(nameHistory.reverse());
+          nameHistory.reverse();
+
+          return resolve(nameHistory);
         })
         .catch(reject);
   });
