@@ -5,13 +5,15 @@ import {
   MinecraftUUIDResponse
 } from '../global';
 import { httpGet } from './web';
-import { isUUID } from './utils';
+import { ApiError, isUUID } from './utils';
 
 let rateLimitedNameHistory = false;
 
+// TODO: Make sure that only the needed parts are requested by the API-Routes. We don't need Name-History every time!
+
 setInterval(() => {
   rateLimitedNameHistory = false;
-}, 5 * 60 * 1000 /* 5 minutes */);
+}, 15 * 60 * 1000 /* 15 minutes */);
 
 // TODO: Check if using fallback-api is needed
 
@@ -29,7 +31,7 @@ export async function fetchUUID(username: string, at?: number): Promise<Minecraf
           if (result.res.status == 200) {
             return resolve(JSON.parse(result.body.toString('utf-8')));
           } else if (result.res.status == 429 && at == undefined) {
-            console.error(`Got ${result.res.status} from 'api.mojang.com' for '${cleanUsername}'->uuid - Contacting fallback...`);
+            ApiError.log(`Got ${result.res.status} from 'api.mojang.com' for '${cleanUsername}'->uuid - Contacting fallback...`);
 
             fetchUUIDFallback(cleanUsername)
                 .then(resolve)
@@ -74,7 +76,7 @@ export async function fetchProfile(uuid: string): Promise<MinecraftProfile | nul
 
             return resolve(apiRes);
           } else if (result.res.status == 429) {
-            console.error(`Got ${result.res.status} from 'sessionserver.mojang.com' for '${cleanUUID}'->profile - Contacting fallback...`);
+            ApiError.log(`Got ${result.res.status} from 'sessionserver.mojang.com' for '${cleanUUID}'->profile - Contacting fallback...`);
 
             fetchProfileFallback(cleanUUID)
                 .then(resolve)
@@ -130,8 +132,10 @@ export async function fetchNameHistory(uuid: string): Promise<MinecraftNameHisto
           if (result.res.status == 200) {
             return resolve(JSON.parse(result.body.toString('utf-8')));
           } else if (result.res.status == 429) {
-            rateLimitedNameHistory = true;
-            console.error(`Got ${result.res.status} from 'sessionserver.mojang.com' for '${cleanUUID}'->name_history - Using fallback for the next 5 minutes`);
+            if (!rateLimitedNameHistory) {
+              rateLimitedNameHistory = true;
+              ApiError.log(`Got ${result.res.status} from 'sessionserver.mojang.com' for '${cleanUUID}'->name_history - Using fallback for the next 15 minutes`);
+            }
 
             fetchNameHistoryFallback(cleanUUID)
                 .then(resolve)

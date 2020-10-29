@@ -41,7 +41,7 @@ export class CacheUtils {
     this.redisClient.on('ready', () => this.redisReady = true);
     this.redisClient.on('end', () => this.redisReady = false);
     this.redisClient.on('error', (err) => {
-      console.error(err); // TODO: Log error
+      ApiError.log('Redis-Client encountered an error', {err});
     });
   }
 
@@ -100,7 +100,7 @@ export class CacheUtils {
                     try {
                       const importedTextures = await importByTexture(user.textureValue, user.textureSignature, user.userAgent);
 
-                      if (importedTextures.cape) {
+                      if (importedTextures.cape && db.isAvailable()) {
                         try {
                           await db.addCapeToUserHistory(user, importedTextures.cape, new Date(MinecraftUser.extractMinecraftProfileTextureProperty(user.textureValue).timestamp));
                         } catch (err) {
@@ -129,7 +129,7 @@ export class CacheUtils {
                           .then((cape) => {
                             if (!cape) return resolve();
 
-                            if (capeType != 'MOJANG') {
+                            if (capeType != 'MOJANG' && db.isAvailable()) {
                               db.addCapeToUserHistory(user, cape, user.textureValue ? new Date(MinecraftUser.extractMinecraftProfileTextureProperty(user.textureValue).timestamp) : 'now')
                                   .then(resolve)
                                   .catch((err) => {
@@ -197,7 +197,7 @@ export class CacheUtils {
             resultFromRedis = true;
           }
         } catch (err) {
-          console.error(err); // TODO: log error
+          ApiError.log('Redis-Client could not fetch data', {key, err});
         }
       }
 
@@ -218,7 +218,7 @@ export class CacheUtils {
             }
           }
         } catch (err) {
-          console.log(err); // TODO: log error
+          ApiError.log('CacheUtils encountered an error', {key, err});
         }
       }
 
@@ -229,7 +229,7 @@ export class CacheUtils {
 
           result = uuid ? uuid : CacheUtils.EMPTY_VALUE;
         } catch (err) {
-          console.log(err); // TODO: log error
+          ApiError.log('CacheUtils encountered an error', {key, err});
         }
       }
 
@@ -272,7 +272,7 @@ export class CacheUtils {
             resultFromRedis = true;
           }
         } catch (err) {
-          console.error(err); // TODO: log error
+          ApiError.log('CacheUtils encountered an error', {key, err});
         }
       }
 
@@ -285,7 +285,7 @@ export class CacheUtils {
             result = dbProfile;
           }
         } catch (err) {
-          console.log(err); // TODO: log error
+          ApiError.log('CacheUtils encountered an error', {key, err});
         }
       }
 
@@ -296,7 +296,7 @@ export class CacheUtils {
 
           result = profile ? profile : CacheUtils.EMPTY_VALUE;
         } catch (err) {
-          console.log(err); // TODO: log error
+          ApiError.log('CacheUtils encountered an error', {key, err});
         }
       }
 
@@ -340,7 +340,7 @@ export class CacheUtils {
             resultFromRedis = true;
           }
         } catch (err) {
-          console.error(err); // TODO: log error
+          ApiError.log('CacheUtils encountered an error', {key, err});
         }
       }
 
@@ -362,7 +362,7 @@ export class CacheUtils {
             }
           }
         } catch (err) {
-          console.log(err); // TODO: log error
+          ApiError.log('CacheUtils encountered an error', {key, err});
         }
       }
 
@@ -373,7 +373,7 @@ export class CacheUtils {
 
           result = nameHistory ? nameHistory : CacheUtils.EMPTY_VALUE;
         } catch (err) {
-          console.log(err); // TODO: log error
+          ApiError.log('CacheUtils encountered an error', {key, err});
         }
       }
 
@@ -414,7 +414,7 @@ export class CacheUtils {
             resultFromRedis = true;
           }
         } catch (err) {
-          console.error(err); // TODO: log error
+          ApiError.log('CacheUtils encountered an error inside #getBlockedServers', {err});
         }
       }
 
@@ -425,7 +425,7 @@ export class CacheUtils {
         try {
           result = await fetchBlockedServers();
         } catch (err) {
-          console.log(err); // TODO: log error
+          ApiError.log('CacheUtils encountered an error inside #getBlockedServers', {err});
         }
       }
 
@@ -454,7 +454,7 @@ export class CacheUtils {
             return resolve(true);
           }
         } catch (err) {
-          console.error(err); // TODO: log error
+          ApiError.log('CacheUtils encountered an error inside #isProfileInRedis', {err});
         }
       }
 

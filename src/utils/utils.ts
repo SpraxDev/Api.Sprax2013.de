@@ -603,9 +603,8 @@ export class ApiError extends Error {
     }
 
     // Contact Discord-WebHook
-    if (!skipWebHook && ApiError.discordHookCounter < 8 && cfg && cfg.logging.discordErrorWebHookURL && cfg.logging.discordErrorWebHookURL.toLowerCase().startsWith('http')) {
-      ApiError.discordHookCounter++;
-
+    if (!skipWebHook && cfg && cfg.logging.discordErrorWebHookURL &&
+        cfg.logging.discordErrorWebHookURL.toLowerCase().startsWith('http') && ApiError.discordHookCounter++ < 8) {
       request.post(cfg.logging.discordErrorWebHookURL, {
         headers: {
           'Content-Type': 'application/json',

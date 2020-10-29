@@ -64,16 +64,16 @@ function shutdownHook() {
 
   const ready = async (): Promise<never> => {
     try {
-      if (db) {
-        await db.shutdown();
+      if (cache) {
+        await cache.shutdown();
       }
     } catch (ex) {
       console.error(ex);
     }
 
     try {
-      if (cache) {
-        await cache.shutdown();
+      if (db) {
+        await db.shutdown();
       }
     } catch (ex) {
       console.error(ex);
