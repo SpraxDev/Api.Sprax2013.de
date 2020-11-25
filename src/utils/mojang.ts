@@ -21,8 +21,8 @@ export async function fetchUUID(username: string, at?: number): Promise<Minecraf
   return new Promise<MinecraftUUIDResponse | null>((resolve, reject) => {
     const cleanUsername = username.trim().toLowerCase();
 
-    // We don't have to check invalid looking usernames (although they exists), because Mojang doesn't return an UUID for them
-    if (cleanUsername.length > 16 || !/^[a-z0-9_]+$/.test(cleanUsername)) return reject(new Error('Invalid username'));
+    // We don't have to check invalid looking usernames (although they exist), because Mojang doesn't return an UUID for them
+    if (cleanUsername.length > 16 || !/^[a-z0-9_]+$/.test(cleanUsername)) return resolve(null);
 
     httpGet(`https://api.mojang.com/users/profiles/minecraft/${cleanUsername}${at != undefined ? `?at=${at}` : ''}`)
         .then((result) => {

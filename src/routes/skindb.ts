@@ -5,7 +5,7 @@ import { join as joinPath } from 'path';
 
 import { AiModel } from '../utils/ai_predict';
 import { cache, db } from '..';
-import { ApiError, ErrorBuilder, generateHash, Image, isNumber, restful, setCaching } from '../utils/utils';
+import { ApiError, ErrorBuilder, generateHash, Image, isNumeric, restful, setCaching } from '../utils/utils';
 import { getByUUID, getUserAgent } from './minecraft';
 import { Cape, CapeType, MinecraftProfileTextureProperty, MinecraftUser, Skin, UserAgent } from '../global';
 import { httpGet } from '../utils/web';
@@ -193,7 +193,7 @@ router.use('/cdn/skins/:id?/:type?', (req, res, next) => {
     req.params.id = req.params.id.substring(0, req.params.id.length - 4);
   }
 
-  if (!req.params.id || !isNumber(req.params.id.trim())) {
+  if (!req.params.id || !isNumeric(req.params.id.trim())) {
     return next(new ErrorBuilder().invalidParams('url', [{
       param: 'id',
       condition: 'Is numeric string (0-9)'
@@ -238,7 +238,7 @@ router.use('/cdn/capes/:id?', (req, res, next) => {
     req.params.id = req.params.id.substring(0, req.params.id.length - 4);
   }
 
-  if (!req.params.id || !isNumber(req.params.id.trim())) {
+  if (!req.params.id || !isNumeric(req.params.id.trim())) {
     return next(new ErrorBuilder().invalidParams('url', [{
       param: 'id',
       condition: 'Is numeric string (0-9)'
@@ -354,7 +354,7 @@ router.all('/ai/:model?', async (req, res, next) => {
           condition: 'skin.length > 0'
         }]));
       }
-      if (typeof querySkinID != 'string' || !isNumber(querySkinID)) {
+      if (typeof querySkinID != 'string' || !isNumeric(querySkinID)) {
         return next(new ErrorBuilder().invalidParams('query', [{
           param: 'skin',
           condition: 'Is numeric string (0-9)'

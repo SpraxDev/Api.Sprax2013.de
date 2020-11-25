@@ -10,7 +10,7 @@ import { appVersion, cfg, errorLogStream } from '..';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
     UUID_PATTERN_ADD_DASH = /(.{8})(.{4})(.{4})(.{4})(.{12})/,
-    FQDN_PATTERN = /^(?=.{1,253})(?!.*--.*)(?:(?![0-9-])[a-z0-9-]{1,63}(?<!-)\.){1,}(?:(?![0-9-])[a-z0-9-]{1,63}(?<!-))\.?$/i;
+    FQDN_PATTERN = /^(?=.{1,253})(?!.*--.*)(?:(?![0-9-])[a-z0-9-]{1,63}(?<!-)\.)+(?:(?![0-9-])[a-z0-9-]{1,63}(?<!-))\.?$/i;
 
 export class Image {
   img: { data: Buffer, info: sharp.OutputInfo };
@@ -882,7 +882,7 @@ export function getFileNameFromURL(str: string, stripFileExtension: boolean = fa
 /**
  * Checks if string only contains numbers (negative numbers are not allowed)
  */
-export function isNumber(str: string): boolean {
+export function isNumeric(str: string): boolean {
   return /^[0-9]+$/.test(str);
 }
 
@@ -898,7 +898,7 @@ export function toBoolean(input: string | number | boolean): boolean {
 export function toInt(input: string | number | boolean): number | null {
   if (input) {
     if (typeof input == 'number') return input;
-    if (typeof input == 'string' && isNumber(input)) return parseInt(input);
+    if (typeof input == 'string' && isNumeric(input)) return parseInt(input);
   }
 
   return null;

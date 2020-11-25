@@ -12,14 +12,16 @@
   ],
   "homepage": "https://github.com/SpraxDev/Api.Sprax2013.de#readme",
   "main": "build/index.js",
-  "private": false,
+  "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "start": "cross-env NODE_ENV=production nodemon --enable-source-maps build/index.js",
     "start-headless": "xvfb-run -d -s \"-ac -screen 0 1280x1024x24\" cross-env NODE_ENV=production nodemon --enable-source-maps build/index.js",
-    "devStart": "xvfb-run -d -s \"-ac -screen 0 1280x1024x24\" cross-env NODE_ENV=development ts-node src/index.ts",
+    "devStart": "cross-env NODE_ENV=development ts-node src/index.ts",
     "dev": "nodemon --ext ts --watch ./src --exec \"npm run devStart\"",
+    "devStart-headless": "xvfb-run -d -s \"-ac -screen 0 1280x1024x24\" cross-env NODE_ENV=development ts-node src/index.ts",
+    "dev-headless": "nodemon --ext ts --watch ./src --exec \"npm run devStart-headless\"",
     "debug": "ts-node src/index-debug.ts"
   },
   "author": {

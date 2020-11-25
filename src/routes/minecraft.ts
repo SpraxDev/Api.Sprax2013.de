@@ -17,7 +17,7 @@ import {
   getFileNameFromURL,
   Image,
   isHttpURL,
-  isNumber,
+  isNumeric,
   isUUID,
   isValidFQDN,
   restful,
@@ -169,10 +169,10 @@ router.param('user', (req, _res, next, value, name) => {
       next();
     } else {  // Normal request
       const queryAt = req.query.at;
-      let at: number | null = null;
+      let at: number | undefined;
 
       if (req.query.at) {
-        if (typeof queryAt != 'string' || !isNumber(queryAt)) {
+        if (typeof queryAt != 'string' || !isNumeric(queryAt)) {
           return next(new ErrorBuilder().invalidParams('query', [{
             param: 'at',
             condition: 'Is numeric string (0-9)'
@@ -182,27 +182,26 @@ router.param('user', (req, _res, next, value, name) => {
         at = Number.parseInt(queryAt);
       }
 
-      getByUsername(value, at, (err, apiRes) => {
-        if (err) return next(err);
-        if (!apiRes) return next(new ErrorBuilder().notFound('UUID for given username'));
+      cache.getUUID(value, at)
+          .then((uuid) => {
+            if (!uuid) return next(new ErrorBuilder().notFound('UUID for given username'));
 
-        getByUUID(apiRes.id, req, (err, mcUser) => {
-          if (err) return next(err);
-          if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given username'));
+            req.params[name] = uuid.id;
 
-          req.params[name] = mcUser.id;
-          return next();
-        });
-      });
+            next();
+          })
+          .catch(next);
     }
   } else if (isUUID(value)) {
-    getByUUID(value, req, (err, mcUser) => {
-      if (err) return next(err);
-      if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given uuid'));
+    cache.getProfile(value)
+        .then((profile) => {
+          if (!profile) return next(new ErrorBuilder().notFound('Profile for given uuid'));
 
-      req.params[name] = mcUser.id;
-      return next();
-    });
+          req.params[name] = profile.id;
+
+          next();
+        })
+        .catch(next);
   } else {
     return next(new ErrorBuilder().invalidParams('url', [{
       param: 'user',
@@ -271,7 +270,9 @@ router.param('capeType', (req, _res, next, value, name) => {
 router.all('/uuid/:name?', (req, res, next) => {
   restful(req, res, {
     get: () => {
-      if (!req.params.name) {
+      const name = req.params.name;
+
+      if (typeof name != 'string' || name.length == 0) {
         return next(new ErrorBuilder().invalidParams('url', [{
           param: 'name',
           condition: 'name.length > 0'
@@ -279,10 +280,10 @@ router.all('/uuid/:name?', (req, res, next) => {
       }
 
       const queryAt = req.query.at;
-      let at: number | null = null;
+      let at: number | undefined;
 
       if (queryAt) {
-        if (typeof queryAt != 'string' || !isNumber(queryAt)) {
+        if (typeof queryAt != 'string' || !isNumeric(queryAt)) {
           return next(new ErrorBuilder().invalidParams('query', [{
             param: 'at',
             condition: 'Is numeric string (0-9)'
@@ -292,55 +293,104 @@ router.all('/uuid/:name?', (req, res, next) => {
         at = Number.parseInt(queryAt);
       }
 
-      getByUsername(req.params.name, at, (err, apiRes) => {
-        if (err) return next(err);
-        if (!apiRes) return next(new ErrorBuilder().notFound('Profile for given user'));
+      cache.getUUID(name, at)
+          .then((uuid) => {
+            if (!uuid) return next(new ErrorBuilder().notFound('UUID for given username'));
 
-        setCaching(res, true, true, 60).send(apiRes);
-      });
+            setCaching(res, true, true, 60).send(uuid);
+          })
+          .catch(next);
     }
   });
 });
 
-router.all('/profile/:user?', (req, res, next) => {
+router.all('/profile/:nameOrId?', (req, res, next) => {
   restful(req, res, {
-    get: () => {
-      if (!req.params.user) {
+    get: async (): Promise<void> => {
+      const nameOrId = req.params.nameOrId;
+
+      if (typeof nameOrId != 'string' || nameOrId.length == 0) {
         return next(new ErrorBuilder().invalidParams('url', [{
           param: 'user',
           condition: 'user.length > 0'
         }]));
       }
 
-      const raw = typeof req.query.raw == 'string' ? toBoolean(req.query.raw) : true;
+      const full = typeof req.query.raw == 'string' ? !toBoolean(req.query.raw) :
+          typeof req.query.full == 'string' ? toBoolean(req.query.full) : false;
 
-      getByUUID(req.params.user, req, (err, mcUser) => {
-        if (err) return next(err);
-        if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given user', true));
+      /* nameOrId->profile */
 
-        return setCaching(res, true, true, 60).send(raw ? mcUser.toOriginal() : mcUser.toCleanJSON());
-      });
+      let result: object | undefined | null;
+
+      try {
+        if (full) {
+          const user = await cache.getUser(nameOrId, false);
+
+          if (user) {
+            result = user.toCleanJSON();
+          }
+        } else {
+          let uuid: string | undefined = nameOrId;
+
+          if (!isUUID(uuid)) {
+            uuid = (await cache.getUUID(nameOrId))?.id;
+          }
+
+          if (uuid) {
+            result = await cache.getProfile(uuid);
+          }
+        }
+      } catch (err) {
+        return next(err);
+      }
+
+      /* Send response */
+
+      if (!result) return next(new ErrorBuilder().notFound('Profile for given user'));
+
+      setCaching(res, true, true, 60)
+          .send(result);
     }
   });
 });
 
-router.all('/history/:user?', (req, res, next) => {
+router.all('/history/:nameOrId?', (req, res, next) => {
   restful(req, res, {
-    get: () => {
-      if (!req.params.user) {
+    get: async (): Promise<void> => {
+      const nameOrId = req.params.nameOrId;
+
+      if (typeof nameOrId != 'string' || nameOrId.length == 0) {
         return next(new ErrorBuilder().invalidParams('url', [{
           param: 'user',
           condition: 'user.length > 0'
         }]));
       }
 
-      getByUUID(req.params.user, req, (err, mcUser) => {
-        if (err) return next(err);
-        if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given user', true));
-        if (!mcUser.nameHistory) return next(new ErrorBuilder().notFound('Name history for given user', true));
+      /* nameOrId->name_history */
 
-        setCaching(res, true, true, 60).send(mcUser.nameHistory);
-      });
+      let result: object | undefined | null;
+
+      try {
+        let uuid: string | undefined = nameOrId;
+
+        if (!isUUID(uuid)) {
+          uuid = (await cache.getUUID(nameOrId))?.id;
+        }
+
+        if (uuid) {
+          result = await cache.getNameHistory(uuid);
+        }
+      } catch (err) {
+        return next(err);
+      }
+
+      /* Send response */
+
+      if (!result) return next(new ErrorBuilder().notFound('Profile for given user'));
+
+      setCaching(res, true, true, 60)
+          .send(result);
     }
   });
 });

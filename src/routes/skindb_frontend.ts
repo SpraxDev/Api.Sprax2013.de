@@ -8,7 +8,7 @@ import {
   ErrorBuilder,
   generateHash,
   Image,
-  isNumber,
+  isNumeric,
   isUUID,
   restful,
   setCaching
@@ -86,7 +86,7 @@ router.all('/skin/:skinID/vote', (req, res, next) => {
   restful(req, res, {
     post: () => {
       if (!db.isAvailable()) return next(new ErrorBuilder().serviceUnavailable('SkinDB-Frontend route can only work while using a database'));
-      if (!isNumber(req.params.skinID)) {
+      if (!isNumeric(req.params.skinID)) {
         return next(new ErrorBuilder().invalidParams('url', [{
           param: 'skinID',
           condition: 'Numeric string'
@@ -139,7 +139,7 @@ router.all('/skin/:skinID', (req, res, next) => {
   restful(req, res, {
     get: () => {
       if (!db.isAvailable()) return next(new ErrorBuilder().serviceUnavailable('SkinDB-Frontend route can only work while using a database'));
-      if (!isNumber(req.params.skinID)) {
+      if (!isNumeric(req.params.skinID)) {
         return next(new ErrorBuilder().invalidParams('url', [{
           param: 'skinID',
           condition: 'Numeric string'
@@ -227,7 +227,7 @@ router.all('/skins', (req, res, next) => {
   restful(req, res, {
     get: () => {
       if (!db.isAvailable()) return next(new ErrorBuilder().serviceUnavailable('SkinDB-Frontend route can only work while using a database'));
-      if (req.query.page && !isNumber(req.query.page as string)) {
+      if (req.query.page && !isNumeric(req.query.page as string)) {
         return next(new ErrorBuilder().invalidParams('query', [{
           param: 'page',
           condition: 'Valid number > 0'
@@ -352,7 +352,7 @@ router.all('/search', (req, res, next) => {
           param: 'q',
           condition: 'Valid string'
         }]));
-        if (req.query.page && !isNumber(req.query.page as string)) {
+        if (req.query.page && !isNumeric(req.query.page as string)) {
           return next(new ErrorBuilder().invalidParams('query', [{
             param: 'page',
             condition: 'Valid number > 0'
