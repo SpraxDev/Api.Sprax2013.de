@@ -28,7 +28,7 @@ async function initAiModels(): Promise<void> {
     AI_MODELS[dirName.toUpperCase()] = null;
   }
 
-  new Promise((resolve) => {
+  new Promise<void>((resolve) => {
     let i = 0;
 
     for (const dirName of aiModelDirs) {
