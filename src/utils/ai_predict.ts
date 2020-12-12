@@ -33,7 +33,7 @@ export class AiModel {
   }
 
   async init(): Promise<void> {
-    new Promise((resolve, reject) => {
+    new Promise<void>((resolve, reject) => {
       if (!this.modelDir) return reject(new Error('This AiModel instance has already been initialized'));
 
       tf.loadLayersModel('file://' + join(this.modelDir, 'model.json'))
