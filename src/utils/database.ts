@@ -33,55 +33,63 @@ export class dbUtils {
   }
 
   /* Profiles */
-
-  // TODO: Don't have one large function for the whole user but allow stuff to be updated independently
-  async updateUser(mcUser: MinecraftUser): Promise<void> {
-    return new Promise((resolve, reject) => {
+  async updateProfile(mcProfile: MinecraftProfile, names?: MinecraftUser['nameHistory']): Promise<void> {
+    return new Promise(async (resolve, reject): Promise<void> => {
       if (this.pool == null) return reject(new Error('No database connected'));
 
-      if (mcUser.nameHistory.length <= 0) return reject(new Error('nameHistory may not be an empty array'));
+      let client: PoolClient | undefined;
 
-      this.pool.connect((err, client, done) => {
-        if (err) return reject(err);
+      try {
+        let updatedNameHistory = false;
 
-        client.query('BEGIN', (err) => {
-          if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+        if (names) {
+          // Build query string
+          let queryStr = 'INSERT INTO name_history(profile_id,name,changed_to_at) VALUES';
+          const queryArgs: (string | Date)[] = [mcProfile.id];
 
-          // Store latest profile
-          client.query('INSERT INTO profiles(id,name_lower,raw_json,deleted) VALUES($1,$2,$3,$4) ON CONFLICT(id) DO UPDATE SET name_lower =$2, raw_json =$3, last_update =CURRENT_TIMESTAMP,last_name_history_update=CURRENT_TIMESTAMP;',
-              [mcUser.id.toLowerCase(), mcUser.name.toLowerCase(), mcUser.toOriginal(), false], (err, _res) => {
-                if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+          let counter = 2;
+          for (const elem of names) {
+            if (counter > 2) queryStr += ', ';
 
-                let queryStr = 'INSERT INTO name_history(profile_id,name,changed_to_at) VALUES';
-                const queryArgs: (string | Date)[] = [mcUser.id];
+            queryStr += `(lower($1),$${counter++},${typeof elem.changedToAt == 'number' ? `$${counter++}` : `'-infinity'`})`;
 
-                let counter = 2;
-                for (const elem of mcUser.nameHistory) {
-                  if (counter > 2) queryStr += ', ';
+            queryArgs.push(elem.name);
 
-                  queryStr += `($1,$${counter++},${typeof elem.changedToAt == 'number' ? `$${counter++}` : `'-infinity'`})`;
+            if (typeof elem.changedToAt == 'number') {
+              queryArgs.push(new Date(elem.changedToAt));
+            }
+          }
 
-                  queryArgs.push(elem.name);
+          // Store Name-History
+          client = await this.pool.connect();
 
-                  if (typeof elem.changedToAt == 'number') {
-                    queryArgs.push(new Date(elem.changedToAt));
-                  }
-                }
+          await client.query('BEGIN');
+          await client.query(`${queryStr} ON CONFLICT DO NOTHING;`, queryArgs);
 
-                // Store Name-History
-                client.query(`${queryStr} ON CONFLICT DO NOTHING;`, queryArgs, (err, _res) => {
-                  if (this.shouldAbortTransaction(client, done, err)) return reject(err);
+          updatedNameHistory = true;
+        }
 
-                  client.query('COMMIT', (err) => {
-                    done();
-                    if (err) return reject(err);
+        // Store latest profile
+        await (client ?? this.pool).query('INSERT INTO profiles(id,name_lower,raw_json,deleted) VALUES(lower($1),lower($2),$3,$4) ' +
+            'ON CONFLICT(id) DO UPDATE SET name_lower =lower($2), raw_json =$3, last_update =CURRENT_TIMESTAMP' +
+            (updatedNameHistory ? ', last_name_history_update=CURRENT_TIMESTAMP' : '') + ';',
+            [mcProfile.id, mcProfile.name, mcProfile, false]);
 
-                    resolve();
-                  });
-                });
-              });
+        await client?.query('COMMIT');
+        client?.release();
+
+        resolve();
+      } catch (err) {
+        client?.query('ROLLBACK', (err) => {
+          client?.release();
+
+          if (err) {
+            ApiError.log('Error rolling back client', err);
+          }
         });
-      });
+
+        reject(err);
+      }
     });
   }
 
@@ -763,7 +771,7 @@ export class dbUtils {
     });
   }
 
-  async addCapeToUserHistory(mcUser: MinecraftUser, cape: Cape, timestamp: Date | 'now'): Promise<void> {
+  async addCapeToUserHistory(id: string, cape: Cape, timestamp: Date | 'now'): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
 
@@ -777,7 +785,7 @@ export class dbUtils {
             if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
             client.query(`SELECT EXISTS(SELECT * FROM(SELECT ch.* FROM cape_history ch JOIN capes c ON ch.cape_id =c.id WHERE profile_id =$1 AND c.type =$2 AND ch.added <= ${timestamp != 'now' ? '$4' : 'CURRENT_TIMESTAMP'} ORDER BY ch.added DESC LIMIT 1)x WHERE x.cape_id =$3) as before, EXISTS(SELECT * FROM(SELECT ch.* FROM cape_history ch JOIN capes c ON ch.cape_id =c.id WHERE profile_id =$1 AND c.type =$2 AND ch.added > ${timestamp != 'now' ? '$4' : 'CURRENT_TIMESTAMP'} ORDER BY ch.added DESC LIMIT 1)x WHERE x.cape_id =$3) as after;`,
-                [mcUser.id, cape.type, cape.duplicateOf || cape.id, timestamp != 'now' ? timestamp : undefined], (err, res) => {
+                [id.toLowerCase(), cape.type, cape.duplicateOf || cape.id, timestamp != 'now' ? timestamp : undefined], (err, res) => {
                   if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
                   if (res.rows[0].before || res.rows[0].after) { // Cape hasn't changed
@@ -789,7 +797,7 @@ export class dbUtils {
                     });
                   } else {
                     client.query(`INSERT INTO cape_history(profile_id,cape_id,added) VALUES($1,$2,${timestamp != 'now' ? '$3' : 'CURRENT_TIMESTAMP'}) ON CONFLICT DO NOTHING;`,
-                        [mcUser.id, cape.duplicateOf || cape.id, timestamp != 'now' ? timestamp : undefined], (err, _res) => {
+                        [id.toLowerCase(), cape.duplicateOf || cape.id, timestamp != 'now' ? timestamp : undefined], (err, _res) => {
                           if (this.shouldAbortTransaction(client, done, err)) return reject(err);
 
                           client.query('COMMIT', (err) => {

@@ -536,7 +536,7 @@ export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: 
                             getByUUID(json.profileId, null, (err, user) => {
                               if (err || !user) return;  // Error or invalid uuid
 
-                              db.addCapeToUserHistory(user, cape, new Date(json.timestamp))
+                              db.addCapeToUserHistory(user.id, cape, new Date(json.timestamp))
                                   .catch((err) => {
                                     ApiError.log(`Could not update cape-history in database`, {
                                       profile: json.profileId,

@@ -52,7 +52,7 @@ export class CacheUtils {
   // TODO: Accept express.Request as optional param and append timing headers when env != production
   //  + use it to get the User-Agent for database-import
 
-  public async getUser(nameOrUUID: string, waitForDbImport: boolean = false): Promise<MinecraftUser | null> {
+  public async getUser(nameOrUUID: string, waitForDbSkinImport: boolean = false): Promise<MinecraftUser | null> {
     return new Promise(async (resolve, reject): Promise<void> => {
       let uuid: string;
       let uuidExists = false;
@@ -73,7 +73,7 @@ export class CacheUtils {
       }
 
       try {
-        const profile = await this.getProfile(uuid);
+        const profile = await this.getProfile(uuid, waitForDbSkinImport);
 
         if (!profile && uuidExists) return reject(new Error(`Got Null-Profile for existing profile '${uuid}'`));
         if (!profile) return resolve(null);
@@ -84,103 +84,7 @@ export class CacheUtils {
         // TODO: replace User-Agent
         const user = profile ? new MinecraftUser(profile, nameHistory as MinecraftNameHistoryElement[], await getUserAgent(null)) : null;
 
-        if (!waitForDbImport || !db.isAvailable()) {
-          resolve(user);
-        }
-
-        // Import into db
-        if (db.isAvailable()) {
-          // FIXME: DO NOT call this inside #getUser but in #getProfile etc. because it currently imports on every #getUser-call
-          // TODO: clean this *shit* up
-          if (user == null) {
-            // We don't care about the result as the profile does not exist anymore (or never did)
-            db.markUserDeleted(uuid)
-                .catch((err) => {
-                  // Just log errors that occurred
-                  ApiError.log('Could not mark user as deleted in database', {uuid: uuid, stack: err.stack});
-                });
-          } else {
-            db.updateUser(user)
-                .then(async (): Promise<void> => {
-                  /* Skin */
-                  if (user.textureValue) {
-                    try {
-                      const importedTextures = await importByTexture(user.textureValue, user.textureSignature, user.userAgent);
-
-                      if (importedTextures.cape && db.isAvailable()) {
-                        try {
-                          await db.addCapeToUserHistory(user, importedTextures.cape, new Date(MinecraftUser.extractMinecraftProfileTextureProperty(user.textureValue).timestamp));
-                        } catch (err) {
-                          ApiError.log(`Could not update cape-history in database`, {
-                            cape: importedTextures.cape.id,
-                            profile: user.id,
-                            stack: err.stack
-                          });
-                        }
-                      }
-                    } catch (err) {
-                      ApiError.log('Could not import skin/cape from profile', {
-                        skinURL: user.skinURL,
-                        profile: user.id,
-                        stack: (err || new Error()).stack
-                      });
-                    }
-                  }
-
-                  /* Capes */
-                  const processCape = (capeURL: string | null, capeType: CapeType): Promise<void> => {
-                    return new Promise((resolve, reject) => {
-                      if (!capeURL) return resolve();
-
-                      importCapeByURL(capeURL, capeType, user.userAgent, user.textureValue || undefined, user.textureSignature || undefined)
-                          .then((cape) => {
-                            if (!cape) return resolve();
-
-                            if (capeType != 'MOJANG' && db.isAvailable()) {
-                              db.addCapeToUserHistory(user, cape, user.textureValue ? new Date(MinecraftUser.extractMinecraftProfileTextureProperty(user.textureValue).timestamp) : 'now')
-                                  .then(resolve)
-                                  .catch((err) => {
-                                    ApiError.log(`Could not update cape-history in database`, {
-                                      cape: cape.id,
-                                      profile: user.id,
-                                      stack: err.stack
-                                    });
-                                    reject(err);
-                                  });
-                            }
-                          })
-                          .catch((err) => {
-                            ApiError.log(`Could not import cape(type=${capeType}) from profile`, {
-                              capeURL: capeURL,
-                              profile: user.id,
-                              stack: err.stack
-                            });
-                            reject(err);
-                          });
-                    });
-                  };
-
-                  try {
-                    await processCape(user.getOptiFineCapeURL(), CapeType.OPTIFINE);
-                  } catch (err) {
-                    ApiError.log('Could not process OptiFine-Cape', err);
-                  }
-
-                  try {
-                    await processCape(user.getLabyModCapeURL(), CapeType.LABYMOD);
-                  } catch (err) {
-                    ApiError.log('Could not process LabyMod-Cape', err);
-                  }
-                })
-                .catch((err) => {
-                  ApiError.log('Could not update user in database', {profile: user.id, stack: err.stack});
-                });
-          }
-
-          if (waitForDbImport) {
-            resolve(user);
-          }
-        }
+        resolve(user);
       } catch (err) {
         return reject(err);
       }
@@ -267,7 +171,7 @@ export class CacheUtils {
     });
   }
 
-  public async getProfile(uuid: string): Promise<MinecraftProfile | null> {
+  public async getProfile(uuid: string, waitForDbSkinImport: boolean = false): Promise<MinecraftProfile | null> {
     return new Promise<MinecraftProfile | null>(async (resolve, reject): Promise<void> => {
       const cleanUUID = uuid.toLowerCase().replace(/-/g, '');
       const key = CacheUtils.KEY_PREFIX_PROFILE + cleanUUID;
@@ -319,6 +223,110 @@ export class CacheUtils {
             const profile = await fetchProfile(cleanUUID);
 
             result = profile ? profile : CacheUtils.EMPTY_VALUE;
+
+            // Write new data to database
+            if (db.isAvailable()) {
+              if (!profile) {
+                // We don't care about the result as the profile does not exist anymore (or never did)
+                db.markUserDeleted(uuid)
+
+                    .catch((err) => {
+                      // Just log errors that occurred
+                      ApiError.log('Could not mark user as deleted in database', {uuid: uuid, stack: err.stack});
+                    })
+                    .finally(() => {
+                      if (waitForDbSkinImport) {
+                        this.resolveQueue(key, result);
+                      }
+                    });
+              } else {
+                db.updateProfile(profile)
+                    .then(async (): Promise<void> => {
+                      const tempUser = new MinecraftUser(profile, [], await getUserAgent(null));
+
+                      /* Skin */
+                      if (tempUser.textureValue) {
+                        try {
+                          const importedTextures = await importByTexture(tempUser.textureValue, tempUser.textureSignature, tempUser.userAgent);
+
+                          if (importedTextures.cape && db.isAvailable()) {
+                            try {
+                              await db.addCapeToUserHistory(profile.id, importedTextures.cape, new Date(MinecraftUser.extractMinecraftProfileTextureProperty(tempUser.textureValue).timestamp));
+                            } catch (err) {
+                              ApiError.log(`Could not update cape-history in database`, {
+                                cape: importedTextures.cape.id,
+                                profile: profile.id,
+                                stack: err.stack
+                              });
+                            }
+                          }
+                        } catch (err) {
+                          ApiError.log('Could not import skin/cape from profile', {
+                            skinURL: tempUser.skinURL,
+                            profile: profile.id,
+                            stack: (err || new Error()).stack
+                          });
+                        }
+                      }
+
+                      /* Capes */
+                      const processCape = (capeURL: string | null, capeType: CapeType): Promise<void> => {
+                        return new Promise((resolve, reject) => {
+                          if (!capeURL) return resolve();
+
+                          importCapeByURL(capeURL, capeType, tempUser.userAgent, tempUser.textureValue || undefined, tempUser.textureSignature || undefined)
+                              .then((cape) => {
+                                if (!cape) return resolve();
+
+                                if (capeType != 'MOJANG' && db.isAvailable()) {
+                                  db.addCapeToUserHistory(profile.id, cape, tempUser.textureValue ? new Date(MinecraftUser.extractMinecraftProfileTextureProperty(tempUser.textureValue).timestamp) : 'now')
+                                      .then(resolve)
+                                      .catch((err) => {
+                                        ApiError.log(`Could not update cape-history in database`, {
+                                          cape: cape.id,
+                                          profile: profile.id,
+                                          stack: err.stack
+                                        });
+                                        reject(err);
+                                      });
+                                }
+                              })
+                              .catch((err) => {
+                                ApiError.log(`Could not import cape(type=${capeType}) from profile`, {
+                                  capeURL: capeURL,
+                                  profile: profile.id,
+                                  stack: err.stack
+                                });
+                                reject(err);
+                              });
+                        });
+                      };
+
+                      try {
+                        await processCape(tempUser.getOptiFineCapeURL(), CapeType.OPTIFINE);
+                      } catch (err) {
+                        ApiError.log('Could not process OptiFine-Cape', err);
+                      }
+
+                      try {
+                        await processCape(tempUser.getLabyModCapeURL(), CapeType.LABYMOD);
+                      } catch (err) {
+                        ApiError.log('Could not process LabyMod-Cape', err);
+                      }
+
+                      if (waitForDbSkinImport) {
+                        this.resolveQueue(key, result);
+                      }
+                    })
+                    .catch((err) => {
+                      ApiError.log('Could not update user in database', {profile: profile.id, stack: err.stack});
+
+                      if (waitForDbSkinImport) {
+                        this.resolveQueue(key, result);
+                      }
+                    });
+              }
+            }
           } catch (err) {
             ApiError.log('CacheUtils encountered an error while fetching a profile from Mojang', {key, err});
           }
@@ -335,7 +343,9 @@ export class CacheUtils {
           }
         }
 
-        this.resolveQueue(key, result);
+        if (!waitForDbSkinImport || !db.isAvailable()) {
+          this.resolveQueue(key, result);
+        }
       }
     });
   }
