@@ -8,12 +8,14 @@ import {
   MinecraftUser,
   MinecraftUUIDResponse
 } from '../global';
-import { fetchBlockedServers, fetchNameHistory, fetchProfile, fetchUUID } from './mojang';
 import { db } from '../index';
-import { ApiError, isUUID } from './utils';
 import { getUserAgent } from '../routes/minecraft';
 import { importByTexture, importCapeByURL } from '../routes/skindb';
+import { fetchBlockedServers, fetchNameHistory, fetchProfile, fetchUUID } from './mojang';
+import { ApiError, isUUID } from './utils';
 
+// TODO: Allow ?allowOldCache=true when Mojang API is down and cache would be considered out-of-date (maybe have it true by default)
+// TODO: Tell User-Agent that Mojang API is down instead of generic 500 error
 export class CacheUtils {
   private static readonly KEY_PREFIX_UUID: string = 'minecraft:uuid:';
   private static readonly KEY_PREFIX_PROFILE: string = 'minecraft:profile:';

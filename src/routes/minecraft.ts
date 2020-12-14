@@ -106,7 +106,7 @@ const whitelistedSkinURLs = ['//textures.minecraft.net/texture/', '//cdn.skindb.
 const router = Router();
 export const minecraftExpressRouter = router;
 
-// Turn :user into uuid (without hyphenes) or if :user == x-url check if query-param url is valid
+// Turn :user into uuid (without hyphens) or if :user == x-url check if query-param url is valid
 router.param('user', (req, _res, next, value, name) => {
   if (typeof value != 'string') {
     return next(new ErrorBuilder().invalidParams('url', [{

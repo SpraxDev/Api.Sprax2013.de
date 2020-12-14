@@ -2,13 +2,13 @@ import { createVerify as cryptoCreateVerify } from 'crypto';
 import { Router } from 'express';
 import { readdirSync, readFileSync } from 'fs';
 import { join as joinPath } from 'path';
+import { cache, db } from '..';
+import { Cape, CapeType, MinecraftProfileTextureProperty, MinecraftUser, Skin, UserAgent } from '../global';
 
 import { AiModel } from '../utils/ai_predict';
-import { cache, db } from '..';
 import { ApiError, ErrorBuilder, generateHash, Image, isNumeric, restful, setCaching } from '../utils/utils';
-import { getByUUID, getUserAgent } from './minecraft';
-import { Cape, CapeType, MinecraftProfileTextureProperty, MinecraftUser, Skin, UserAgent } from '../global';
 import { httpGet } from '../utils/web';
+import { getByUUID, getUserAgent } from './minecraft';
 
 const yggdrasilPublicKey = readFileSync(joinPath(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));
 

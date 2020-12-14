@@ -3,11 +3,11 @@ import { addHyphensToUUID } from './utils/utils';
 /* SpraxAPI */
 export interface SpraxAPIcfg {
   readonly listen: {
-    readonly usePath: boolean,
-    readonly path: string,
+    readonly usePath: boolean;
+    readonly path: string;
 
-    readonly host: string,
-    readonly port: number
+    readonly host: string;
+    readonly port: number;
   }
 
   readonly trustProxy: boolean;
@@ -139,12 +139,14 @@ export interface CleanMinecraftUser {
   id_hyphens: string;
   name: string;
   legacy: boolean | null;
+
   textures: {
     skinURL: string | null;
     capeURL: string | null;
     texture_value: string | null;
-    texture_signature: string | null
+    texture_signature: string | null;
   }
+
   name_history?: MinecraftNameHistoryElement[];
 }
 
@@ -261,32 +263,35 @@ export class MinecraftUser {
 }
 
 export interface MinecraftProfile {
-  id: string,
-  name: string,
-  properties: MinecraftProfileProperty[],
-  legacy?: boolean | null
+  id: string;
+  name: string;
+  properties: MinecraftProfileProperty[];
+  legacy?: boolean | null;
 }
 
 export interface MinecraftProfileProperty {
-  name: 'textures',
-  value: string,
-  signature?: string
+  name: 'textures';
+  value: string;
+  signature?: string;
 }
 
 export interface MinecraftProfileTextureProperty {
-  timestamp: number,
-  profileId: string,
-  profileName: string,
-  signatureRequired?: boolean,
+  timestamp: number;
+  profileId: string;
+  profileName: string;
+  signatureRequired?: boolean;
+
   textures: {
     SKIN?: {
-      url: string,
+      url: string;
+
       metadata?: {
-        model?: 'slim'
+        model?: 'slim';
       }
     },
+
     CAPE?: {
-      url: string
+      url: string;
     }
   }
 }

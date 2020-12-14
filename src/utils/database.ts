@@ -89,8 +89,8 @@ export class dbUtils {
     return new Promise((resolve, reject) => {
       if (this.pool == null) return reject(new Error('No database connected'));
 
-      this.pool.query('UPDATE profiles SET deleted =$2,last_update =CURRENT_TIMESTAMP WHERE id =$1;',
-          [id.toLowerCase(), deleted], (err, _res) => {
+      this.pool.query('UPDATE profiles SET deleted =$2,last_update =CURRENT_TIMESTAMP WHERE id =lower($1);',
+          [id, deleted], (err, _res) => {
             if (err) return reject(err);
 
             resolve();
