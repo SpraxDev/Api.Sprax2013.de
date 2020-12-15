@@ -64,47 +64,6 @@ export interface Cape {
 }
 
 /* SkinDB */
-export interface SkinDBAccount {
-  readonly user: CleanMinecraftUser;
-
-  readonly skinHistory: {
-    readonly lastTen: number[];
-    readonly total: number;
-  }
-}
-
-export interface SkinDBSkin {
-  readonly skin: Skin;
-  readonly tags: { id: string, name: string }[];
-  readonly aiTags: { id: string, name: string, sum: number }[];
-  readonly tagVotes: { id: string, name: string, sum: number }[];
-  readonly seenOn: { name: string, id: string }[];
-  readonly profileVotes: { id: string, vote: boolean }[] | undefined;
-}
-
-export interface SkinDBSkins {
-  readonly skins: Skin[];
-  readonly page: number;
-  readonly hasNextPage: boolean;
-}
-
-export interface SkinDBSearch {
-  readonly profiles: {
-    readonly direct: { name: string, id: string } | null;
-    readonly indirect: { name: string, matched_name: string, id: string }[];
-  }
-
-  readonly skins: {
-    readonly hits: Skin[];
-    readonly time: number;
-    readonly page: number;
-    readonly hasNextPage: boolean;
-  }
-}
-
-export interface SkinDBIndex {
-  top_ten: { id: string, count: number }[];
-}
 
 /**
  * value equals remote database enum

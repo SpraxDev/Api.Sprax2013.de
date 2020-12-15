@@ -1,14 +1,13 @@
 // TODO: File is WAY too large
 import nCache = require('node-cache');
+import { Request, Response, Router } from 'express';
 import { readFileSync } from 'fs';
 import { isIPv4 } from 'net';
 import { join as joinPath } from 'path';
-import { Request, Response, Router } from 'express';
+import { CapeType, MinecraftUser, MinecraftUUIDResponse, SkinArea, UserAgent } from '../global';
+import { cache, db } from '../index';
 
 import { Camera, createCamera, createModel, Model } from '../utils/modelRender';
-import { cache, db } from '../index';
-import { httpGet } from '../utils/web';
-import { CapeType, MinecraftUser, MinecraftUUIDResponse, SkinArea, UserAgent } from '../global';
 import {
   ApiError,
   convertFQDNtoASCII,
@@ -25,6 +24,7 @@ import {
   toBoolean,
   toInt
 } from '../utils/utils';
+import { httpGet } from '../utils/web';
 
 /* key: ${userAgent};${internal(boolean)}, value: UserAgent */
 const userAgentCache = new nCache({
@@ -927,6 +927,124 @@ router.all('/servers/blocked/check', (req, res, next) => {
     }
   });
 });
+
+// TODO: Allow clients to import any raw data related to profiles and/or skins (Used by SkinDB too)
+// router.all('/import', (req, res, next) => {
+//   // user (uuid, name), texture-value (+signature), file(s), URL
+//
+//   restful(req, res, {
+//     post: () => {
+//       const contentType = (req.headers['content-type'] || '').toLowerCase();
+//
+//       if (contentType == 'image/png') {
+//         if (!(req.body instanceof Buffer)) {
+//           return next(new ErrorBuilder().invalidBody([{
+//             param: 'body',
+//             condition: 'Valid png under 3MB'
+//           }]));
+//         }
+//
+//         Image.fromImg(req.body, (err, img) => {
+//           if (err || !img) return next(new ErrorBuilder().invalidBody([{param: 'body', condition: 'Valid png'}]));
+//           if (!img.hasSkinDimensions()) {
+//             return next(new ErrorBuilder().invalidBody([{
+//               param: 'body',
+//               condition: 'Valid minecraft skin dimensions 64x32px or 64x64px'
+//             }]));
+//           }
+//
+//           getUserAgent(req)
+//               .then((userAgent) => {
+//                 importSkinByBuffer(req.body, null, userAgent, (err, skin, exactMatch) => {
+//                   if (err || !skin) return next(err || new ErrorBuilder().serverErr(undefined, `Could not import uploaded skin by Buffer`));
+//
+//                   return setCaching(res, false, false)
+//                       .status(exactMatch ? 200 : 201)
+//                       .send({
+//                         result: exactMatch ? 'Skin already in database' : 'Skin added to database',
+//                         skinID: skin.id
+//                       });
+//                 });
+//               })
+//               .catch(next);
+//         });
+//       } else if (contentType == 'application/json') {
+//         const json: { url?: string, raw?: { value: string, signature?: string } } = req.body;
+//
+//         if (json.raw) {
+//           if (!json.raw.value) {
+//             return next(new ErrorBuilder().invalidBody([{
+//               param: 'JSON-Body: json.raw.value',
+//               condition: 'Valid skin value from mojang profile'
+//             }]));
+//           }
+//
+//           if (json.raw.signature && !isFromYggdrasil(json.raw.value, json.raw.signature)) json.raw.signature = undefined;
+//
+//           getUserAgent(req)
+//               .then((userAgent) => {
+//                 if (!json.raw) return next(new ErrorBuilder().unknown());  // FIXME: why does TypeScript need this line? o.0
+//
+//                 importByTexture(json.raw.value, json.raw.signature || null, userAgent)
+//                     .then((result) => {
+//                       return setCaching(res, false, false)
+//                           .status(202) // TODO report if skin added to db or already was in db
+//                           .send({
+//                             result: null, // TODO report if skin added to db or already was in db
+//                             skinID: result.skin?.id
+//                           });
+//                     })
+//                     .catch((err) => {
+//                       next(err);
+//                     });
+//               })
+//               .catch(next);
+//         } else if (json.url) {
+//           if (!MinecraftUser.getSecureURL(json.url).toLowerCase().startsWith('https://textures.minecraft.net/texture/')) {
+//             return next(new ErrorBuilder().invalidBody([{
+//               param: 'JSON-Body: json.url',
+//               condition: 'Valid textures.minecraft.net URL'
+//             }]));
+//           }
+//
+//           db.getSkinByURL(MinecraftUser.getSecureURL(json.url).toLowerCase())
+//               .then((skin) => {
+//                 if (!skin) {
+//                   getUserAgent(req)
+//                       .then((userAgent) => {
+//                         if (!json.url) return next(new ErrorBuilder().unknown());  // FIXME: why does TypeScript need this line? o.0
+//
+//                         importSkinByURL(MinecraftUser.getSecureURL(json.url), userAgent, (err, skin, exactMatch) => {
+//                           if (err || !skin) return next(err || new ErrorBuilder().serverErr(undefined, `Could not import skin-URL`));
+//
+//                           return setCaching(res, false, false)
+//                               .status(exactMatch ? 200 : 201)
+//                               .send({
+//                                 result: exactMatch ? 'Skin already in database' : 'Skin added to database',
+//                                 skinID: skin.id
+//                               });
+//                         });
+//                       })
+//                       .catch(next);
+//                 } else {
+//                   return setCaching(res, false, false)
+//                       .status(200)
+//                       .send({
+//                         result: 'Skin already in database',
+//                         skinID: skin.id
+//                       });
+//                 }
+//               })
+//               .catch(next);
+//         } else {
+//           return next(new ErrorBuilder().invalidBody([]));  //TODO
+//         }
+//       } else {
+//         return next(new ErrorBuilder().invalidBody([]));  //TODO
+//       }
+//     }
+//   });
+// });
 
 /* Helper */
 function sendDownloadHeaders(res: Response, mimeType: string, download: boolean, fileIdentifier: string, fileExtension: string = 'png'): void {

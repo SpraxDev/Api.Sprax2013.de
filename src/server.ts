@@ -1,13 +1,11 @@
 import express = require('express');
 import morgan = require('morgan');
 
-import { minecraftExpressRouter } from './routes/minecraft';
-import { skindbExpressRouter } from './routes/skindb';
-import { statusExpressRouter } from './routes/status';
-
 import { cfg, webAccessLogStream } from '.';
+
+import { minecraftExpressRouter } from './routes/minecraft';
+import { statusExpressRouter } from './routes/status';
 import { ApiError, ErrorBuilder, HttpError } from './utils/utils';
-import { skindbFrontendExpressRouter } from './routes/skindb_frontend';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -64,8 +62,6 @@ app.use('/hems', (_req, _res, next) => next(new ApiError(`Gone forever or as lon
 
 app.use('/status', statusExpressRouter);
 app.use('/mc', minecraftExpressRouter);
-app.use('/skindb/frontend', skindbFrontendExpressRouter);
-app.use('/skindb', skindbExpressRouter);
 
 /* Error handling */
 app.use((_req, _res, next) => {

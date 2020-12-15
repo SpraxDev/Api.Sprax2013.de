@@ -10,7 +10,7 @@ import {
 } from '../global';
 import { db } from '../index';
 import { getUserAgent } from '../routes/minecraft';
-import { importByTexture, importCapeByURL } from '../routes/skindb';
+import { importByTexture, importCapeByURL } from './skindb';
 import { fetchBlockedServers, fetchNameHistory, fetchProfile, fetchUUID } from './mojang';
 import { ApiError, isUUID } from './utils';
 
