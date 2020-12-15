@@ -1,9 +1,9 @@
-import fs = require('fs');
-import path = require('path');
-import readline = require('readline');
+import fs from 'fs';
+import path from 'path';
+import { Pool } from 'pg';
+import readline from 'readline';
 
 import { dbUtils } from './utils/database';
-import { Pool } from 'pg';
 
 let db: dbUtils;
 
@@ -36,7 +36,7 @@ rl.question('> ', (input) => {
           console.log('fixHistory [skin|cape] - Removes any duplicate rows (e.g. User changed skin with id 12 and 2 seconds later again with id 12)');
           console.log('quit - Exits the application');
 
-          await new Promise((resolve, reject) => {
+          await new Promise<void>((resolve, reject) => {
             rl.question('> ', async (input) => {
               const args = input.trim().split(' ');
 
@@ -96,7 +96,7 @@ rl.question('> ', (input) => {
           });
         }
       })
-      .catch((err) => exit(`Databse connection failed: ${err.message}`));
+      .catch((err) => exit(`Database connection failed: ${err.message}`));
 });
 
 function exit(err?: string): never {

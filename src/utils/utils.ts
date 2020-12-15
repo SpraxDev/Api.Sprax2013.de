@@ -1,12 +1,12 @@
 import request = require('request');
 import sharp = require('sharp');
-import { toASCII as punycodeToASCII } from 'punycode';
 import { createHash, HashOptions } from 'crypto';
 import { Request, Response } from 'express';
 import { EOL } from 'os';
+import { toASCII as punycodeToASCII } from 'punycode';
 
-import { Color } from '../global';
 import { appVersion, cfg, errorLogStream } from '..';
+import { Color } from '../global';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
     UUID_PATTERN_ADD_DASH = /(.{8})(.{4})(.{4})(.{4})(.{12})/,
@@ -91,7 +91,7 @@ export class Image {
   /**
    * Full alpha or no alpha in skin overlay
    */
-  async resetSkinOverlayAlpha() {
+  resetSkinOverlayAlpha() {
     const black = {r: 0, g: 0, b: 0, alpha: 0};
 
     for (const area of Image.secondSkinLayerAreas) {
@@ -767,7 +767,7 @@ export class HttpError {
  * a method that does not have corresponding request handler.
  *
  * For example if a resource allows only GET and POST requests then
- * PUT, DELETE, etc. requests will be responsed with the 405.
+ * PUT, DELETE, etc. requests will be responded with the 405.
  *
  * HTTP 405 is required to have Allow-header set to a list of allowed
  * methods so in this case the response has "Allow: GET, POST, HEAD" in its headers.
@@ -783,7 +783,7 @@ export class HttpError {
  *      });
  *    });
  *
- * Orignal author: https://stackoverflow.com/a/15754373/9346616
+ * Original author: https://stackoverflow.com/a/15754373/9346616
  */
 export function restful(req: Request, res: Response, handlers: { [key: string]: () => void }): void {
   const method = (req.method || '').toLowerCase();
@@ -821,16 +821,6 @@ export function setCaching(res: Response, cacheResource: boolean = true, publicR
   }
 
   return res.set('Cache-Control', value);
-}
-
-export function compareString(a: string, b: string) {
-  const aLower = a.toLowerCase(),
-      bLower = b.toLowerCase();
-
-  if (aLower == bLower) return 0;
-  if (aLower > bLower) return 1;
-
-  return -1;
 }
 
 export function isUUID(str: string): boolean {

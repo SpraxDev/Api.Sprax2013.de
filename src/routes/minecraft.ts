@@ -4,9 +4,9 @@ import { Request, Response, Router } from 'express';
 import { readFileSync } from 'fs';
 import { isIPv4 } from 'net';
 import { join as joinPath } from 'path';
+
 import { CapeType, MinecraftUser, MinecraftUUIDResponse, SkinArea, UserAgent } from '../global';
 import { cache, db } from '../index';
-
 import { Camera, createCamera, createModel, Model } from '../utils/modelRender';
 import {
   ApiError,

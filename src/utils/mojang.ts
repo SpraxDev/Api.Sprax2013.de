@@ -4,8 +4,8 @@ import {
   MinecraftProfileProperty,
   MinecraftUUIDResponse
 } from '../global';
-import { httpGet } from './web';
 import { ApiError, isUUID } from './utils';
+import { httpGet } from './web';
 
 let rateLimitedNameHistory = false;
 

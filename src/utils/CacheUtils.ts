@@ -10,8 +10,8 @@ import {
 } from '../global';
 import { db } from '../index';
 import { getUserAgent } from '../routes/minecraft';
-import { importByTexture, importCapeByURL } from './skindb';
 import { fetchBlockedServers, fetchNameHistory, fetchProfile, fetchUUID } from './mojang';
+import { importByTexture, importCapeByURL } from './skindb';
 import { ApiError, isUUID } from './utils';
 
 // TODO: Allow ?allowOldCache=true when Mojang API is down and cache would be considered out-of-date (maybe have it true by default)

@@ -2,7 +2,6 @@ import express = require('express');
 import morgan = require('morgan');
 
 import { cfg, webAccessLogStream } from '.';
-
 import { minecraftExpressRouter } from './routes/minecraft';
 import { statusExpressRouter } from './routes/status';
 import { ApiError, ErrorBuilder, HttpError } from './utils/utils';

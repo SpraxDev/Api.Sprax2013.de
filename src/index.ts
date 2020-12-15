@@ -1,12 +1,12 @@
-import * as fs from 'fs';
+import fs from 'fs';
+import { createServer, Server } from 'http';
+import objectAssignDeep from 'object-assign-deep';
 import { join as joinPath } from 'path';
 import { createStream as createRotatingFileStream } from 'rotating-file-stream';
-import objectAssignDeep from 'object-assign-deep';
-import { createServer, Server } from 'http';
 
-import { dbUtils } from './utils/database';
 import { SpraxAPIcfg, SpraxAPIdbCfg } from './global';
 import { CacheUtils } from './utils/CacheUtils';
+import { dbUtils } from './utils/database';
 
 let server: Server | null;
 export let db: dbUtils;

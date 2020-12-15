@@ -1,11 +1,12 @@
 import { createVerify as cryptoCreateVerify } from 'crypto';
 import { readFileSync } from 'fs';
 import { join as joinPath } from 'path';
-import { cache, db } from '../index';
+
 import { Cape, CapeType, MinecraftProfileTextureProperty, MinecraftUser, Skin, UserAgent } from '../global';
+import { cache, db } from '../index';
+import { getByUUID } from '../routes/minecraft';
 import { ApiError, generateHash, Image } from './utils';
 import { httpGet } from './web';
-import { getByUUID } from '../routes/minecraft';
 
 const yggdrasilPublicKey = readFileSync(joinPath(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));
 

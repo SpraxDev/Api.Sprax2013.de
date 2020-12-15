@@ -33,17 +33,17 @@ void main(){
 
 /* MODEL */
 export class Model {
-  vdata: Float32Array;
-  idata: Uint16Array;
+  vData: Float32Array;
+  iData: Uint16Array;
   readonly texture: WebGLTexture;
   readonly vertexBuffer: WebGLBuffer;
   readonly indexBuffer: WebGLBuffer;
   readonly textureWidth: number;
   readonly textureHeight: number;
 
-  constructor(vdata: Float32Array, idata: Uint16Array, width: number, height: number) {
+  constructor(vData: Float32Array, iData: Uint16Array, width: number, height: number) {
     let maxValue = 0;
-    idata.forEach(v => maxValue = Math.max(v, maxValue));
+    iData.forEach(v => maxValue = Math.max(v, maxValue));
     if (maxValue > (Math.pow(2, 16) - 1)) {
       throw new Error('Model contains too many different vertices');
     }
@@ -57,16 +57,16 @@ export class Model {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 
-    this.vdata = vdata;
-    this.idata = idata;
+    this.vData = vData;
+    this.iData = iData;
 
     this.vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vdata, gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, vData, gl.STATIC_DRAW);
 
     this.indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idata, gl.STATIC_DRAW);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, iData, gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 24, 0);
     gl.enableVertexAttribArray(1);
@@ -132,7 +132,8 @@ export class Camera {
   readonly shader: WebGLProgram;
   readonly width: number;
   readonly height: number;
-  private depthRenderBuffer: WebGLRenderbuffer;
+
+  private readonly depthRenderBuffer: WebGLRenderbuffer;
   private mvp: Float32Array;
   private position: vec3;
   private rotation: vec3;
@@ -234,7 +235,7 @@ export class Camera {
     if (clearBuffer) {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     }
-    gl.drawElements(gl.TRIANGLES, model.idata.length, gl.UNSIGNED_SHORT, 0);
+    gl.drawElements(gl.TRIANGLES, model.iData.length, gl.UNSIGNED_SHORT, 0);
 
     gl.flush();
     gl.finish();

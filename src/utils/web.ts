@@ -23,7 +23,7 @@ import { appVersion } from '..';
 //               .then(resolve)
 //               .catch(reject);
 //         } else if (triesLeft == 0 && useProxy) {
-//           return getHttp(uri, false, --triesLeft) // One last try without proxy pool (my proxies are sometimes down for a couple of hours >:( - Patreons can help me with that c:)
+//           return getHttp(uri, false, --triesLeft) // One last try without proxy pool (my proxies are sometimes down for a couple of hours >:( - Patrons can help me with that c:)
 //               .then(resolve)
 //               .catch(reject);
 //         }
