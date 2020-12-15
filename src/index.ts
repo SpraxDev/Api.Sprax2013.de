@@ -123,7 +123,6 @@ export const errorLogStream = createRotatingFileStream('error.log', {
       await db.isReady();
     } catch (err) {
       console.error(`Database is not ready! (${err.message})`);
-      process.exit(2);
     }
   }
 
