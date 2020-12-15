@@ -411,46 +411,48 @@ router.all('/skin/:user?', (req, res, next) => {
       const mimeType = download ? 'application/octet-stream' : 'png';
 
       if (req.params.user != 'x-url') {
-        getByUUID(req.params.user, req, (err, mcUser) => {
-          if (err) return next(err);
-          if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given user', true));
+        cache.getProfile(req.params.user)
+            .then(async (profile): Promise<void> => {
+              if (!profile) return next(new ErrorBuilder().notFound('Profile for given user', true));
 
-          const skinURL = mcUser.getSecureSkinURL();
+              const user = new MinecraftUser(profile, [], await getUserAgent(null));
+              const skinURL = user.getSecureSkinURL();
 
-          if (skinURL) {
-            httpGet(skinURL)
-                .then((httpRes) => {
-                  if (httpRes.res.status == 200) {
-                    if (!raw) {
-                      Image.fromImg(httpRes.body, (err, img) => {
-                        if (err || !img) return next(err);
+              if (skinURL) {
+                httpGet(skinURL)
+                    .then((httpRes) => {
+                      if (httpRes.res.status == 200) {
+                        if (!raw) {
+                          Image.fromImg(httpRes.body, (err, img) => {
+                            if (err || !img) return next(err);
 
-                        img.toCleanSkinBuffer()
-                            .then((png) => {
-                              sendDownloadHeaders(res, mimeType, download, mcUser.name);
-                              setCaching(res, true, true, 60).send(png);
-                            })
-                            .catch(next);
-                      });
-                    } else {
-                      sendDownloadHeaders(res, mimeType, download, mcUser.name);
-                      setCaching(res, true, true, 60).send(httpRes.body);
-                    }
-                  } else {
-                    if (httpRes.res.status != 404) ApiError.log(`${skinURL} returned HTTP-Code ${httpRes.res.status}`);
+                            img.toCleanSkinBuffer()
+                                .then((png) => {
+                                  sendDownloadHeaders(res, mimeType, download, profile.name);
+                                  setCaching(res, true, true, 60).send(png);
+                                })
+                                .catch(next);
+                          });
+                        } else {
+                          sendDownloadHeaders(res, mimeType, download, profile.name);
+                          setCaching(res, true, true, 60).send(httpRes.body);
+                        }
+                      } else {
+                        if (httpRes.res.status != 404) ApiError.log(`${skinURL} returned HTTP-Code ${httpRes.res.status}`);
 
-                    sendDownloadHeaders(res, mimeType, download, mcUser.name);
+                        sendDownloadHeaders(res, mimeType, download, profile.name);
 
-                    setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
-                  }
-                })
-                .catch(next);
-          } else {
-            sendDownloadHeaders(res, mimeType, download, mcUser.name);
+                        setCaching(res, true, true, 60).send(user.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
+                      }
+                    })
+                    .catch(next);
+              } else {
+                sendDownloadHeaders(res, mimeType, download, profile.name);
 
-            setCaching(res, true, true, 60).send(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
-          }
-        });
+                setCaching(res, true, true, 60).send(user.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
+              }
+            })
+            .catch(next);
       } else {
         const skinURL: string = MinecraftUser.getSecureURL(req.query.url as string);
 
@@ -525,45 +527,48 @@ router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
       const mimeType: string = download ? 'application/octet-stream' : 'png';
 
       if (req.params.user != 'x-url') {
-        getByUUID(req.params.user, req, (err, mcUser) => {
-          if (err) return next(err);
-          if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given user', true));
+        cache.getProfile(req.params.user)
+            .then(async (profile): Promise<void> => {
+              if (!profile) return next(new ErrorBuilder().notFound('Profile for given user', true));
 
-          const skinURL = mcUser.getSecureSkinURL();
+              const user = new MinecraftUser(profile, [], await getUserAgent(null));
 
-          if (skinURL) {
+              const skinURL = user.getSecureSkinURL();
 
-            httpGet(skinURL)
-                .then((httpRes) => {
-                  if (httpRes.res.status != 200 && httpRes.res.status != 404) ApiError.log(`${skinURL} returned HTTP-Code ${httpRes.res.status}`);
+              if (skinURL) {
 
-                  const skinBuffer: Buffer = httpRes.res.status == 200 ? httpRes.body : (mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
+                httpGet(skinURL)
+                    .then((httpRes) => {
+                      if (httpRes.res.status != 200 && httpRes.res.status != 404) ApiError.log(`${skinURL} returned HTTP-Code ${httpRes.res.status}`);
 
-                  Image.fromImg(skinBuffer, (err, img) => {
-                    if (err || !img) return next(err || new Error());
+                      const skinBuffer: Buffer = httpRes.res.status == 200 ? httpRes.body : (user.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE);
 
-                    renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : mcUser.modelSlim, is3D, size, (err, png) => {
-                      if (err || !png) return next(err || new Error());
+                      Image.fromImg(skinBuffer, (err, img) => {
+                        if (err || !img) return next(err || new Error());
 
-                      sendDownloadHeaders(res, mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
-                      setCaching(res, true, true, 60).send(png);
-                    });
+                        renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : user.modelSlim, is3D, size, (err, png) => {
+                          if (err || !png) return next(err || new Error());
+
+                          sendDownloadHeaders(res, mimeType, download, `${profile.name}-${skinArea.toLowerCase()}`);
+                          setCaching(res, true, true, 60).send(png);
+                        });
+                      });
+                    })
+                    .catch(next);
+              } else {
+                Image.fromImg(user.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE, (err, img) => {
+                  if (err || !img) return next(err || new Error());
+
+                  renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : 'auto', is3D, size, (err, png) => {
+                    if (err || !png) return next(err || new Error());
+
+                    sendDownloadHeaders(res, mimeType, download, `${profile.name}-${skinArea.toLowerCase()}`);
+                    setCaching(res, true, true, 60).send(png);
                   });
-                })
-                .catch(next);
-          } else {
-            Image.fromImg(mcUser.isAlexDefaultSkin() ? SKIN_ALEX : SKIN_STEVE, (err, img) => {
-              if (err || !img) return next(err || new Error());
-
-              renderSkin(img, skinArea, overlay, typeof slimModel == 'boolean' ? slimModel : 'auto', is3D, size, (err, png) => {
-                if (err || !png) return next(err || new Error());
-
-                sendDownloadHeaders(res, mimeType, download, `${mcUser.name}-${skinArea.toLowerCase()}`);
-                setCaching(res, true, true, 60).send(png);
-              });
-            });
-          }
-        });
+                });
+              }
+            })
+            .catch(next);
       } else {
         const skinURL: string = MinecraftUser.getSecureURL(req.query.url as string);
 
@@ -667,36 +672,39 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
       const download = typeof req.query.download == 'string' ? toBoolean(req.query.download) : false;
       const mimeType = download ? 'application/octet-stream' : 'png';
 
-      getByUUID(req.params.user, req, (err, mcUser) => {
-        if (err) return next(err);
-        if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given user', true));
+      cache.getProfile(req.params.user)
+          .then(async (profile): Promise<void> => {
+            if (!profile) return next(new ErrorBuilder().notFound('Profile for given user', true));
 
-        const capeType = req.params.capeType as CapeType;
-        const capeURL = capeType == CapeType.MOJANG ? mcUser.getSecureCapeURL() :
-            capeType == CapeType.OPTIFINE ? mcUser.getOptiFineCapeURL() :
-                capeType == CapeType.LABYMOD ? mcUser.getLabyModCapeURL() : null;
+            const user = new MinecraftUser(profile, [], await getUserAgent(null));
 
-        if (capeURL) {
-          httpGet(capeURL)
-              .then((httpRes) => {
-                if (httpRes.res.status == 200) {
-                  res.type(mimeType);
-                  if (download) {
-                    res.set('Content-Disposition', `attachment;filename=${mcUser.name}.png`);
-                  }
+            const capeType = req.params.capeType as CapeType;
+            const capeURL = capeType == CapeType.MOJANG ? user.getSecureCapeURL() :
+                capeType == CapeType.OPTIFINE ? user.getOptiFineCapeURL() :
+                    capeType == CapeType.LABYMOD ? user.getLabyModCapeURL() : null;
 
-                  setCaching(res, true, true, 60).send(httpRes.body);
-                } else {
-                  if (httpRes.res.status != 404) ApiError.log(`${capeURL} returned HTTP-Code ${httpRes.res.status}`);
+            if (capeURL) {
+              httpGet(capeURL)
+                  .then((httpRes) => {
+                    if (httpRes.res.status == 200) {
+                      res.type(mimeType);
+                      if (download) {
+                        res.set('Content-Disposition', `attachment;filename=${profile.name}.png`);
+                      }
 
-                  return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
-                }
-              })
-              .catch(next);
-        } else {
-          return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
-        }
-      });
+                      setCaching(res, true, true, 60).send(httpRes.body);
+                    } else {
+                      if (httpRes.res.status != 404) ApiError.log(`${capeURL} returned HTTP-Code ${httpRes.res.status}`);
+
+                      return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
+                    }
+                  })
+                  .catch(next);
+            } else {
+              return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
+            }
+          })
+          .catch(next);
     }
   });
 });
@@ -762,32 +770,35 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
       const mimeType: string = download ? 'application/octet-stream' : 'png';
 
       if (req.params.user != 'x-url') {
-        getByUUID(req.params.user, req, (err, mcUser) => {
-          if (err) return next(err);
-          if (!mcUser) return next(new ErrorBuilder().notFound('Profile for given user', true));
+        cache.getProfile(req.params.user)
+            .then(async (profile): Promise<void> => {
+              if (!profile) return next(new ErrorBuilder().notFound('Profile for given user', true));
 
-          const capeURL = capeType == CapeType.MOJANG ? mcUser.getSecureCapeURL() :
-              capeType == CapeType.OPTIFINE ? mcUser.getOptiFineCapeURL() :
-                  capeType == CapeType.LABYMOD ? mcUser.getLabyModCapeURL() : null;
+              const user = new MinecraftUser(profile, [], await getUserAgent(null));
 
-          if (capeURL) {
-            httpGet(capeURL)
-                .then((httpRes) => {
-                  if (httpRes.res.status != 200 && httpRes.res.status != 404) ApiError.log(`${capeURL} returned HTTP-Code ${httpRes.res.status}`);
-                  if (httpRes.res.status != 200) return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
+              const capeURL = capeType == CapeType.MOJANG ? user.getSecureCapeURL() :
+                  capeType == CapeType.OPTIFINE ? user.getOptiFineCapeURL() :
+                      capeType == CapeType.LABYMOD ? user.getLabyModCapeURL() : null;
 
-                  renderCape(httpRes.body, capeType, size, (err, png) => {
-                    if (err || !png) return next(err);
+              if (capeURL) {
+                httpGet(capeURL)
+                    .then((httpRes) => {
+                      if (httpRes.res.status != 200 && httpRes.res.status != 404) ApiError.log(`${capeURL} returned HTTP-Code ${httpRes.res.status}`);
+                      if (httpRes.res.status != 200) return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
 
-                    sendDownloadHeaders(res, mimeType, download, `${mcUser.name}-${capeType.toLowerCase()}`);
-                    setCaching(res, true, true, 60).send(png);
-                  });
-                })
-                .catch(next);
-          } else {
-            return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
-          }
-        });
+                      renderCape(httpRes.body, capeType, size, (err, png) => {
+                        if (err || !png) return next(err);
+
+                        sendDownloadHeaders(res, mimeType, download, `${profile.name}-${capeType.toLowerCase()}`);
+                        setCaching(res, true, true, 60).send(png);
+                      });
+                    })
+                    .catch(next);
+              } else {
+                return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
+              }
+            })
+            .catch(next);
       } else {
         const capeURL: string = MinecraftUser.getSecureURL(req.query.url as string);
 
@@ -815,12 +826,11 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
 router.all('/servers/blocked', (req, res, next) => {  // TODO: return object (key: hash, value: 'known host' | null) with query param to only return array
   restful(req, res, {
     get: () => {
-      getBlockedServers((err, hashes) => {
-        if (err) return next(err);
-        if (!hashes) return next(new ErrorBuilder().notFound('List of blocked servers', true));
-
-        setCaching(res, true, true, 60 * 2).send(hashes);
-      });
+      cache.getBlockedServers()
+          .then((hashes) => {
+            setCaching(res, true, true, 60 * 2).send(hashes);
+          })
+          .catch(next);
     }
   });
 });
@@ -828,28 +838,27 @@ router.all('/servers/blocked', (req, res, next) => {  // TODO: return object (ke
 router.all('/servers/blocked/known', (req, res, next) => {
   restful(req, res, {
     get: () => {
-      getBlockedServers((err, hashes) => {
-        if (err) return next(err);
-        if (!hashes) return next(new ErrorBuilder().notFound('List of blocked servers', true));
+      cache.getBlockedServers()
+          .then((hashes) => {
+            const result: { [key: string]: string | null } = {};
 
-        const result: { [key: string]: string | null } = {};
-
-        if (!db.isAvailable()) {
-          return setCaching(res, true, true, 120)
-              .send(result);
-        }
-
-        db.getHost(hashes)
-            .then((known) => {
-              for (const elem of known) {
-                result[elem.hash] = elem.host;
-              }
-
-              return setCaching(res, true, true, 60 * 30)
+            if (!db.isAvailable()) {
+              return setCaching(res, true, true, 120)
                   .send(result);
-            })
-            .catch(next);
-      });
+            }
+
+            db.getHost(hashes)
+                .then((known) => {
+                  for (const elem of known) {
+                    result[elem.hash] = elem.host;
+                  }
+
+                  return setCaching(res, true, true, 60 * 30)
+                      .send(result);
+                })
+                .catch(next);
+          })
+          .catch(next);
     }
   });
 });
@@ -909,21 +918,20 @@ router.all('/servers/blocked/check', (req, res, next) => {
             .catch((err) => ApiError.log('Could not import hosts', {err, hosts}));
       }
 
-      getBlockedServers((err, hashes) => {
-        if (err) return next(err);
-        if (!hashes) return next(new ErrorBuilder().notFound('List of blocked servers', true));
+      cache.getBlockedServers()
+          .then((hashes) => {
+            const result: { [key: string]: boolean } = {};
 
-        const result: { [key: string]: boolean } = {};
+            for (const key in hosts) {
+              if (hosts.hasOwnProperty(key)) {
+                result[key] = hashes.includes(hosts[key]);
+              }
+            }
 
-        for (const key in hosts) {
-          if (hosts.hasOwnProperty(key)) {
-            result[key] = hashes.includes(hosts[key]);
-          }
-        }
-
-        return setCaching(res, true, true, 60 * 15)
-            .send(result);
-      });
+            return setCaching(res, true, true, 60 * 15)
+                .send(result);
+          })
+          .catch(next);
     }
   });
 });
@@ -1053,74 +1061,6 @@ function sendDownloadHeaders(res: Response, mimeType: string, download: boolean,
   if (download) {
     res.set('Content-Disposition', `attachment;filename=${fileIdentifier}.${fileExtension}`);
   }
-}
-
-export function getByUsername(username: string, at: number | null = null, callback: (err: Error | null, apiRes: MinecraftUUIDResponse | null) => void): void {
-  const cacheKey = `${username.toLowerCase()};${at != null ? at : ''}`;
-
-  let alreadyRunning = false;
-  for (const elem of uuidRequestQueue) {
-    if (elem.key == cacheKey) {
-      alreadyRunning = true;
-      break;
-    }
-  }
-  uuidRequestQueue.push({key: cacheKey, callback});
-
-  if (!alreadyRunning) {
-    const done = (err: Error | null, result: MinecraftUUIDResponse | null): void => {
-      let i: number;
-      do {
-        i = uuidRequestQueue.findIndex((value) => value.key == cacheKey);
-
-        if (i != -1) {
-          uuidRequestQueue[i].callback(null, result);
-          uuidRequestQueue.splice(i, 1);
-        }
-      } while (i != -1);
-    };
-
-    cache.getUUID(username, at ?? undefined)
-        .then((uuid) => done(null, uuid))
-        .catch(err => done(err, null));
-  }
-}
-
-export function getByUUID(uuid: string, req: Request | null, callback: (err: Error | null, user: MinecraftUser | null) => void, waitForImport: boolean = false): void {
-  const cleanUUID = uuid.replace(/-/g, '').toLowerCase();
-
-  let alreadyRunning = false;
-  for (const elem of profileRequestQueue) {
-    if (elem.key == cleanUUID) {
-      alreadyRunning = true;
-      break;
-    }
-  }
-  profileRequestQueue.push({key: cleanUUID, callback});
-
-  if (!alreadyRunning) {
-    const done = (err: Error | null, user: MinecraftUser | null): void => {
-      let i: number;
-      do {
-        i = profileRequestQueue.findIndex((value) => value.key == cleanUUID);
-
-        if (i != -1) {
-          profileRequestQueue[i].callback(err, user);
-          profileRequestQueue.splice(i, 1);
-        }
-      } while (i != -1);
-    };
-
-    cache.getUser(cleanUUID, waitForImport)
-        .then(user => done(null, user))
-        .catch(err => done(err, null));
-  }
-}
-
-function getBlockedServers(callback: (err: Error | null, hashes: string[] | null) => void): void {
-  cache.getBlockedServers()
-      .then((hashes) => callback(null, hashes))
-      .catch((err) => callback(err, null));
 }
 
 // TODO put inside global and change the UserAgent-interface to an class
