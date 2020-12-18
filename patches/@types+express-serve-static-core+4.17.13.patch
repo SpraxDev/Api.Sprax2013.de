@@ -1,0 +1,21 @@
+diff --git a/node_modules/@types/express-serve-static-core/index.d.ts b/node_modules/@types/express-serve-static-core/index.d.ts
+index 1d3fa1e..952f1ea 100644
+--- a/node_modules/@types/express-serve-static-core/index.d.ts
++++ b/node_modules/@types/express-serve-static-core/index.d.ts
+@@ -28,6 +28,7 @@ import * as http from "http";
+ import { EventEmitter } from "events";
+ import { Options as RangeParserOptions, Result as RangeParserResult, Ranges as RangeParserRanges } from "range-parser";
+ import { ParsedQs } from "qs";
++import { ServerTiming } from '../../../src/utils/ServerTiming';
+ 
+ export type Query = ParsedQs;
+ 
+@@ -841,7 +842,7 @@ export interface Response<ResBody = any, StatusCode extends number = number> ext
+     render(view: string, options?: object, callback?: (err: Error, html: string) => void): void;
+     render(view: string, callback?: (err: Error, html: string) => void): void;
+ 
+-    locals: Record<string, any>;
++    locals: { timings: ServerTiming | undefined, [p: string]: any };
+ 
+     charset: string;
+ 

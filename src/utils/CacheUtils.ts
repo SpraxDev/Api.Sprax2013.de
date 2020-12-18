@@ -111,7 +111,7 @@ export class CacheUtils {
 
       const done = (result: unknown) => {
         if (result == null || result == CacheUtils.ERR_VALUE) {
-          return reject(new Error(`An error occurred while trying to get the UUID for '${username}'`));
+          return reject(new Error(`An error occurred while trying to get the UUID for '${username}': ${JSON.stringify(result)}`));
         } else if (result == CacheUtils.EMPTY_VALUE) {
           return resolve(null);
         } else {
@@ -186,13 +186,13 @@ export class CacheUtils {
   }
 
   public async getProfile(uuid: string, waitForDbSkinImport: boolean = false): Promise<MinecraftProfile | null> {
-    return new Promise<MinecraftProfile | null>(async (resolve, reject): Promise<void> => {
+    return new Promise(async (resolve, reject): Promise<void> => {
       const cleanUUID = uuid.toLowerCase().replace(/-/g, '');
       const key = CacheUtils.KEY_PREFIX_PROFILE + cleanUUID;
 
       const done = (result: unknown) => {
         if (result == null || result == CacheUtils.ERR_VALUE) {
-          return reject(new Error(`An error occurred while trying to get the profile for '${uuid}'`));
+          return reject(new Error(`An error occurred while trying to get the profile for '${uuid}': ${JSON.stringify(result)}`));
         } else if (result == CacheUtils.EMPTY_VALUE) {
           return resolve(null);
         } else {
@@ -365,7 +365,7 @@ export class CacheUtils {
   }
 
   public async getNameHistory(uuid: string): Promise<MinecraftNameHistoryElement[] | null> {
-    return new Promise<MinecraftNameHistoryElement[] | null>(async (resolve, reject): Promise<void> => {
+    return new Promise(async (resolve, reject): Promise<void> => {
       const cleanUUID = uuid.toLowerCase().replace(/-/g, '');
       const key = CacheUtils.KEY_PREFIX_NAME_HISTORY + cleanUUID;
 
@@ -448,7 +448,7 @@ export class CacheUtils {
   }
 
   public async getBlockedServers(): Promise<string[]> {
-    return new Promise<string[]>(async (resolve, reject): Promise<void> => {
+    return new Promise(async (resolve, reject): Promise<void> => {
       const key = CacheUtils.KEY_BLOCKED_SERVERS;
 
       const done = (result: unknown) => {
@@ -499,7 +499,7 @@ export class CacheUtils {
   }
 
   public async isProfileInRedis(uuid: string): Promise<boolean> {
-    return new Promise<boolean>(async (resolve): Promise<void> => {
+    return new Promise(async (resolve): Promise<void> => {
       // Check if data is already cached in Redis
       if (this.redisReady && this.redisGet) {
         try {

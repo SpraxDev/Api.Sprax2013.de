@@ -5,7 +5,7 @@ import { readFileSync } from 'fs';
 import { isIPv4 } from 'net';
 import { join as joinPath } from 'path';
 
-import { CapeType, MinecraftUser, MinecraftUUIDResponse, SkinArea, UserAgent } from '../global';
+import { CapeType, MinecraftUser, SkinArea, UserAgent } from '../global';
 import { cache, db } from '../index';
 import { Camera, createCamera, createModel, Model } from '../utils/modelRender';
 import {
@@ -31,9 +31,6 @@ const userAgentCache = new nCache({
   stdTTL: 10 * 60,
   useClones: false
 });
-
-const profileRequestQueue: { key: string, callback: (err: Error | null, user: MinecraftUser | null) => void }[] = [],
-    uuidRequestQueue: { key: string, callback: (err: Error | null, apiRes: MinecraftUUIDResponse | null) => void }[] = [];
 
 const rendering = {
   cams: {
@@ -269,7 +266,7 @@ router.param('capeType', (req, _res, next, value, name) => {
 /* Account Routes */
 router.all('/uuid/:name?', (req, res, next) => {
   restful(req, res, {
-    get: () => {
+    get: async (): Promise<void> => {
       const name = req.params.name;
 
       if (typeof name != 'string' || name.length == 0) {
@@ -293,13 +290,16 @@ router.all('/uuid/:name?', (req, res, next) => {
         at = Number.parseInt(queryAt);
       }
 
-      cache.getUUID(name, at)
-          .then((uuid) => {
-            if (!uuid) return next(new ErrorBuilder().notFound('UUID for given username'));
+      try {
+        res.locals.timings?.startNext('cacheNameToUUID');
 
-            setCaching(res, true, true, 60).send(uuid);
-          })
-          .catch(next);
+        const uuid = await cache.getUUID(name, at);
+        if (!uuid) return next(new ErrorBuilder().notFound('UUID for given username'));
+
+        setCaching(res, true, true, 60).send(uuid);
+      } catch (err) {
+        return next(err);
+      }
     }
   });
 });
@@ -325,22 +325,28 @@ router.all('/profile/:nameOrId?', (req, res, next) => {
 
       try {
         if (full) {
-          const user = await cache.getUser(nameOrId, false);
+          res.locals.timings?.startNext('cacheWholeUser');
+          const user = await cache.getUser(nameOrId);
 
           if (user) {
+            res.locals.timings?.startNext('convertToStr');
             result = user.toCleanJSON();
           }
         } else {
           let uuid: string | undefined = nameOrId;
 
           if (!isUUID(uuid)) {
+            res.locals.timings?.startNext('cacheNameToUUID');
             uuid = (await cache.getUUID(nameOrId))?.id;
           }
 
           if (uuid) {
+            res.locals.timings?.startNext('cacheUuidToProfile');
             result = await cache.getProfile(uuid);
           }
         }
+
+        res.locals.timings?.stopCurrent();
       } catch (err) {
         return next(err);
       }
@@ -375,12 +381,16 @@ router.all('/history/:nameOrId?', (req, res, next) => {
         let uuid: string | undefined = nameOrId;
 
         if (!isUUID(uuid)) {
+          res.locals.timings?.startNext('cacheNameToUUID');
           uuid = (await cache.getUUID(nameOrId))?.id;
         }
 
         if (uuid) {
+          res.locals.timings?.startNext('cacheUuidToNameHistory');
           result = await cache.getNameHistory(uuid);
         }
+
+        res.locals.timings?.stopCurrent();
       } catch (err) {
         return next(err);
       }

@@ -8,6 +8,8 @@ import { SpraxAPIcfg, SpraxAPIdbCfg } from './global';
 import { CacheUtils } from './utils/CacheUtils';
 import { dbUtils } from './utils/database';
 
+export const runningInProduction = process.env.NODE_ENV == 'production';
+
 let server: Server | null;
 export let db: dbUtils;
 export let cache: CacheUtils;

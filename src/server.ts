@@ -1,9 +1,10 @@
 import express = require('express');
 import morgan = require('morgan');
 
-import { cfg, webAccessLogStream } from '.';
+import { cfg, runningInProduction, webAccessLogStream } from '.';
 import { minecraftExpressRouter } from './routes/minecraft';
 import { statusExpressRouter } from './routes/status';
+import { ServerTiming } from './utils/ServerTiming';
 import { ApiError, ErrorBuilder, HttpError } from './utils/utils';
 
 export const app = express();
@@ -12,11 +13,10 @@ app.set('trust proxy', cfg.trustProxy);
 
 /* Logging webserver request */
 app.use(morgan(cfg.logging.accessLogFormat, {stream: webAccessLogStream}));
-if (process.env.NODE_ENV == 'production') {
-  app.use(morgan('dev', {skip: (_req, res) => res.statusCode < 500}));
-} else {
-  app.use(morgan('dev'));
-}
+app.use(morgan('dev', runningInProduction ? {skip: (_req, res) => res.statusCode < 500} : undefined));
+
+// Prepare Server-Timings
+app.use(ServerTiming.getExpressMiddleware(true /*!runningInProduction*/));  // TODO: remove debug
 
 // Force the last query param instead of allowing multiple as string[]
 app.use((req, _res, next) => {

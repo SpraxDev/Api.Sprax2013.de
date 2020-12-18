@@ -14,6 +14,7 @@
   "main": "build/index.js",
   "private": true,
   "scripts": {
+    "postinstall": "patch-package",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "start": "cross-env NODE_ENV=production nodemon --enable-source-maps build/index.js",
@@ -72,6 +73,7 @@
     "@types/sharp": "^0.26.1",
     "@types/superagent": "^4.1.10",
     "cross-env": "^7.0.3",
+    "patch-package": "^6.2.2",
     "ts-node": "^9.1.1",
     "typescript": "^4.1.3"
   },
