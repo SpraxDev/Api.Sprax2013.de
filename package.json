@@ -17,10 +17,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "start": "cross-env NODE_ENV=production nodemon --enable-source-maps build/index.js",
-    "start-headless": "xvfb-run -s \"-ac -screen 0 1280x1024x24\" cross-env NODE_ENV=production nodemon --enable-source-maps build/index.js",
+    "start-headless": "xvfb-run -a -s \"-ac -screen 0 1280x1024x24\" cross-env NODE_ENV=production nodemon --enable-source-maps build/index.js",
     "devStart": "cross-env NODE_ENV=development ts-node src/index.ts",
     "dev": "nodemon --ext ts --watch ./src --exec \"npm run devStart\"",
-    "devStart-headless": "xvfb-run -s \"-ac -screen 0 1280x1024x24\" cross-env NODE_ENV=development ts-node src/index.ts",
+    "devStart-headless": "xvfb-run -a -s \"-ac -screen 0 1280x1024x24\" cross-env NODE_ENV=development ts-node src/index.ts",
     "dev-headless": "nodemon --ext ts --watch ./src --exec \"npm run devStart-headless\"",
     "debug": "ts-node src/index-debug.ts"
   },
@@ -47,7 +47,6 @@
     "node": ">=12.0.0"
   },
   "dependencies": {
-    "@tensorflow/tfjs-node": "^2.7.0",
     "canvas": "^2.6.1",
     "express": "^4.17.1",
     "gl": "^4.9.0",
