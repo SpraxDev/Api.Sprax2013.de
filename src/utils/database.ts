@@ -155,7 +155,7 @@ export class dbUtils {
       if (this.pool == null) return reject(new Error('No database connected'));
 
       this.pool.query('SELECT name,changed_to_at FROM name_history WHERE profile_id=$1 ' +
-          `ORDER BY changed_to_at DESC${limit != undefined ? ` LIMIT ${limit}}` : ''};`,
+          `ORDER BY changed_to_at ${limit != undefined ? ` LIMIT ${limit}}` : ''};`,
           [id], (err, res) => {
             if (err) return reject(err);
 
