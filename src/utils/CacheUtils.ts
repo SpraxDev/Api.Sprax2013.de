@@ -8,7 +8,7 @@ import {
   MinecraftUser,
   MinecraftUUIDResponse
 } from '../global';
-import { db } from '../index';
+import { cfg, db } from '../index';
 import { getUserAgent } from '../routes/minecraft';
 import { fetchBlockedServers, fetchNameHistory, fetchProfile, fetchUUID } from './mojang';
 import { importByTexture, importCapeByURL } from './skindb';
@@ -32,21 +32,35 @@ export class CacheUtils {
   private syncTaskQueue: { [key: string]: ((result: unknown) => void)[] } = {};
 
   private redisReady: boolean = false;  // TODO: Make redis optional in the config
-  private readonly redisClient: RedisClient;  // TODO: Allow configuring the client
-  private readonly redisGet: (key: string) => Promise<string | null>;
-  private readonly redisSetEx: (key: string, ttl: number, value: string) => Promise<string | null>;
+  private readonly redisClient?: RedisClient;  // TODO: Allow configuring the client
+  private readonly redisGet?: (key: string) => Promise<string | null>;
+  private readonly redisSetEx?: (key: string, ttl: number, value: string) => Promise<string | null>;
 
   constructor() {
-    this.redisClient = createClient({enable_offline_queue: false});
+    if (cfg.redis.enabled) {
+      this.redisClient = createClient({
+        enable_offline_queue: false,
+        host: cfg.redis.host,
+        port: cfg.redis.port,
+        db: cfg.redis.db,
+        password: cfg.redis.password || undefined
+      });
 
-    this.redisGet = promisify(this.redisClient.get).bind(this.redisClient);
-    this.redisSetEx = promisify(this.redisClient.setex).bind(this.redisClient);
+      this.redisGet = promisify(this.redisClient.get).bind(this.redisClient);
+      this.redisSetEx = promisify(this.redisClient.setex).bind(this.redisClient);
 
-    this.redisClient.on('ready', () => this.redisReady = true);
-    this.redisClient.on('end', () => this.redisReady = false);
-    this.redisClient.on('error', (err) => {
-      ApiError.log('Redis-Client encountered an error', {err});
-    });
+      this.redisClient.on('ready', () => {
+        this.redisReady = true;
+        console.log('[+] Connected to Redis');
+      });
+      this.redisClient.on('end', () => {
+        this.redisReady = false;
+        console.log('[-] Disconnected from Redis');
+      });
+      this.redisClient.on('error', (err) => {
+        ApiError.log('Redis-Client encountered an error', {err});
+      });
+    }
   }
 
   // TODO: Accept express.Request as optional param and append timing headers when env != production
@@ -505,7 +519,7 @@ export class CacheUtils {
 
   public async shutdown(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.redisClient.quit((err) => {
+      this.redisClient?.quit((err) => {
         if (err) return reject(err);
 
         return resolve();

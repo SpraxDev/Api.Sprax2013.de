@@ -14,6 +14,7 @@ import { ApiError } from './utils'; // TODO: don't import from utils because of 
 
 export class dbUtils {
   private pool: Pool | null = null;
+  private connectedClients: number = 0;
 
   constructor(dbCfg: SpraxAPIdbCfg) {
     if (dbCfg.enabled) {
@@ -24,9 +25,25 @@ export class dbUtils {
         password: dbCfg.password,
         database: dbCfg.databases.skindb,
         ssl: dbCfg.ssl ? {rejectUnauthorized: false} : false,
-        max: dbCfg.connectionPoolSize
+        max: dbCfg.connectionPoolSize,
+
+        idleTimeoutMillis: 10 * 60 * 1000
       });
 
+      this.pool.on('connect', (_client) => {
+        if (this.connectedClients == 0) {
+          console.log('[+] Connected to PostgreSQL database');
+        }
+
+        this.connectedClients++;
+      });
+      this.pool.on('remove', (_client) => {
+        if (this.connectedClients == 1) {
+          console.log('[-] Disconnected from PostgreSQL database');
+        }
+
+        this.connectedClients--;
+      });
       this.pool.on('error', (err, _client) => {
         console.error('Unexpected error on idle client:', err);
       });

@@ -17,7 +17,15 @@ export interface SpraxAPIcfg {
     readonly discordErrorWebHookURL: string | null;
   }
 
-  readonly proxies: string[];
+  readonly redis: {
+    readonly enabled: boolean;
+    readonly host: string;
+    readonly port: number;
+    readonly db: number;
+    readonly password: string;
+  }
+
+  // readonly proxies: string[];
 }
 
 export interface SpraxAPIdbCfg {
