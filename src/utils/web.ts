@@ -85,7 +85,9 @@ export async function httpPost(url: string, headers?: { [key: string]: string },
 
 export function applyDefaults(req: SuperAgentRequest, headers?: { [key: string]: string }, body?: string | object): SuperAgentRequest {
   // set own default headers
-  req.set('User-Agent', getUserAgent());
+  if (!req.get('User-Agent')) {
+    req.set('User-Agent', getUserAgent());
+  }
 
   // Set optional headers
   if (headers) {
@@ -118,5 +120,5 @@ export function getReqHandler(resolve: Function, reject: Function): (err: any, r
 }
 
 export function getUserAgent(): string {
-  return `Sprax-API/${appVersion} (${osType()}; ${process.arch}; ${process.platform}) (+https://Api.Sprax2013.de)`;
+  return `Sprax-API/${appVersion} (${osType()}; ${process.arch}; ${process.platform}) (+https://github.com/SpraxDev/Api.Sprax2013.de)`;
 }
