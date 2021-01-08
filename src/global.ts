@@ -3,6 +3,8 @@ import { httpGet } from './utils/web';
 
 /* SpraxAPI */
 export interface SpraxAPIcfg {
+  readonly instanceName: string;
+
   readonly listen: {
     readonly usePath: boolean;
     readonly path: string;
@@ -16,6 +18,7 @@ export interface SpraxAPIcfg {
   readonly logging: {
     readonly accessLogFormat: string;
     readonly discordErrorWebHookURL: string | null;
+    readonly database: string | null;
   }
 
   readonly redis: {

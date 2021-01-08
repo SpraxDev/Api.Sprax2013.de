@@ -604,7 +604,7 @@ export class ApiError extends Error {
 
     // Contact Discord-WebHook
     if (!skipWebHook && cfg && cfg.logging.discordErrorWebHookURL &&
-        cfg.logging.discordErrorWebHookURL.toLowerCase().startsWith('http') && ApiError.discordHookCounter++ < 8) {
+        cfg.logging.discordErrorWebHookURL.toLowerCase().startsWith('http') && ApiError.discordHookCounter++ < 3) {
       request.post(cfg.logging.discordErrorWebHookURL, {
         headers: {
           'Content-Type': 'application/json',
