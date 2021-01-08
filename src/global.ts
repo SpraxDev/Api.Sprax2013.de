@@ -1,4 +1,5 @@
-import { addHyphensToUUID } from './utils/utils';
+import { addHyphensToUUID, ApiError } from './utils/utils';
+import { httpGet } from './utils/web';
 
 /* SpraxAPI */
 export interface SpraxAPIcfg {
@@ -175,8 +176,27 @@ export class MinecraftUser {
     return `http://s.optifine.net/capes/${this.name}.png`;
   }
 
-  getLabyModCapeURL(): string {
-    return `http://dl.labymod.net/capes/${addHyphensToUUID(this.id)}`;
+  async fetchLabyModCape(): Promise<Buffer | null> {
+    return new Promise((resolve, reject) => {
+      const capeURL = `https://dl.labymod.net/textures/../capes/${addHyphensToUUID(this.id)}`;
+
+      httpGet(capeURL, {
+        // Version can be extracted from https://dl.labymod.net/versions.json
+        'User-Agent': 'LabyMod v3.7.7 on mc1.8.9'
+      })
+          .then((httpRes) => {
+            if (httpRes.res.status == 200) {
+              if (httpRes.body.length > 0) {
+                return resolve(httpRes.body);
+              }
+            } else if (httpRes.res.status != 404) {
+              ApiError.log(`${capeURL} returned HTTP-Code ${httpRes.res.status}`);
+            }
+
+            return resolve(null);
+          })
+          .catch(reject);
+    });
   }
 
   /**

@@ -691,9 +691,24 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
             const capeType = req.params.capeType as CapeType;
             const capeURL = capeType == CapeType.MOJANG ? user.getSecureCapeURL() :
                 capeType == CapeType.OPTIFINE ? user.getOptiFineCapeURL() :
-                    capeType == CapeType.LABYMOD ? user.getLabyModCapeURL() : null;
+                    capeType == CapeType.LABYMOD ? CapeType.LABYMOD : null;
 
-            if (capeURL) {
+            if (capeURL == CapeType.LABYMOD) {
+              user.fetchLabyModCape()
+                  .then((labyCape) => {
+                    if (labyCape == null) {
+                      return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
+                    } else {
+                      res.type(mimeType);
+                      if (download) {
+                        res.set('Content-Disposition', `attachment;filename=${profile.name}.png`);
+                      }
+
+                      setCaching(res, true, true, 60).send(labyCape);
+                    }
+                  })
+                  .catch(next);
+            } else if (capeURL) {
               httpGet(capeURL)
                   .then((httpRes) => {
                     if (httpRes.res.status == 200) {
@@ -788,9 +803,22 @@ router.all('/capes/:capeType/:user?/render', (req, res, next) => {
 
               const capeURL = capeType == CapeType.MOJANG ? user.getSecureCapeURL() :
                   capeType == CapeType.OPTIFINE ? user.getOptiFineCapeURL() :
-                      capeType == CapeType.LABYMOD ? user.getLabyModCapeURL() : null;
+                      capeType == CapeType.LABYMOD ? CapeType.LABYMOD : null;
 
-              if (capeURL) {
+              if (capeURL == CapeType.LABYMOD) {
+                user.fetchLabyModCape()
+                    .then((labyCape) => {
+                      if (labyCape == null) return next(new ErrorBuilder().notFound('User does not have a cape for that type'));
+
+                      renderCape(labyCape, capeType, size, (err, png) => {
+                        if (err || !png) return next(err);
+
+                        sendDownloadHeaders(res, mimeType, download, `${profile.name}-${capeType.toLowerCase()}`);
+                        setCaching(res, true, true, 60).send(png);
+                      });
+                    })
+                    .catch(next);
+              } else if (capeURL) {
                 httpGet(capeURL)
                     .then((httpRes) => {
                       if (httpRes.res.status != 200 && httpRes.res.status != 404) ApiError.log(`${capeURL} returned HTTP-Code ${httpRes.res.status}`);

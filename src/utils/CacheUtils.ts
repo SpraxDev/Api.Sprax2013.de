@@ -284,7 +284,7 @@ export class CacheUtils {
                       }
 
                       /* Capes */
-                      const processCape = (capeURL: string | null, capeType: CapeType): Promise<void> => {
+                      const processCape = (capeURL: string | MinecraftUser, capeType: CapeType): Promise<void> => {
                         return new Promise((resolve, reject) => {
                           if (!capeURL) return resolve();
 
@@ -323,7 +323,7 @@ export class CacheUtils {
                       }
 
                       try {
-                        await processCape(tempUser.getLabyModCapeURL(), CapeType.LABYMOD);
+                        await processCape(tempUser, CapeType.LABYMOD);
                       } catch (err) {
                         ApiError.log('Could not process LabyMod-Cape', err);
                       }

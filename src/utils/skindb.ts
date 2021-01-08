@@ -4,7 +4,7 @@ import { join as joinPath } from 'path';
 
 import { Cape, CapeType, MinecraftProfileTextureProperty, MinecraftUser, Skin, UserAgent } from '../global';
 import { cache, db } from '../index';
-import { ApiError, generateHash, Image } from './utils';
+import { addHyphensToUUID, ApiError, generateHash, Image } from './utils';
 import { httpGet } from './web';
 
 const yggdrasilPublicKey = readFileSync(joinPath(__dirname, '..', '..', 'resources', 'yggdrasil_session_pubkey.pem'));
@@ -139,50 +139,97 @@ export function importSkinByBuffer(skinBuffer: Buffer, skinURL: string | null, u
   });
 }
 
-export function importCapeByURL(capeURL: string, capeType: CapeType, userAgent: UserAgent, textureValue?: string, textureSignature?: string): Promise<Cape | null> {
+export function importCapeByURL(capeURL: string | MinecraftUser, capeType: CapeType, userAgent: UserAgent, textureValue?: string, textureSignature?: string): Promise<Cape | null> {
   return new Promise((resolve, reject) => {
-    httpGet(capeURL)
-        .then((httpRes) => {
-          if (httpRes.res.status == 200) {
-            Image.fromImg(httpRes.body, (err, img) => {
-              if (err || !img) return reject(err);
+    if (capeURL instanceof MinecraftUser && capeType != CapeType.LABYMOD) {
+      return reject(new Error('You have to provide a CapeURL when importing a cape by URL for ' + CapeType[capeType]));
+    }
 
-              img.toPngBuffer()
-                  .then((capePng) => {
-                    db.addCape(capePng, generateHash(img.img.data), capeType, capeURL,
-                        capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent)
-                        .then((cape) => {
-                          if (capeType == 'MOJANG' && textureValue && textureSignature) {
-                            const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
+    if (capeURL instanceof MinecraftUser) {
+      capeURL.fetchLabyModCape()
+          .then((labyCape) => {
+            if (labyCape != null) {
+              Image.fromImg(labyCape, (err, img) => {
+                if (err || !img) return reject(err);
 
-                            cache.getProfile(json.profileId)
-                                .then((profile) => {
-                                  if (profile) {
-                                    db.addCapeToUserHistory(profile.id, cape, new Date(json.timestamp))
-                                        .catch((err) => {
-                                          ApiError.log(`Could not update cape-history in database`, {
-                                            profile: json.profileId,
-                                            cape: cape.id,
-                                            stack: err.stack
+                img.toPngBuffer()
+                    .then((capePng) => {
+                      db.addCape(capePng, generateHash(img.img.data), capeType, `http://dl.labymod.net/capes/${addHyphensToUUID(capeURL.id)}`,
+                          capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent)
+                          .then((cape) => {
+                            if (capeType == 'MOJANG' && textureValue && textureSignature) {
+                              const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
+
+                              cache.getProfile(json.profileId)
+                                  .then((profile) => {
+                                    if (profile) {
+                                      db.addCapeToUserHistory(profile.id, cape, new Date(json.timestamp))
+                                          .catch((err) => {
+                                            ApiError.log(`Could not update cape-history in database`, {
+                                              profile: json.profileId,
+                                              cape: cape.id,
+                                              stack: err.stack
+                                            });
                                           });
-                                        });
-                                  }
-                                });
-                          }
+                                    }
+                                  });
+                            }
 
-                          return resolve(cape);
-                        })
-                        .catch(reject);
-                  })
-                  .catch(reject);
-            });
-          } else if (httpRes.res.status != 404) {
-            reject(new Error(`Importing cape by URL returned status ${httpRes.res.status}`));
-          } else {
-            resolve(null);
-          }
-        })
-        .catch(reject);
+                            return resolve(cape);
+                          })
+                          .catch(reject);
+                    })
+                    .catch(reject);
+              });
+            } else {
+              resolve(null);
+            }
+          })
+          .catch(reject);
+    } else {
+      httpGet(capeURL)
+          .then((httpRes) => {
+            if (httpRes.res.status == 200) {
+              Image.fromImg(httpRes.body, (err, img) => {
+                if (err || !img) return reject(err);
+
+                img.toPngBuffer()
+                    .then((capePng) => {
+                      db.addCape(capePng, generateHash(img.img.data), capeType, capeURL,
+                          capeType == CapeType.MOJANG ? textureValue || null : null, capeType == CapeType.MOJANG ? textureSignature || null : null, userAgent)
+                          .then((cape) => {
+                            if (capeType == 'MOJANG' && textureValue && textureSignature) {
+                              const json: MinecraftProfileTextureProperty = MinecraftUser.extractMinecraftProfileTextureProperty(textureValue);
+
+                              cache.getProfile(json.profileId)
+                                  .then((profile) => {
+                                    if (profile) {
+                                      db.addCapeToUserHistory(profile.id, cape, new Date(json.timestamp))
+                                          .catch((err) => {
+                                            ApiError.log(`Could not update cape-history in database`, {
+                                              profile: json.profileId,
+                                              cape: cape.id,
+                                              stack: err.stack
+                                            });
+                                          });
+                                    }
+                                  });
+                            }
+
+                            return resolve(cape);
+                          })
+                          .catch(reject);
+                    })
+                    .catch(reject);
+              });
+            } else if (httpRes.res.status != 404) {
+              reject(new Error(`Importing cape by URL returned status ${httpRes.res.status}`));
+            } else {
+              resolve(null);
+            }
+          })
+          .catch(reject);
+    }
   });
 }
 
