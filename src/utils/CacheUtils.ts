@@ -71,8 +71,8 @@ export class CacheUtils {
       let uuid: string;
       let uuidExists = false;
 
-      if (isUUID(nameOrUUID)) {
-        uuid = nameOrUUID.toLowerCase().replace(/-/g, '');
+      if (isUUID(nameOrUUID) || isUUID(nameOrUUID.trim())) {
+        uuid = nameOrUUID.trim().toLowerCase().replace(/-/g, '');
       } else {
         try {
           const mcUUID = await this.getUUID(nameOrUUID);

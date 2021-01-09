@@ -342,7 +342,7 @@ router.all('/profile/:nameOrId?', (req, res, next) => {
 
           if (uuid) {
             res.locals.timings?.startNext('cacheUuidToProfile');
-            result = await cache.getProfile(uuid);
+            result = await cache.getProfile(uuid.trim());
           }
         }
 
