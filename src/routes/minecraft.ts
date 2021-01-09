@@ -8,6 +8,7 @@ import { join as joinPath } from 'path';
 import { CapeType, MinecraftUser, SkinArea, UserAgent } from '../global';
 import { cache, db } from '../index';
 import { Camera, createCamera, createModel, Model } from '../utils/modelRender';
+import { importCapeByURL } from '../utils/skindb';
 import {
   ApiError,
   convertFQDNtoASCII,
@@ -669,6 +670,45 @@ router.all('/render/block', (req, res, next) => {
 });
 
 /* Cape Routes */
+router.all('/capes/all/:user?', (req, res, next) => {
+  restful(req, res, {
+    get: () => {
+      if (!req.params.user) {
+        return next(new ErrorBuilder().invalidParams('url', [{
+          param: 'user',
+          condition: 'user.length > 0'
+        }]));
+      }
+
+      cache.getProfile(req.params.user)
+          .then(async (profile): Promise<void> => {
+            if (!profile) return next(new ErrorBuilder().notFound('Profile for given user', true));
+
+            const userAgent = await getUserAgent(req);
+            const user = new MinecraftUser(profile, [], await getUserAgent(null));
+
+            try {
+              const labyCape = await importCapeByURL(user, CapeType.LABYMOD, userAgent);
+              const optiFineCape = await importCapeByURL(user.getOptiFineCapeURL(), CapeType.OPTIFINE, await getUserAgent(req));
+
+              const mojangCapeURL = user.getSecureCapeURL();
+              const mojangCape = mojangCapeURL ? await importCapeByURL(mojangCapeURL, CapeType.MOJANG, await getUserAgent(req)) : null;
+
+              setCaching(res, true, true, 60)
+                  .send({
+                    Mojang: mojangCape?.id || null,
+                    OptiFine: optiFineCape?.id || null,
+                    LabyMod: labyCape?.id || null
+                  });
+            } catch (err) {
+              next(err);
+            }
+          })
+          .catch(next);
+    }
+  });
+});
+
 router.all('/capes/:capeType/:user?', (req, res, next) => {
   restful(req, res, {
     get: () => {
