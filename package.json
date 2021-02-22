@@ -54,7 +54,7 @@
     "object-assign-deep": "^0.4.0",
     "pg": "^8.5.1",
     "request": "^2.88.2",
-    "rotating-file-stream": "^2.1.4",
+    "rotating-file-stream": "^2.1.5",
     "sharp": "^0.27.1"
   },
   "devDependencies": {
