@@ -62,7 +62,7 @@
     "superagent": "^6.1.0"
   },
   "devDependencies": {
-    "@types/express": "^4.17.9",
+    "@types/express": "^4.17.12",
     "@types/morgan": "^1.9.2",
     "@types/object-assign-deep": "^0.4.0",
     "@types/pg": "^8.6.0",
