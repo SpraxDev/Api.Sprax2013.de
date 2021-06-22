@@ -1,16 +1,21 @@
-import fs = require('fs');
-import objectAssignDeep = require('object-assign-deep');
-import path = require('path');
-import rfs = require('rotating-file-stream');
+import fs from 'fs';
+import { createServer, Server } from 'http';
+import objectAssignDeep from 'object-assign-deep';
+import { join as joinPath } from 'path';
+import { createStream as createRotatingFileStream } from 'rotating-file-stream';
 
-import { Server, createServer } from 'http';
-
-import { dbUtils } from './utils/database';
 import { SpraxAPIcfg, SpraxAPIdbCfg } from './global';
+import { CacheUtils } from './utils/CacheUtils';
+import { dbUtils } from './utils/database';
+
+export const runningInProduction = process.env.NODE_ENV == 'production';
 
 let server: Server | null;
 export let db: dbUtils;
+export let cache: CacheUtils;
 export let cfg: SpraxAPIcfg = {
+  instanceName: 'SpraxAPI',
+
   listen: {
     usePath: false,
     path: './SpraxAPI.unixSocket',
@@ -21,9 +26,19 @@ export let cfg: SpraxAPIcfg = {
   trustProxy: false,
   logging: {
     accessLogFormat: '[:date[web]] :remote-addr by :remote-user | :method :url :status with :res[content-length] bytes | ":user-agent" referred from ":referrer" | :response-time[3] ms',
-    discordErrorWebHookURL: null
+    discordErrorWebHookURL: null,
+    database: null
   },
-  proxies: []
+
+  redis: {
+    enabled: false,
+    host: '127.0.0.1',
+    port: 6379,
+    password: '',
+    db: 0
+  }
+
+  // proxies: []
 };
 export let dbCfg: SpraxAPIdbCfg = {
   enabled: false,
@@ -38,30 +53,38 @@ export let dbCfg: SpraxAPIdbCfg = {
     skindb: 'skindb'
   }
 };
-export const appVersion = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8')).version;
+export const appVersion = JSON.parse(fs.readFileSync(joinPath(__dirname, '..', 'package.json'), 'utf-8')).version;
 
 /* Init configuration files */
 
-if (!fs.existsSync(path.join(process.cwd(), 'storage'))) {
-  fs.mkdirSync(path.join(process.cwd(), 'storage'));
+if (!fs.existsSync(joinPath(process.cwd(), 'storage'))) {
+  fs.mkdirSync(joinPath(process.cwd(), 'storage'));
 }
 
-if (fs.existsSync(path.join(process.cwd(), 'storage', 'config.json'))) {
-  cfg = objectAssignDeep({}, cfg, JSON.parse(fs.readFileSync(path.join(process.cwd(), 'storage', 'config.json'), 'utf-8'))); // Merge existing cfg into default one
+if (fs.existsSync(joinPath(process.cwd(), 'storage', 'config.json'))) {
+  cfg = objectAssignDeep({}, cfg, JSON.parse(fs.readFileSync(joinPath(process.cwd(), 'storage', 'config.json'), 'utf-8'))); // Merge existing cfg into default one
 }
-fs.writeFileSync(path.join(process.cwd(), 'storage', 'config.json'), JSON.stringify(cfg, null, 2));  // Write current config (+ missing default values) to file
+fs.writeFileSync(joinPath(process.cwd(), 'storage', 'config.json'), JSON.stringify(cfg, null, 2));  // Write current config (+ missing default values) to file
 
 // Repeat above for db.json
-if (fs.existsSync(path.join(process.cwd(), 'storage', 'db.json'))) {
-  dbCfg = objectAssignDeep({}, dbCfg, JSON.parse(fs.readFileSync(path.join(process.cwd(), 'storage', 'db.json'), 'utf-8')));
+if (fs.existsSync(joinPath(process.cwd(), 'storage', 'db.json'))) {
+  dbCfg = objectAssignDeep({}, dbCfg, JSON.parse(fs.readFileSync(joinPath(process.cwd(), 'storage', 'db.json'), 'utf-8')));
 }
-fs.writeFileSync(path.join(process.cwd(), 'storage', 'db.json'), JSON.stringify(dbCfg, null, 2));
+fs.writeFileSync(joinPath(process.cwd(), 'storage', 'db.json'), JSON.stringify(dbCfg, null, 2));
 
 /* Register shutdown hook */
 function shutdownHook() {
   console.log('Shutting down...');
 
-  const ready = async () => {
+  const ready = async (): Promise<never> => {
+    try {
+      if (cache) {
+        await cache.shutdown();
+      }
+    } catch (ex) {
+      console.error(ex);
+    }
+
     try {
       if (db) {
         await db.shutdown();
@@ -77,8 +100,10 @@ function shutdownHook() {
     server.close((err) => {
       if (err && err.message != 'Server is not running.') console.error(err);
 
-      ready();
+      ready()
+          .catch(console.error);
     });
+
     server = null;
   }
 }
@@ -91,21 +116,34 @@ process.on('SIGUSR2', shutdownHook);  // The package 'nodemon' is using this sig
 
 /* Prepare webserver */
 db = new dbUtils(dbCfg);
+cache = new CacheUtils();
 
-export const webAccessLogStream = rfs.createStream('access.log', { interval: '1d', maxFiles: 14, path: path.join(process.cwd(), 'logs', 'access'), compress: true }),
-  errorLogStream = rfs.createStream('error.log', { interval: '1d', maxFiles: 90, path: path.join(process.cwd(), 'logs', 'error') });
+export const webAccessLogStream = createRotatingFileStream('access.log', {
+  interval: '1d',
+  maxFiles: 14,
+  path: joinPath(process.cwd(), 'logs', 'access'),
+  compress: true
+});
+export const errorLogStream = createRotatingFileStream('error.log', {
+  interval: '1d',
+  maxFiles: 90,
+  path: joinPath(process.cwd(), 'logs', 'error')
+});
 
 /* Start webserver (and test database connection) */
-db.isReady((err) => {
-  if (err) {
-    console.error(`Database is not ready! (${err.message})`);
-    process.exit(2);
+(async () => {
+  if (dbCfg.enabled) {
+    try {
+      await db.isReady();
+    } catch (err) {
+      console.error(`Database is not ready! (${err.message})`);
+    }
   }
 
   server = createServer(require('./server').app);
 
   server.on('error', (err: { syscall: string, code: string }) => {
-    if (err.syscall !== 'listen') {
+    if (err.syscall != 'listen') {
       throw err;
     }
 
@@ -129,11 +167,11 @@ db.isReady((err) => {
 
   if (cfg.listen.usePath) {
     const unixSocketPath = cfg.listen.path,
-      unixSocketPIDPath = cfg.listen.path + '.pid',
-      parentDir = require('path').dirname(unixSocketPath);
+        unixSocketPIDPath = cfg.listen.path + '.pid',
+        parentDir = require('path').dirname(unixSocketPath);
 
     if (!fs.existsSync(parentDir)) {
-      fs.mkdirSync(parentDir, { recursive: true });
+      fs.mkdirSync(parentDir, {recursive: true});
     }
 
     const isProcessRunning = (pid: number): boolean => {
@@ -147,12 +185,13 @@ db.isReady((err) => {
 
     if (fs.existsSync(unixSocketPath)) {
       let isRunning: boolean = false;
-      if (!fs.existsSync(unixSocketPIDPath) || !(isRunning = isProcessRunning(parseInt(fs.readFileSync(unixSocketPIDPath, 'utf-8'))))) {
+      let runningPID: number = -1;
+      if (!fs.existsSync(unixSocketPIDPath) || !(isRunning = isProcessRunning(runningPID = parseInt(fs.readFileSync(unixSocketPIDPath, 'utf-8'))))) {
         fs.unlinkSync(unixSocketPath);
       }
 
       if (isRunning) {
-        console.error(`It looks like the process that created '${unixSocketPath}' is still running!`);
+        console.error(`The process (PID: ${runningPID}) that created '${unixSocketPath}' is still running!`);
         process.exit(1);
       }
     }
@@ -163,4 +202,4 @@ db.isReady((err) => {
   } else {
     server.listen(cfg.listen.port, cfg.listen.host);
   }
-});
+})();

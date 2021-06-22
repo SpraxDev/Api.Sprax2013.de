@@ -1,23 +1,35 @@
-import { addHyphensToUUID } from './utils/utils';
+import { addHyphensToUUID, ApiError } from './utils/utils';
+import { httpGet } from './utils/web';
 
 /* SpraxAPI */
 export interface SpraxAPIcfg {
-  readonly listen: {
-    readonly usePath: boolean,
-    readonly path: string,
+  readonly instanceName: string;
 
-    readonly host: string,
-    readonly port: number
-  };
+  readonly listen: {
+    readonly usePath: boolean;
+    readonly path: string;
+
+    readonly host: string;
+    readonly port: number;
+  }
 
   readonly trustProxy: boolean;
 
   readonly logging: {
     readonly accessLogFormat: string;
     readonly discordErrorWebHookURL: string | null;
+    readonly database: string | null;
   }
 
-  readonly proxies: string[];
+  readonly redis: {
+    readonly enabled: boolean;
+    readonly host: string;
+    readonly port: number;
+    readonly db: number;
+    readonly password: string;
+  }
+
+  // readonly proxies: string[];
 }
 
 export interface SpraxAPIdbCfg {
@@ -31,7 +43,7 @@ export interface SpraxAPIdbCfg {
 
   readonly databases: {
     readonly skindb: string;
-  };
+  }
 }
 
 export interface UserAgent {
@@ -64,42 +76,10 @@ export interface Cape {
 }
 
 /* SkinDB */
-export interface SkinDBAccount {
-  readonly user: CleanMinecraftUser;
-
-  readonly skinHistory: {
-    readonly lastTen: number[];
-    readonly total: number;
-  }
-}
-
-export interface SkinDBSkin {
-  readonly skin: Skin;
-  readonly tags: { id: string, name: string }[];
-  readonly aiTags: { id: string, name: string }[];
-  readonly seen_on: { name: string, id: string }[];
-}
-
-export interface SkinDBSearch {
-  readonly profiles: {
-    readonly direct: { name: string, id: string } | null,
-    readonly indirect: { name: string, id: string }[]
-  }
-
-  readonly skins: {
-    readonly hits: Skin[];
-    readonly page: number;
-    readonly hasNextPage: boolean;
-  }
-}
-
-export interface SkinDBIndex {
-  top_ten: { id: string, count: number }[];
-}
 
 /**
  * value equals remote database enum
-*/
+ */
 export enum CapeType {
   MOJANG = 'MOJANG',
   OPTIFINE = 'OPTIFINE',
@@ -120,17 +100,24 @@ export interface Color {
 }
 
 /* Minecraft */
+export interface MinecraftUUIDResponse {
+  name: string;
+  id: string;
+}
+
 export interface CleanMinecraftUser {
   id: string;
   id_hyphens: string;
   name: string;
   legacy: boolean | null;
+
   textures: {
     skinURL: string | null;
     capeURL: string | null;
     texture_value: string | null;
-    texture_signature: string | null
-  };
+    texture_signature: string | null;
+  }
+
   name_history?: MinecraftNameHistoryElement[];
 }
 
@@ -149,10 +136,10 @@ export class MinecraftUser {
   nameHistory: MinecraftNameHistoryElement[];
   userAgent: UserAgent;
 
-  constructor(profile: MinecraftProfile, nameHistory: MinecraftNameHistoryElement[], userAgent: UserAgent, profileFromMojang: boolean = false) {
+  constructor(profile: MinecraftProfile, nameHistory: MinecraftNameHistoryElement[], userAgent: UserAgent) {
     this.id = profile.id;
     this.name = profile.name;
-    this.legacy = profile.legacy || (profileFromMojang ? false : null);
+    this.legacy = profile.legacy ?? null;
     this.nameHistory = nameHistory;
     this.userAgent = userAgent;
 
@@ -192,8 +179,27 @@ export class MinecraftUser {
     return `http://s.optifine.net/capes/${this.name}.png`;
   }
 
-  getLabyModCapeURL(): string {
-    return `http://capes.labymod.net/capes/${addHyphensToUUID(this.id)}`;
+  async fetchLabyModCape(): Promise<Buffer | null> {
+    return new Promise((resolve, reject) => {
+      const capeURL = `https://dl.labymod.net/textures/../capes/${addHyphensToUUID(this.id)}`;
+
+      httpGet(capeURL, {
+        // Version can be extracted from https://dl.labymod.net/versions.json
+        'User-Agent': 'LabyMod v3.7.7 on mc1.8.9'
+      })
+          .then((httpRes) => {
+            if (httpRes.res.status == 200) {
+              if (httpRes.body.length > 0) {
+                return resolve(httpRes.body);
+              }
+            } else if (httpRes.res.status != 404) {
+              ApiError.log(`${capeURL} returned HTTP-Code ${httpRes.res.status}`);
+            }
+
+            return resolve(null);
+          })
+          .catch(reject);
+    });
   }
 
   /**
@@ -215,7 +221,7 @@ export class MinecraftUser {
         capeURL: this.capeURL,
 
         texture_value: this.textureValue,
-        texture_signature: this.textureSignature || null,
+        texture_signature: this.textureSignature || null
       },
 
       name_history: this.nameHistory
@@ -247,32 +253,35 @@ export class MinecraftUser {
 }
 
 export interface MinecraftProfile {
-  id: string,
-  name: string,
-  properties: MinecraftProfileProperty[],
-  legacy?: boolean
+  id: string;
+  name: string;
+  properties: MinecraftProfileProperty[];
+  legacy?: boolean | null;
 }
 
 export interface MinecraftProfileProperty {
-  name: 'textures',
-  value: string,
-  signature?: string
+  name: 'textures';
+  value: string;
+  signature?: string;
 }
 
 export interface MinecraftProfileTextureProperty {
-  timestamp: number,
-  profileId: string,
-  profileName: string,
-  signatureRequired?: boolean,
+  timestamp: number;
+  profileId: string;
+  profileName: string;
+  signatureRequired?: boolean;
+
   textures: {
     SKIN?: {
-      url: string,
+      url: string;
+
       metadata?: {
-        model?: 'slim'
+        model?: 'slim';
       }
     },
+
     CAPE?: {
-      url: string
+      url: string;
     }
   }
 }
