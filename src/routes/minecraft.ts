@@ -265,12 +265,12 @@ router.param('capeType', (req, _res, next, value, name) => {
 });
 
 /* Account Routes */
-router.all('/uuid/:name?', (req, res, next) => {
+router.all<{ name?: string }>('/uuid/:name?', (req, res, next) => {
   restful(req, res, {
     get: async (): Promise<void> => {
       const name = req.params.name;
 
-      if (typeof name != 'string' || name.length == 0) {
+      if (!name || name.length == 0) {
         return next(new ErrorBuilder().invalidParams('url', [{
           param: 'name',
           condition: 'name.length > 0'
@@ -305,7 +305,7 @@ router.all('/uuid/:name?', (req, res, next) => {
   });
 });
 
-router.all('/profile/:nameOrId?', (req, res, next) => {
+router.all<{ nameOrId?: string }>('/profile/:nameOrId?', (req, res, next) => {
   restful(req, res, {
     get: async (): Promise<void> => {
       const nameOrId = req.params.nameOrId;
@@ -362,7 +362,7 @@ router.all('/profile/:nameOrId?', (req, res, next) => {
   });
 });
 
-router.all('/history/:nameOrId?', (req, res, next) => {
+router.all<{ nameOrId?: string }>('/history/:nameOrId?', (req, res, next) => {
   restful(req, res, {
     get: async (): Promise<void> => {
       const nameOrId = req.params.nameOrId;
@@ -407,7 +407,7 @@ router.all('/history/:nameOrId?', (req, res, next) => {
 });
 
 /* Skin Routes */
-router.all('/skin/:user?', (req, res, next) => {
+router.all<{ user?: string }>('/skin/:user?', (req, res, next) => {
   restful(req, res, {
     get: () => {
       if (!req.params.user) {
@@ -496,7 +496,7 @@ router.all('/skin/:user?', (req, res, next) => {
   });
 });
 
-router.all('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
+router.all<{ user?: string, skinArea?: string, '3d'?: string }>('/skin/:user?/:skinArea?/:3d?', (req, res, next) => {
   restful(req, res, {
     get: () => {
       const is3D = typeof req.params['3d'] == 'string' && req.params['3d'].toLowerCase() == '3d';
@@ -670,7 +670,7 @@ router.all('/render/block', (req, res, next) => {
 });
 
 /* Cape Routes */
-router.all('/capes/all/:user?', (req, res, next) => {
+router.all<{ user?: string }>('/capes/all/:user?', (req, res, next) => {
   restful(req, res, {
     get: () => {
       if (!req.params.user) {
@@ -709,7 +709,7 @@ router.all('/capes/all/:user?', (req, res, next) => {
   });
 });
 
-router.all('/capes/:capeType/:user?', (req, res, next) => {
+router.all<{ capeType: string, user?: string }>('/capes/:capeType/:user?', (req, res, next) => {
   restful(req, res, {
     get: () => {
       if (!req.params.user) {
@@ -774,7 +774,7 @@ router.all('/capes/:capeType/:user?', (req, res, next) => {
   });
 });
 
-router.all('/capes/:capeType/:user?/render', (req, res, next) => {
+router.all<{ capeType: string, user?: string }>('/capes/:capeType/:user?/render', (req, res, next) => {
   const renderCape = function (cape: Buffer, type: CapeType, size: number, callback: (err: Error | null, png: Buffer | null) => void): void {
     Image.fromImg(cape, (err, capeImg) => {
       if (err || !capeImg) return callback(err, null);
