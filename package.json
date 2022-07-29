@@ -22,7 +22,15 @@
     "dev": "nodemon --ext ts --watch ./src --exec \"npm run devStart\"",
     "devStart-headless": "xvfb-run -a -s \"-ac -screen 0 1280x1024x24\" cross-env NODE_ENV=development ts-node src/index.ts",
     "dev-headless": "nodemon --ext ts --watch ./src --exec \"npm run devStart-headless\"",
-    "debug": "ts-node src/index-debug.ts"
+    "debug": "ts-node src/index-debug.ts",
+
+    "snyk": "npm run build && snyk test",
+    "snyk:docker": "npm run docker:build:prod && snyk container test api-sprax2013-de:latest --file=Dockerfile",
+
+    "docker:build": "docker build --rm .",
+    "docker:build:prod": "npm run docker:build -- --target prod --tag api-sprax2013-de:latest",
+    "docker:build:dev": "npm run docker:build -- --target dev --tag api-sprax2013-de:dev --build-arg BUILD_SCRIPT=\"build\"",
+    "docker:dev": "npm run docker:build:dev && (docker stop api-sprax2013-de-dev;docker rm api-sprax2013-de-dev;echo '') && docker run --network host --name api-sprax2013-de-dev --cpus 3 --memory 1G --volume $(realpath ./storage/):/app/storage/ api-sprax2013-de:dev"
   },
   "author": {
     "name": "Christian Koop",
