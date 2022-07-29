@@ -66,7 +66,7 @@
     "redis": "^3.1.2",
     "request": "^2.88.2",
     "rotating-file-stream": "^2.1.5",
-    "sharp": "^0.28.3",
+    "sharp": "^0.30.7",
     "superagent": "^6.1.0"
   },
   "devDependencies": {
