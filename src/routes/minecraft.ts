@@ -99,8 +99,6 @@ const rendering = {
 const SKIN_STEVE = readFileSync(joinPath(__dirname, '..', '..', 'resources', 'steve.png')),
     SKIN_ALEX = readFileSync(joinPath(__dirname, '..', '..', 'resources', 'alex.png'));
 
-const whitelistedSkinURLs = ['//textures.minecraft.net/texture/', '//cdn.skindb.net/'];
-
 const router = Router();
 export const minecraftExpressRouter = router;
 
@@ -137,29 +135,6 @@ router.param('user', (req, _res, next, value, name) => {
         return next(new ErrorBuilder().invalidParams('query', [{
           param: 'url',
           condition: 'url starts with http:// or https://'
-        }]));
-      }
-
-      let qURL: string = queryURL.toLowerCase();
-
-      if (qURL.startsWith('https')) {
-        qURL = qURL.substring(6);
-      } else {
-        qURL = qURL.substring(5);
-      }
-
-      let isWhitelisted: boolean = false;
-      for (const elem of whitelistedSkinURLs) {
-        if (qURL.startsWith(elem)) {
-          isWhitelisted = true;
-          break;
-        }
-      }
-
-      if (!isWhitelisted) {
-        return next(new ErrorBuilder().invalidParams('query', [{
-          param: 'url',
-          condition: `url is whitelisted (Whitelisted: ${whitelistedSkinURLs.join('", "')})`
         }]));
       }
 
