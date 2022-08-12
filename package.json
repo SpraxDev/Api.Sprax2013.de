@@ -55,6 +55,7 @@
     "node": ">=12.0.0"
   },
   "dependencies": {
+    "cross-env": "^7.0.3",
     "express": "^4.17.1",
     "gl": "^4.9.0",
     "morgan": "^1.10.0",
@@ -78,7 +79,6 @@
     "@types/request": "^2.48.5",
     "@types/sharp": "^0.28.3",
     "@types/superagent": "^4.1.11",
-    "cross-env": "^7.0.3",
     "ts-node": "^10.0.0",
     "typescript": "^4.3.4"
   },
