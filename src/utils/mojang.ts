@@ -1,19 +1,6 @@
-import {
-  MinecraftNameHistoryElement,
-  MinecraftProfile,
-  MinecraftProfileProperty,
-  MinecraftUUIDResponse
-} from '../global';
+import { MinecraftProfile, MinecraftProfileProperty, MinecraftUUIDResponse } from '../global';
 import { ApiError, isUUID } from './utils';
 import { httpGet } from './web';
-
-let rateLimitedNameHistory = false;
-
-// TODO: Make sure that only the needed parts are requested by the API-Routes. We don't need Name-History every time!
-
-setInterval(() => {
-  rateLimitedNameHistory = false;
-}, 15 * 60 * 1000 /* 15 minutes */);
 
 // TODO: Check if using fallback-api is needed
 
@@ -109,65 +96,6 @@ async function fetchProfileFallback(cleanUUID: string): Promise<MinecraftProfile
             name: apiRes.username,
             properties: profileProps
           });
-        })
-        .catch(reject);
-  });
-}
-
-export async function fetchNameHistory(uuid: string): Promise<MinecraftNameHistoryElement[] | null> {
-  return new Promise<MinecraftNameHistoryElement[] | null>((resolve, reject) => {
-    if (!isUUID(uuid)) return reject(new Error('Invalid UUID'));
-
-    const cleanUUID = uuid.toLowerCase().replace(/-/g, '');
-
-    if (rateLimitedNameHistory) {
-      return fetchNameHistoryFallback(cleanUUID)
-          .then(resolve)
-          .catch(reject);
-    }
-
-    httpGet(`https://api.mojang.com/user/profiles/${cleanUUID}/names`)
-        .then((result) => {
-          if (result.res.status == 204) return resolve(null);
-          if (result.res.status == 200) {
-            return resolve(JSON.parse(result.body.toString('utf-8')));
-          } else if (result.res.status == 429) {
-            if (!rateLimitedNameHistory) {
-              rateLimitedNameHistory = true;
-              ApiError.log(`Got ${result.res.status} from 'sessionserver.mojang.com' for '${cleanUUID}'->name_history - Using fallback for the next 15 minutes`);
-            }
-
-            fetchNameHistoryFallback(cleanUUID)
-                .then(resolve)
-                .catch(reject);
-          } else {
-            return reject(createError('sessionserver.mojang.com', result.res.status, result.body));
-          }
-        })
-        .catch(reject);
-  });
-}
-
-async function fetchNameHistoryFallback(cleanUUID: string): Promise<MinecraftNameHistoryElement[] | null> {
-  return new Promise<MinecraftNameHistoryElement[] | null>((resolve, reject) => {
-    httpGet(`https://api.ashcon.app/mojang/v2/user/${cleanUUID}`)
-        .then((result) => {
-          if (result.res.status == 404) return resolve(null);
-          if (result.res.status != 200) return reject(createError('api.ashcon.app', result.res.status, result.body));
-
-          const apiRes = JSON.parse(result.body.toString('utf-8')).username_history;
-          const nameHistory: MinecraftNameHistoryElement[] = [];
-
-          for (const entry of apiRes) {
-            nameHistory.push({
-              name: entry.username,
-              changedToAt: entry.changed_at ? new Date(entry.changed_at).getTime() : undefined
-            });
-          }
-
-          nameHistory.reverse();
-
-          return resolve(nameHistory);
         })
         .catch(reject);
   });

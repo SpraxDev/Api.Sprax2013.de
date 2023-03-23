@@ -51,46 +51,16 @@ export class dbUtils {
   }
 
   /* Profiles */
-  async updateProfile(mcProfile: MinecraftProfile, names?: MinecraftUser['nameHistory']): Promise<void> {
+  async updateProfile(mcProfile: MinecraftProfile): Promise<void> {
     return new Promise(async (resolve, reject): Promise<void> => {
       if (this.pool == null) return reject(new Error('No database connected'));
 
       let client: PoolClient | undefined;
 
       try {
-        let updatedNameHistory = false;
-
-        if (names) {
-          // Build query string
-          let queryStr = 'INSERT INTO name_history(profile_id,name,changed_to_at) VALUES';
-          const queryArgs: (string | Date)[] = [mcProfile.id];
-
-          let counter = 2;
-          for (const elem of names) {
-            if (counter > 2) queryStr += ', ';
-
-            queryStr += `(lower($1),$${counter++},${typeof elem.changedToAt == 'number' ? `$${counter++}` : `'-infinity'`})`;
-
-            queryArgs.push(elem.name);
-
-            if (typeof elem.changedToAt == 'number') {
-              queryArgs.push(new Date(elem.changedToAt));
-            }
-          }
-
-          // Store Name-History
-          client = await this.pool.connect();
-
-          await client.query('BEGIN');
-          await client.query(`${queryStr} ON CONFLICT DO NOTHING;`, queryArgs);
-
-          updatedNameHistory = true;
-        }
-
         // Store latest profile
         await (client ?? this.pool).query('INSERT INTO profiles(id,name_lower,raw_json,deleted) VALUES(lower($1),lower($2),$3,$4) ' +
-            'ON CONFLICT(id) DO UPDATE SET name_lower =lower($2), raw_json =$3, last_update =CURRENT_TIMESTAMP' +
-            (updatedNameHistory ? ', last_name_history_update=CURRENT_TIMESTAMP' : '') + ';',
+            'ON CONFLICT(id) DO UPDATE SET name_lower =lower($2), raw_json =$3, last_update =CURRENT_TIMESTAMP;',
             [mcProfile.id, mcProfile.name, mcProfile, false]);
 
         await client?.query('COMMIT');
@@ -146,45 +116,6 @@ export class dbUtils {
             if (err) return reject(err);
 
             resolve(res.rows.length > 0 ? res.rows[0].raw_json : null);
-          });
-    });
-  }
-
-  async getNameHistory(id: string, limit?: number): Promise<MinecraftNameHistoryElement[] | null> {
-    return new Promise((resolve, reject) => {
-      if (this.pool == null) return reject(new Error('No database connected'));
-
-      this.pool.query('SELECT name,changed_to_at FROM name_history WHERE profile_id=$1 ' +
-          `ORDER BY changed_to_at ${limit != undefined ? ` LIMIT ${limit}}` : ''};`,
-          [id], (err, res) => {
-            if (err) return reject(err);
-
-            if (res.rows.length == 0) return resolve(null);
-
-            const result: MinecraftNameHistoryElement[] = [];
-
-            for (const row of res.rows) {
-              result.push({
-                name: row.name,
-                // if it is a number, it is not a timestamp but '-Infinity' meaning this is the first name of an account
-                changedToAt: row.changed_to_at instanceof Date ? row.changed_to_at.getTime() : undefined
-              });
-            }
-
-            return resolve(result);
-          });
-    });
-  }
-
-  async isNameHistoryUpToDate(id: string): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      if (this.pool == null) return reject(new Error('No database connected'));
-
-      this.pool.query(`SELECT EXISTS(SELECT FROM profiles WHERE id=$1 AND last_name_history_update >= NOW() - INTERVAL '14 days');`,
-          [id], (err, res) => {
-            if (err) return reject(err);
-
-            return resolve(res.rows.length != 0 && res.rows[0].exists);
           });
     });
   }

@@ -133,14 +133,12 @@ export class MinecraftUser {
 
   modelSlim: boolean = false;
 
-  nameHistory: MinecraftNameHistoryElement[];
   userAgent: UserAgent;
 
-  constructor(profile: MinecraftProfile, nameHistory: MinecraftNameHistoryElement[], userAgent: UserAgent) {
+  constructor(profile: MinecraftProfile, userAgent: UserAgent) {
     this.id = profile.id;
     this.name = profile.name;
     this.legacy = profile.legacy ?? null;
-    this.nameHistory = nameHistory;
     this.userAgent = userAgent;
 
     for (const prop of profile.properties) {
@@ -224,7 +222,7 @@ export class MinecraftUser {
         texture_signature: this.textureSignature || null
       },
 
-      name_history: this.nameHistory
+      name_history: []  // TODO: remove this property
     };
   }
 

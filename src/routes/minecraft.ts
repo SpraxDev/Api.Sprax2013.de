@@ -340,43 +340,10 @@ router.all<{ nameOrId?: string }>('/profile/:nameOrId?', (req, res, next) => {
 router.all<{ nameOrId?: string }>('/history/:nameOrId?', (req, res, next) => {
   restful(req, res, {
     get: async (): Promise<void> => {
-      const nameOrId = req.params.nameOrId;
-
-      if (typeof nameOrId != 'string' || nameOrId.length == 0) {
-        return next(new ErrorBuilder().invalidParams('url', [{
-          param: 'user',
-          condition: 'user.length > 0'
-        }]));
-      }
-
-      /* nameOrId->name_history */
-
-      let result: object | undefined | null;
-
-      try {
-        let uuid: string | undefined = nameOrId;
-
-        if (!isUUID(uuid)) {
-          res.locals.timings?.startNext('cacheNameToUUID');
-          uuid = (await cache.getUUID(nameOrId))?.id;
-        }
-
-        if (uuid) {
-          res.locals.timings?.startNext('cacheUuidToNameHistory');
-          result = await cache.getNameHistory(uuid);
-        }
-
-        res.locals.timings?.stopCurrent();
-      } catch (err) {
-        return next(err);
-      }
-
-      /* Send response */
-
-      if (!result) return next(new ErrorBuilder().notFound('Profile for given user'));
-
-      setCaching(res, true, true, 60)
-          .send(result);
+      res.status(410).send({
+        error: 'Gone',
+        message: 'This endpoint has been removed as Mojang removed the username history API (https://help.minecraft.net/hc/en-us/articles/8969841895693-Username-History-API-Removal-FAQ-)'
+      });
     }
   });
 });
@@ -401,7 +368,7 @@ router.all<{ user?: string }>('/skin/:user?', (req, res, next) => {
             .then(async (profile): Promise<void> => {
               if (!profile) return next(new ErrorBuilder().notFound('Profile for given user', true));
 
-              const user = new MinecraftUser(profile, [], await getUserAgent(null));
+              const user = new MinecraftUser(profile, await getUserAgent(null));
               const skinURL = user.getSecureSkinURL();
 
               if (skinURL) {
@@ -517,7 +484,7 @@ router.all<{ user?: string, skinArea?: string, '3d'?: string }>('/skin/:user?/:s
             .then(async (profile): Promise<void> => {
               if (!profile) return next(new ErrorBuilder().notFound('Profile for given user', true));
 
-              const user = new MinecraftUser(profile, [], await getUserAgent(null));
+              const user = new MinecraftUser(profile, await getUserAgent(null));
 
               const skinURL = user.getSecureSkinURL();
 
@@ -660,7 +627,7 @@ router.all<{ user?: string }>('/capes/all/:user?', (req, res, next) => {
             if (!profile) return next(new ErrorBuilder().notFound('Profile for given user', true));
 
             const userAgent = await getUserAgent(req);
-            const user = new MinecraftUser(profile, [], await getUserAgent(null));
+            const user = new MinecraftUser(profile, await getUserAgent(null));
 
             try {
               const labyCape = await importCapeByURL(user, CapeType.LABYMOD, userAgent);
@@ -701,7 +668,7 @@ router.all<{ capeType: string, user?: string }>('/capes/:capeType/:user?', (req,
           .then(async (profile): Promise<void> => {
             if (!profile) return next(new ErrorBuilder().notFound('Profile for given user', true));
 
-            const user = new MinecraftUser(profile, [], await getUserAgent(null));
+            const user = new MinecraftUser(profile, await getUserAgent(null));
 
             const capeType = req.params.capeType as CapeType;
             const capeURL = capeType == CapeType.MOJANG ? user.getSecureCapeURL() :
@@ -814,7 +781,7 @@ router.all<{ capeType: string, user?: string }>('/capes/:capeType/:user?/render'
             .then(async (profile): Promise<void> => {
               if (!profile) return next(new ErrorBuilder().notFound('Profile for given user', true));
 
-              const user = new MinecraftUser(profile, [], await getUserAgent(null));
+              const user = new MinecraftUser(profile, await getUserAgent(null));
 
               const capeURL = capeType == CapeType.MOJANG ? user.getSecureCapeURL() :
                   capeType == CapeType.OPTIFINE ? user.getOptiFineCapeURL() :

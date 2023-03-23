@@ -1,16 +1,10 @@
 import { createClient, RedisClient } from 'redis';
 import { promisify } from 'util';
 
-import {
-  CapeType,
-  MinecraftNameHistoryElement,
-  MinecraftProfile,
-  MinecraftUser,
-  MinecraftUUIDResponse
-} from '../global';
+import { CapeType, MinecraftProfile, MinecraftUser, MinecraftUUIDResponse } from '../global';
 import { cfg, db } from '../index';
 import { getUserAgent } from '../routes/minecraft';
-import { fetchBlockedServers, fetchNameHistory, fetchProfile, fetchUUID } from './mojang';
+import { fetchBlockedServers, fetchProfile, fetchUUID } from './mojang';
 import { importByTexture, importCapeByURL } from './skindb';
 import { ApiError, isUUID } from './utils';
 
@@ -19,7 +13,6 @@ import { ApiError, isUUID } from './utils';
 export class CacheUtils {
   private static readonly KEY_PREFIX_UUID: string = 'minecraft:uuid:';
   private static readonly KEY_PREFIX_PROFILE: string = 'minecraft:profile:';
-  private static readonly KEY_PREFIX_NAME_HISTORY: string = 'minecraft:name_history:';
   private static readonly KEY_BLOCKED_SERVERS: string = 'minecraft:blocked_servers:';
 
   private static readonly CACHE_DURATION: number = 60;  // 60 seconds
@@ -92,11 +85,8 @@ export class CacheUtils {
         if (!profile && uuidExists) return reject(new Error(`Got Null-Profile for existing profile '${uuid}'`));
         if (!profile) return resolve(null);
 
-        const nameHistory = profile ? await this.getNameHistory(profile.id) : null;
-        if (!nameHistory && profile) return reject(new Error(`Got Null-NameHistory for existing profile '${profile.id}'`));
-
         // TODO: replace User-Agent
-        const user = profile ? new MinecraftUser(profile, nameHistory as MinecraftNameHistoryElement[], await getUserAgent(null)) : null;
+        const user = profile ? new MinecraftUser(profile, await getUserAgent(null)) : null;
 
         resolve(user);
       } catch (err) {
@@ -256,7 +246,7 @@ export class CacheUtils {
               } else {
                 db.updateProfile(profile)
                     .then(async (): Promise<void> => {
-                      const tempUser = new MinecraftUser(profile, [], await getUserAgent(null));
+                      const tempUser = new MinecraftUser(profile, await getUserAgent(null));
 
                       /* Skin */
                       if (tempUser.textureValue) {
@@ -360,89 +350,6 @@ export class CacheUtils {
         if (!waitForDbSkinImport || !db.isAvailable()) {
           this.resolveQueue(key, result);
         }
-      }
-    });
-  }
-
-  public async getNameHistory(uuid: string): Promise<MinecraftNameHistoryElement[] | null> {
-    return new Promise(async (resolve, reject): Promise<void> => {
-      const cleanUUID = uuid.toLowerCase().replace(/-/g, '');
-      const key = CacheUtils.KEY_PREFIX_NAME_HISTORY + cleanUUID;
-
-      const done = (result: unknown) => {
-        if ((typeof result != 'string' && !Array.isArray(result)) ||
-            result == CacheUtils.ERR_VALUE) {
-          return reject(new Error(`An error occurred while trying to get the Name-History for '${uuid}'`));
-        } else if (result == CacheUtils.EMPTY_VALUE) {
-          return resolve(null);
-        } else {
-          return resolve(typeof result == 'string' ? JSON.parse(result) : result);
-        }
-      };
-
-      if (this.startQueue(key, done)) {
-        let result: object | string | null = null;
-        let resultFromRedis = false;
-
-        // Check if data is already cached in Redis
-        if (this.redisReady && this.redisGet) {
-          try {
-            const redisResult = await this.redisGet(key);
-
-            if (redisResult != null) {
-              result = redisResult;
-              resultFromRedis = true;
-            }
-          } catch (err) {
-            ApiError.log('Redis-Client could not fetch data', {key, err});
-          }
-        }
-
-        // If not cached in Redis, check if username is already know in the database
-        if (!result && db.isAvailable()) {
-          try {
-            if (await db.isNameHistoryUpToDate(cleanUUID)) {
-              const nameHistory = await db.getNameHistory(cleanUUID);
-
-              // Make sure that the profile from the db is still accurate
-              // by requesting the profile for that UUID
-              // if the names match, we successfully avoided contacting the strictly rate-limited Name->UUID API-Route
-              if (nameHistory) {
-                const freshProfile = await this.getProfile(cleanUUID);
-
-                if (freshProfile?.name == nameHistory[0].name) {
-                  result = nameHistory;
-                }
-              }
-            }
-          } catch (err) {
-            ApiError.log('CacheUtils encountered an error while fetching a name-history from the database', {key, err});
-          }
-        }
-
-        // Requesting data from Mojang-API
-        if (!result) {
-          try {
-            const nameHistory = await fetchNameHistory(cleanUUID);
-
-            result = nameHistory ? nameHistory : CacheUtils.EMPTY_VALUE;
-          } catch (err) {
-            ApiError.log('CacheUtils encountered an error while fetching a name-history from Mojang', {key, err});
-          }
-        }
-
-        // Write to Redis cache
-        if (!resultFromRedis && this.redisReady && this.redisSetEx) {
-          if (result == CacheUtils.EMPTY_VALUE || result == null) {
-            await this.redisSetEx(key, CacheUtils.CACHE_TIME_EMPTY, CacheUtils.EMPTY_VALUE);
-          } else if (result == CacheUtils.ERR_VALUE) {
-            await this.redisSetEx(key, CacheUtils.CACHE_DURATION, CacheUtils.ERR_VALUE);
-          } else {
-            await this.redisSetEx(key, CacheUtils.CACHE_DURATION, typeof result != 'string' ? JSON.stringify(result) : result);
-          }
-        }
-
-        this.resolveQueue(key, result);
       }
     });
   }
