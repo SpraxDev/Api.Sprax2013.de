@@ -13,7 +13,7 @@ export async function fetchUUID(username: string, at?: number): Promise<Minecraf
 
     httpGet(`https://api.mojang.com/users/profiles/minecraft/${cleanUsername}${at != undefined ? `?at=${at}` : ''}`)
         .then((result) => {
-          if (result.res.status == 204) return resolve(null);
+          if (result.res.status == 204 || result.res.status == 404) return resolve(null);
 
           if (result.res.status == 200) {
             return resolve(JSON.parse(result.body.toString('utf-8')));
