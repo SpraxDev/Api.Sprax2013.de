@@ -5,8 +5,10 @@ import { join as joinPath } from 'path';
 import { createStream as createRotatingFileStream } from 'rotating-file-stream';
 
 import { SpraxAPIcfg, SpraxAPIdbCfg } from './global';
+import {initSentrySdk} from './SentrySdk';
 import { CacheUtils } from './utils/CacheUtils';
 import { dbUtils } from './utils/database';
+import * as Sentry from '@sentry/node';
 
 export const runningInProduction = process.env.NODE_ENV == 'production';
 
@@ -15,6 +17,7 @@ export let db: dbUtils;
 export let cache: CacheUtils;
 export let cfg: SpraxAPIcfg = {
   instanceName: 'SpraxAPI',
+  sentryDsn: '',
 
   listen: {
     usePath: false,
@@ -71,6 +74,8 @@ if (fs.existsSync(joinPath(process.cwd(), 'storage', 'db.json'))) {
   dbCfg = objectAssignDeep({}, dbCfg, JSON.parse(fs.readFileSync(joinPath(process.cwd(), 'storage', 'db.json'), 'utf-8')));
 }
 fs.writeFileSync(joinPath(process.cwd(), 'storage', 'db.json'), JSON.stringify(dbCfg, null, 2));
+
+initSentrySdk().catch(console.error);
 
 /* Register shutdown hook */
 function shutdownHook() {
@@ -141,6 +146,7 @@ export const errorLogStream = createRotatingFileStream('error.log', {
   }
 
   server = createServer(require('./server').app);
+  Sentry.addIntegration(new Sentry.Integrations.Express({app: require('./server').app}));
 
   server.on('error', (err: { syscall: string, code: string }) => {
     if (err.syscall != 'listen') {

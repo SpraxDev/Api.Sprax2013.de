@@ -4,6 +4,7 @@ import { httpGet } from './utils/web';
 /* SpraxAPI */
 export interface SpraxAPIcfg {
   readonly instanceName: string;
+  readonly sentryDsn: string;
 
   readonly listen: {
     readonly usePath: boolean;

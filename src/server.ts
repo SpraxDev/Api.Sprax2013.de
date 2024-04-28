@@ -7,10 +7,14 @@ import { minecraftExpressRouter } from './routes/minecraft';
 import { statusExpressRouter } from './routes/status';
 import { ServerTiming } from './utils/ServerTiming';
 import { ApiError, ErrorBuilder, HttpError } from './utils/utils';
+import * as Sentry from '@sentry/node';
 
 export const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', cfg.trustProxy);
+
+app.use(Sentry.Handlers.requestHandler());
+app.use(Sentry.Handlers.tracingHandler());
 
 /* Logging webserver request to database */
 if (cfg.logging.database) {
@@ -120,6 +124,7 @@ app.use('/status', statusExpressRouter);
 app.use('/mc', minecraftExpressRouter);
 
 /* Error handling */
+app.use(Sentry.Handlers.errorHandler());
 app.use((_req, _res, next) => {
   next(new ErrorBuilder().notFound());
 });
