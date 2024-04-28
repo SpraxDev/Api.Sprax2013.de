@@ -1,0 +1,698 @@
+openapi: 3.1.0
+info:
+  title: Sprax's public Minecraft APIs
+  description: |-
+    // TODO (Markdown seems to be allowed here?)
+
+    Get support on my [Discord server](https://sprax.me/discord)
+  contact:
+    name: Christian Koop
+    url: https://github.com/SpraxDev
+  license:
+    name: GNU GPLv3
+    url: https://www.gnu.org/licenses/gpl-3.0.html.en
+  version: 3.0.0-SNAPSHOT
+servers:
+  - url: https://api.sprax.dev/
+  - url: https://api.sprax2013.de/
+    description: DEPRECATED (Backwards compatibility mode)
+
+tags:
+  - name: Minecraft (v2)
+    description: // TODO
+  - name: Minecraft (v1)
+    description: DO NOT use this in new apps – These v1 endpoints exist solely for compatibility with old apps that still use the api.sprax2013.de host
+  - name: Miscellaneous
+    description: Other endpoints
+
+paths:
+  /status:
+    get:
+      tags:
+        - Miscellaneous
+      summary: Check if the API is online/responding
+      description: This endpoint can be used for uptime checks
+      operationId: getApiStatus
+      responses:
+        '200':
+          description: API is online and responding
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  online:
+                    type: boolean
+              example:
+                online: true
+
+  /mc/v1/uuid/{username}:
+    get:
+      tags:
+        - Minecraft (v1)
+      deprecated: true
+      summary: Get the UUID for a given Minecraft username
+      description: This endpoint returns the UUID for a given Minecraft username
+      operationId: getMcUuidByNameV1
+      parameters:
+        - name: username
+          in: path
+          description: Minecraft username
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+              example:
+                id: 955e4cf6411c40d1a1765bc8e03a8a9a
+                name: SpraxDev
+        '404':
+          description: No user found with the given name
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              example:
+                error: Not Found
+                message: UUID for given username
+  /mc/v1/profile/{usernameOrId}:
+    get:
+      tags:
+        - Minecraft (v1)
+      deprecated: true
+      summary: Minecraft profile for a given username or UUID
+      operationId: getMcProfileV1
+      parameters:
+        - name: usernameOrId
+          in: path
+          description: Minecraft username or UUID
+          required: true
+          schema:
+            type: string
+        - name: full
+          in: query
+          description: If set to true, a parsed representation of the profile will be returned (e.g. with the extracted skin URL)
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Found a profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  properties:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        value:
+                          type: string
+                        signature:
+                          type: string
+                  profileActions:
+                    type: array
+                    items:
+                      type: string
+              example:
+                id: 955e4cf6411c40d1a1765bc8e03a8a9a
+                name: SpraxDev
+                properties:
+                  - name: textures
+                    value: <base64 string>
+                    signature: <base64 string; signed data using Yggdrasil's private key>
+                profileActions: [ ]
+        '404':
+          description: No profile found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              example:
+                error: Not Found
+                message: Profile for given user
+  /mc/v1/history/{usernameOrId}:
+    get:
+      tags:
+        - Minecraft (v1)
+      deprecated: true
+      summary: '[GONE] Get the name history for a given Minecraft username or UUID'
+      description: Mojang removed the name history endpoint on 13 September 2022 to "improve player safety and data privacy"
+      operationId: getMcNameHistoryV1
+      parameters:
+        - name: usernameOrId
+          in: path
+          description: Minecraft username or UUID
+          required: true
+          schema:
+            type: string
+      responses:
+        '410':
+          description: Mojang removed the name history endpoint on 13 September 2022 to "improve player safety and data privacy"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              example:
+                error: Gone
+                message: This endpoint has been removed as Mojang removed the username history API (https://web.archive.org/web/20221006001721/https://help.minecraft.net/hc/en-us/articles/8969841895693-Username-History-API-Removal-FAQ-)
+  /mc/v1/skin/{usernameOrIdOrX-Url}:
+    get:
+      tags:
+        - Minecraft (v1)
+      deprecated: true
+      summary: Get the skin for a given Minecraft username or UUID
+      description: This endpoints tries to return the effective skin for a give player (e.g. steve/alex skin is returned if user does not have a skin or the returned skin is normalized by default)
+      operationId: getMcSkinV1
+      parameters:
+        - name: usernameOrIdOrX-Url
+          in: path
+          description: Minecraft username or UUID or "x-url"
+          required: true
+          schema:
+            type: string
+        - name: raw
+          in: query
+          description: Setting raw to true returns the skin as-is (steve/alex skin is returned if user does not have a skin) – Otherwise the skin is somewhat normalized. This includes (but is not limited to) forcing 64x64 pixels or removing unused pixels (vanilla client)
+          schema:
+            type: boolean
+            default: false
+        - name: download
+          in: query
+          description: Sends response headers to force the browser to download the skin
+          schema:
+            type: boolean
+            default: false
+        - name: url
+          in: query
+          description: Uses a given Skin-URL instead of extracting it from a given Minecraft profile; Required if "x-url" is used as usernameOrIdOrX-Url
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Skin found
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: No skin found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              example:
+                error: Not Found
+                message: Profile for given user
+  /mc/v1/skin/{usernameOrIdOrX-Url}/{skinArea}:
+    get:
+      tags:
+        - Minecraft (v1)
+      deprecated: true
+      summary: Get the rendered skin(-area) for a given Minecraft username or UUID
+      description: This endpoint renders a specific skin and area
+      operationId: getMcSkinRenderedAreaV1
+      parameters:
+        - name: usernameOrIdOrX-Url
+          in: path
+          description: Minecraft username or UUID or "x-url"
+          required: true
+          schema:
+            type: string
+        - name: skinArea
+          in: path
+          description: What skin area to render
+          required: true
+          schema:
+            type: string
+            enum:
+              - head
+              - body
+        - name: overlay
+          in: query
+          description: Weather to render the overlay (e.g. helmet) or not
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: size
+          in: query
+          description: The size of the rendered skin (in pixels)
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 512
+            minimum: 8
+            maximum: 1024
+        - name: slim
+          in: query
+          description: Weather to render as slim (alex) or not (steve) – Not setting this will automatically detect the skin type
+          required: false
+          schema:
+            type: boolean
+        - name: download
+          in: query
+          description: Sends response headers to force the browser to download the skin
+          schema:
+            type: boolean
+            default: false
+        - name: url
+          in: query
+          description: Uses a given Skin-URL instead of extracting it from a given Minecraft profile; Required if "x-url" is used as usernameOrIdOrX-Url
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Skin found and rendered
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: No skin found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              example:
+                error: Not Found
+                message: Profile for given user
+  /mc/v1/skin/{usernameOrIdOrX-Url}/{skinArea}/3d:
+    get:
+      tags:
+        - Minecraft (v1)
+      deprecated: true
+      summary: Get the 3D rendered skin(-area) for a given Minecraft username or UUID
+      description: This endpoint renders a specific skin and area in 3D
+      operationId: getMcSkinRenderedArea3dV1
+      parameters:
+        - name: usernameOrIdOrX-Url
+          in: path
+          description: Minecraft username or UUID or "x-url"
+          required: true
+          schema:
+            type: string
+        - name: skinArea
+          in: path
+          description: What skin area to render
+          required: true
+          schema:
+            type: string
+            enum:
+              - head
+              - body
+        - name: overlay
+          in: query
+          description: Weather to render the overlay (e.g. helmet) or not
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: size
+          in: query
+          description: The size of the rendered skin (in pixels)
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 512
+            minimum: 8
+            maximum: 1024
+        - name: slim
+          in: query
+          description: Weather to render as slim (alex) or not (steve) – Not setting this will automatically detect the skin type
+          required: false
+          schema:
+            type: boolean
+        - name: download
+          in: query
+          description: Sends response headers to force the browser to download the skin
+          schema:
+            type: boolean
+            default: false
+        - name: url
+          in: query
+          description: Uses a given Skin-URL instead of extracting it from a given Minecraft profile; Required if "x-url" is used as usernameOrIdOrX-Url
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Skin found and rendered in 3D
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: No skin found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              example:
+                error: Not Found
+                message: Profile for given user
+  /mc/v1/render/block:
+    get:
+      tags:
+        - Minecraft (v1)
+      deprecated: true
+      summary: Renders a block texture in 3D
+      operationId: getMcBlockRenderedV1
+      parameters:
+        - name: download
+          in: query
+          description: Sends response headers to force the browser to download the skin
+          schema:
+            type: boolean
+            default: false
+        - name: size
+          in: query
+          description: The size of the rendered skin (in pixels)
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 150
+            minimum: 8
+            maximum: 1024
+      requestBody:
+        content:
+          image/png:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Client provided a valid image and it was rendered
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Invalid image provided
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+                  details:
+                    type: object
+                    properties:
+                      param:
+                        type: string
+                      condition:
+                        type: string
+              example:
+                error: Bad Request
+                message: Missing or invalid query parameters
+                details:
+                  param: size
+                  condition: size >= 8 and size <= 1024
+  /mc/v1/capes/all/{usernameOrId}:
+    get:
+      tags:
+        - Minecraft (v1)
+      deprecated: true
+      summary: Finds all (supported) capes for a given user
+      description: Looks up all capes for a given user and returns their internal IDs (Looks like SkinDB had an endpoint that supported those IDs)
+      operationId: getMcCapesAllV1
+      parameters:
+        - name: usernameOrId
+          in: path
+          description: Minecraft username or UUID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Found the player and zero or more capes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  Mojang:
+                    type: string
+                    nullable: true
+                  OptiFine:
+                    type: string
+                    nullable: true
+                  LabyMod:
+                    type: string
+                    nullable: true
+              example:
+                Mojang: null
+                OptiFine: '2339409327057536487'
+                LabyMod: null
+  /mc/v1/capes/{capeType}/{usernameOrId}:
+    get:
+      tags:
+        - Minecraft (v1)
+      deprecated: true
+      summary: Get a specific cape (image) for a given user
+      description: This endpoint returns the image for a specific cape type for a given user
+      operationId: getMcCapeByTypeV1
+      parameters:
+        - name: capeType
+          in: path
+          description: Cape type (e.g. "OptiFine")
+          required: true
+          schema:
+            type: string
+            enum:
+              - Mojang
+              - OptiFine
+              - LabyMod
+        - name: usernameOrId
+          in: path
+          description: Minecraft username or UUID
+          required: true
+          schema:
+            type: string
+        - name: download
+          in: query
+          description: Sends response headers to force the browser to download the skin
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Cape found
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: User does not have that cape, user not found, ...
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              example:
+                error: Not Found
+                message: User does not have a cape for that type
+  /mc/v1/capes/{capeType}/{usernameOrIdOrX-Url}/render:
+    get:
+      tags:
+        - Minecraft (v1)
+      deprecated: true
+      summary: Get a rendered version of a specific cape for a given user
+      description: This endpoint returns a rendered version of the image for a specific cape type for a given user
+      operationId: getMcCapeByTypeRenderedV1
+      parameters:
+        - name: capeType
+          in: path
+          description: Cape type (e.g. "OptiFine")
+          required: true
+          schema:
+            type: string
+            enum:
+              - Mojang
+              - OptiFine
+              - LabyMod
+        - name: usernameOrIdOrX-Url
+          in: path
+          description: Minecraft username or UUID or "x-url"
+          required: true
+          schema:
+            type: string
+        - name: size
+          in: query
+          description: The size of the rendered skin (in pixels)
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 512
+            minimum: 8
+            maximum: 1024
+        - name: download
+          in: query
+          description: Sends response headers to force the browser to download the skin
+          schema:
+            type: boolean
+            default: false
+        - name: url
+          in: query
+          description: Uses a given Skin-URL instead of extracting it from a given Minecraft profile; Required if "x-url" is used as usernameOrIdOrX-Url
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cape found and rendered
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: User does not have that cape, user not found, ...
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              example:
+                error: Not Found
+                message: User does not have a cape for that type
+  /mc/v1/servers/blocked:
+    get:
+      tags:
+        - Minecraft (v1)
+      deprecated: true
+      summary: Get a list of blocked Minecraft server hashes
+      description: Mojang has a list of blocked servers, that the client is not allowed to connect to. Mojang stores these blocked servers as hashes in a list. This endpoint returns the list of blocked server hashes.
+      operationId: getMcBlockedServersV1
+      responses:
+        '200':
+          description: List of blocked server hashes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+              example:
+                - 9127048af7d5114492c05bd83323b6256420571f
+                - 330b87ef0ecd27ef4155d5a05019c990512c4937
+                - 817533e2b27f3942a8486edd62b4398c1f938e11
+  /mc/v1/servers/blocked/known:
+    get:
+      tags:
+        - Minecraft (v1)
+      deprecated: true
+      summary: List all known blocked Minecraft server hostnames and their hashes
+      operationId: getMcBlockedServersKnownV1
+      responses:
+        '200':
+          description: List of known blocked server hostnames and their hashes
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+              example:
+                9127048af7d5114492c05bd83323b6256420571f: minecraftmc.ddns.net
+                330b87ef0ecd27ef4155d5a05019c990512c4937: mojang1.ddns.net
+                817533e2b27f3942a8486edd62b4398c1f938e11: mojang2.ddns.net
+  /mc/v1/servers/blocked/check:
+    get:
+      tags:
+        - Minecraft (v1)
+      deprecated: true
+      summary: Check if a given Minecraft server/host is blocked
+      operationId: getMcBlockedServerCheckV1
+      parameters:
+        - name: host
+          in: query
+          description: Minecraft server host (Domain, IPv4, IPv6, ...)
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Result of the given host being blocked
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: boolean
+              example:
+                '*.mojang1.ddns.net': false
+                mojang1.ddns.net: true
+                '*.ddns.net': false
+                '*.net': false
