@@ -342,7 +342,7 @@ router.all<{ nameOrId?: string }>('/history/:nameOrId?', (req, res, next) => {
     get: async (): Promise<void> => {
       res.status(410).send({
         error: 'Gone',
-        message: 'This endpoint has been removed as Mojang removed the username history API (https://help.minecraft.net/hc/en-us/articles/8969841895693-Username-History-API-Removal-FAQ-)'
+        message: 'This endpoint has been removed as Mojang removed the username history API (https://web.archive.org/web/20221006001721/https://help.minecraft.net/hc/en-us/articles/8969841895693-Username-History-API-Removal-FAQ-)'
       });
     }
   });
