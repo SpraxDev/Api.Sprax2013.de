@@ -34,7 +34,7 @@
     "build": "tsc",
 
     "test": "jest --coverage",
-    "dev": "node --watch --env-file .env --watch-path src/ --loader ts-node/esm src/main.ts"
+    "dev": "node --watch --env-file .env --loader ts-node/esm src/main.ts"
   },
   "engines": {
     "node": ">=20.0.0",
