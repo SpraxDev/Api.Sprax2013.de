@@ -29,11 +29,12 @@
     "url": "https://github.com/SpraxDev/Api.Sprax2013.de/issues"
   },
   "main": "dist/main.js",
+  "type": "module",
   "scripts": {
     "build": "tsc",
 
     "test": "jest --coverage",
-    "dev": "node --watch --watch-path src/ --require ts-node/register src/main.ts"
+    "dev": "node --watch --watch-path src/ --loader ts-node/esm src/main.ts"
   },
   "engines": {
     "node": ">=20.0.0",
