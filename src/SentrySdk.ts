@@ -1,5 +1,7 @@
+import type { Transaction } from '@sentry/node';
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import Os from 'node:os';
 import { container } from 'tsyringe';
 import AppConfiguration from './config/AppConfiguration.js';
@@ -85,5 +87,49 @@ export default class SentrySdk {
 
   static async shutdown(): Promise<void> {
     await Sentry.close(15_000);
+  }
+
+  /** This is a workaround until Sentry supports Fastify: https://github.com/getsentry/sentry-javascript/issues/4784 */
+  static setupSentryFastifyIntegration(fastify: FastifyInstance): void {
+    fastify.decorateRequest('sentryTransaction', null);
+
+    fastify.addHook('onRequest', (request: FastifyRequest, reply, done) => {
+      const path = new URL(request.url, 'http://localhost').pathname;
+
+      Sentry.runWithAsyncContext(() => {
+        // We can't use startSpanManual here for some reason... so we use deprecated startTransaction instead
+        // It looks like we somehow loose the context? Or the created span is not attached to the current scope? :shrug:
+        const transaction = Sentry.startTransaction(
+          {
+            op: 'http.server',
+            name: `${request.method} ${path}`,
+            attributes: {
+              'http.method': request.method,
+              'http.path': path,
+              'sentry.source': 'url'
+            }
+          },
+          { request: { method: request.method, path, headers: request.headers } }
+        );
+
+        Sentry.getCurrentScope().setSpan(transaction);
+        (request as any).sentryTransaction = transaction;
+
+        done();
+      });
+    });
+
+    fastify.addHook('onResponse', (request: FastifyRequest, reply: FastifyReply, done): void => {
+      const transaction: Transaction | undefined = (request as any).sentryTransaction;
+      if (transaction != null) {
+        // Push `#end` call to the next event loop so open spans have a chance to finish before the transaction closes
+        setImmediate(() => {
+          Sentry.setHttpStatus(transaction, reply.statusCode);
+          transaction.end();
+        });
+      }
+
+      done();
+    });
   }
 }

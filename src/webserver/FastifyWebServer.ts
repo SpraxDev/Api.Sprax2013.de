@@ -27,6 +27,7 @@ export default class FastifyWebServer {
         .code(500)
         .send('Internal Server Error');
     });
+    SentrySdk.setupSentryFastifyIntegration(this.fastify);
   }
 
   async listen(host: string, port: number): Promise<void> {
