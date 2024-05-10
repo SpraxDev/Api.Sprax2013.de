@@ -46,6 +46,80 @@ paths:
               example:
                 online: true
 
+  /mc/v2/uuid/{username}:
+    get:
+      tags:
+        - Minecraft (v2)
+      summary: Get the UUID for a given Minecraft username
+      parameters:
+        - name: username
+          in: path
+          description: Minecraft username
+          required: true
+          schema:
+            type: string
+  /mc/v2/profile/{user}:
+    get:
+      tags:
+        - Minecraft (v2)
+      summary: Get the profile for a given UUID or username
+      parameters:
+        - name: user
+          in: path
+          description: UUID or username
+          required: true
+          schema:
+            type: string
+  /mc/v2/skin/{userOrX-Url}:
+    get:
+      tags:
+        - Minecraft (v2)
+      summary: Returns the (effective) skin image for a given user
+  /mc/v2/skin/{userOrX-Url}/{skinArea}:
+    get:
+      tags:
+        - Minecraft (v2)
+      summary: Returns the (effective) skin image, optionally cropped to a specific area
+  /mc/v2/skin/{userOrX-Url}/{skinArea}/3d:
+    get:
+      tags:
+        - Minecraft (v2)
+      summary: Returns the (effective) skin image in 3D, optionally cropped to a specific area
+  /mc/v2/cape/{user}:
+    get:
+      tags:
+        - Minecraft (v2)
+      summary: Lists all current capes for a given user
+  /mc/v2/cape/{user}/{capeService}:
+    get:
+      tags:
+        - Minecraft (v2)
+      summary: Returns the cape image for a given user and service
+  /mc/v2/server/blocklist:
+    get:
+      tags:
+        - Minecraft (v2)
+      summary: Returns a SHA-1 list of all currently blocked Minecraft servers
+      externalDocs:
+        description: You can check wiki.vg for more information about this list
+        url: https://wiki.vg/Mojang_API#Blocked_Servers
+  /mc/v2/server/blocklist/discovered:
+    get:
+      tags:
+        - Minecraft (v2)
+      summary: Returns the blocklist with its discovered hostnames, if available
+  /mc/v2/server/blocklist/check:
+    get:
+      tags:
+        - Minecraft (v2)
+      summary: Checks if a given hostname and some variations are blocked by Mojang right now
+  /mc/v2/server/ping:
+    get:
+      tags:
+        - Minecraft (v2)
+      summary: Pings a give Minecraft server and returns its status
+      description: This endpoint is able to properly resolve SRV records and ping Minecraft Java Edition servers
+
   /mc/v1/uuid/{username}:
     get:
       tags:
