@@ -1,4 +1,4 @@
-import 'reflect-metadata';
+import './container-init.js';
 import { container } from 'tsyringe';
 import { IS_PRODUCTION } from './constants.js';
 import SentrySdk from './SentrySdk.js';
