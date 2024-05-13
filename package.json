@@ -45,7 +45,8 @@
     "@sentry/profiling-node": "^7.114.0",
     "fastify": "^4.27.0",
     "reflect-metadata": "^0.2.2",
-    "tsyringe": "^4.8.0"
+    "tsyringe": "^4.8.0",
+    "undici": "^6.16.1"
   },
   "devDependencies": {
     "@tsconfig/node20": "^20.1.4",
