@@ -1,3 +1,4 @@
+import type { PrismaClient } from '@prisma/client';
 import type { Transaction } from '@sentry/node';
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
@@ -87,6 +88,10 @@ export default class SentrySdk {
 
   static async shutdown(): Promise<void> {
     await Sentry.close(15_000);
+  }
+
+  static setupSentryPrismIntegration(client: PrismaClient): void {
+    Sentry.addIntegration(new Sentry.Integrations.Prisma({ client }));
   }
 
   /** This is a workaround until Sentry supports Fastify: https://github.com/getsentry/sentry-javascript/issues/4784 */

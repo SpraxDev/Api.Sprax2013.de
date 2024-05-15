@@ -1,6 +1,7 @@
 import './container-init.js';
 import { container } from 'tsyringe';
 import { IS_PRODUCTION } from './constants.js';
+import DatabaseClient from './database/DatabaseClient.js';
 import SentrySdk from './SentrySdk.js';
 import FastifyWebServer from './webserver/FastifyWebServer.js';
 
@@ -11,6 +12,10 @@ await bootstrap();
 async function bootstrap(): Promise<void> {
   await SentrySdk.init();
   registerShutdownHooks();
+
+  if (IS_PRODUCTION) {
+    await container.resolve(DatabaseClient).runDatabaseMigrations();
+  }
 
   webServer = container.resolve(FastifyWebServer);
   await webServer.listen('0.0.0.0', 8087);

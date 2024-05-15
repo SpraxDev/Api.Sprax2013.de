@@ -34,13 +34,18 @@
     "build": "tsc",
 
     "test": "jest --coverage",
-    "dev": "node --watch --env-file .env --loader ts-node/esm src/main.ts"
+    "dev": "node --watch --env-file .env --loader ts-node/esm src/main.ts",
+
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy"
   },
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
   },
   "dependencies": {
+    "@prisma/client": "^5.14.0",
     "@sentry/node": "^7.114.0",
     "@sentry/profiling-node": "^7.114.0",
     "fastify": "^4.27.0",
@@ -53,6 +58,7 @@
     "@types/jest": "^29.5.12",
     "@types/node": "^20.12.12",
     "jest": "^29.7.0",
+    "prisma": "^5.14.0",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"

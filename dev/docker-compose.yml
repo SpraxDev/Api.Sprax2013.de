@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    pull_policy: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: sprax_api
+      POSTGRES_PASSWORD: sprax_api
+    volumes:
+      - postgres-data:/var/lib/postgresql/data/
+
+volumes:
+  postgres-data:
