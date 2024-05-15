@@ -1,8 +1,29 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["views"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id            String   @id @db.Uuid
+  nameLowercase String   @map("name_lowercase")
+  raw           Json
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+  firstSeen     DateTime @default(now()) @map("first_seen")
+  deleted       Boolean  @default(false)
+
+  @@map("profiles")
+}
+
+view ProfileCache {
+  id            String @id @db.Uuid
+  nameLowercase String @map("name_lowercase")
+  raw           Json
+  ageInSeconds  Int    @map("age_in_seconds")
+
+  @@map("profile_cache")
 }

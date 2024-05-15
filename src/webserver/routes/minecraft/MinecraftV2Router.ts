@@ -3,13 +3,15 @@ import { autoInjectable } from 'tsyringe';
 import BadRequestError from '../../../http/errors/BadRequestError.js';
 import NotFoundError from '../../../http/errors/NotFoundError.js';
 import MinecraftApiClient from '../../../minecraft/MinecraftApiClient.js';
+import MinecraftProfileService from '../../../minecraft/MinecraftProfileService.js';
 import FastifyWebServer from '../../FastifyWebServer.js';
 import Router from '../Router.js';
 
 @autoInjectable()
 export default class MinecraftV2Router implements Router {
   constructor(
-    private readonly minecraftApiClient: MinecraftApiClient
+    private readonly minecraftApiClient: MinecraftApiClient,
+    private readonly minecraftProfileService: MinecraftProfileService
   ) {
   }
 
@@ -58,12 +60,14 @@ export default class MinecraftV2Router implements Router {
             userId = fetchedUuid.id;
           }
 
-          const fetchedProfile = await this.minecraftApiClient.fetchProfileForUuid(userId);
-          if (fetchedProfile == null) {
+          const profile = await this.minecraftProfileService.provideProfile(userId);
+          if (profile == null) {
             throw new NotFoundError('No profile found for UUID');
           }
 
-          return reply.send(fetchedProfile);
+          return reply
+            .header('Age', Math.floor(profile.ageInSeconds).toString())
+            .send(profile.profile);
         }
       });
     });
