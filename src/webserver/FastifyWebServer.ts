@@ -1,5 +1,7 @@
-import Fastify, { type FastifyError, FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { injectAll, singleton } from 'tsyringe';
+import HttpError from '../http/errors/HttpError.js';
+import NotFoundError from '../http/errors/NotFoundError.js';
 import SentrySdk from '../SentrySdk.js';
 import Router from './routes/Router.js';
 
@@ -15,15 +17,17 @@ export default class FastifyWebServer {
       trustProxy: false // TODO
     });
 
-    this.fastify.setNotFoundHandler((_request, reply) => {
-      return reply
-        .code(404)
-        .type('application/json')
-        .send('{"error":"Not Found"}');
+    this.fastify.setNotFoundHandler((): void => {
+      throw new NotFoundError('Requested resource not found');
     });
-    this.fastify.setErrorHandler((err: FastifyError, _req: FastifyRequest, reply: FastifyReply) => {
-      SentrySdk.logAndCaptureError(err);
+    this.fastify.setErrorHandler((err: Error, _req: FastifyRequest, reply: FastifyReply): FastifyReply => {
+      if (err instanceof HttpError) {
+        return reply
+          .code(err.httpStatusCode)
+          .send({ error: err.httpErrorMessage });
+      }
 
+      SentrySdk.logAndCaptureError(err);
       return reply
         .code(500)
         .send('Internal Server Error');
@@ -47,7 +51,11 @@ export default class FastifyWebServer {
     }
   }
 
-  static async handleRestfully(request: FastifyRequest, reply: FastifyReply, handlers: { [key: string]: () => void | Promise<void> }): Promise<void> {
+  static async handleRestfully(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    handlers: { [key: string]: () => void | Promise<void> }
+  ): Promise<void> {
     const method = (request.method || '').toLowerCase();
 
     if (method in handlers) {
