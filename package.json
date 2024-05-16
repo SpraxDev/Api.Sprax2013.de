@@ -50,6 +50,7 @@
     "@sentry/profiling-node": "^7.114.0",
     "fastify": "^4.27.0",
     "reflect-metadata": "^0.2.2",
+    "sharp": "^0.33.4",
     "tsyringe": "^4.8.0",
     "undici": "^6.16.1"
   },
