@@ -27,3 +27,36 @@ view ProfileCache {
 
   @@map("profile_cache")
 }
+
+model Skin {
+  id                  BigInt @id @default(dbgenerated("generate_snowflake('skin_urls_id_seq'::text)"))
+  originalImageSha256 Bytes  @map("original_image_sha256")
+
+  image SkinImage @relation(fields: [originalImageSha256], references: [originalImageSha256])
+
+  @@map("skins")
+}
+
+model SkinUrl {
+  url                 String   @id
+  originalImageSha256 Bytes    @map("original_image_sha256")
+  textureValue        String?  @map("texture_value")
+  textureSignature    String?  @map("texture_signature")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  image SkinImage @relation(fields: [originalImageSha256], references: [originalImageSha256])
+
+  @@map("skin_urls")
+}
+
+model SkinImage {
+  originalImageSha256 Bytes    @id @map("original_image_sha256")
+  originalImage       Bytes    @map("original_image")
+  normalizedImage     Bytes    @map("normalized_image")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  skins    Skin[]
+  skinUrls SkinUrl[]
+
+  @@map("skin_images")
+}

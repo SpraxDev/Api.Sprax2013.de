@@ -10,6 +10,7 @@ const __dirname = Url.fileURLToPath(new URL('.', import.meta.url));
 
 export const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 export const APP_ROOT_DIR = Path.join(__dirname, '..');
+export const APP_RESOURCES_DIR = Path.join(APP_ROOT_DIR, 'resources');
 
 export function getAppInfo(): Readonly<AppInfo> {
   if (appInfo == null) {
