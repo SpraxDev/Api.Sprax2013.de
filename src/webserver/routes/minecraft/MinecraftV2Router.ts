@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { autoInjectable } from 'tsyringe';
 import BadRequestError from '../../../http/errors/BadRequestError.js';
 import NotFoundError from '../../../http/errors/NotFoundError.js';
-import MinecraftApiClient from '../../../minecraft/MinecraftApiClient.js';
+import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService from '../../../minecraft/MinecraftProfileService.js';
 import FastifyWebServer from '../../FastifyWebServer.js';
 import Router from '../Router.js';
@@ -10,7 +10,6 @@ import Router from '../Router.js';
 @autoInjectable()
 export default class MinecraftV2Router implements Router {
   constructor(
-    private readonly minecraftApiClient: MinecraftApiClient,
     private readonly minecraftProfileService: MinecraftProfileService
   ) {
   }
@@ -24,15 +23,17 @@ export default class MinecraftV2Router implements Router {
             throw new BadRequestError('Invalid username');
           }
 
-          const fetchedUuid = await this.minecraftApiClient.fetchUuidForUsername(inputUsername);
-          if (fetchedUuid == null) {
+          const profile = await this.minecraftProfileService.provideProfileByUsername(inputUsername);
+          if (profile == null) {
             throw new NotFoundError('No UUID found for username');
           }
 
-          return reply.send({
-            id: fetchedUuid.id,
-            name: fetchedUuid.name
-          });
+          return reply
+            .header('Age', Math.floor(profile.ageInSeconds).toString())
+            .send({
+              id: profile.profile.id,
+              name: profile.profile.name
+            } satisfies UsernameToUuidResponse);
         }
       });
     });
@@ -51,20 +52,16 @@ export default class MinecraftV2Router implements Router {
             throw new BadRequestError('Invalid username or UUID');
           }
 
-          let userId = inputUser;
+          let profile;
           if (inputUserLooksLikeUsername) {
-            const fetchedUuid = await this.minecraftApiClient.fetchUuidForUsername(inputUser);
-            if (fetchedUuid == null) {
-              throw new NotFoundError('No UUID found for username');
-            }
-            userId = fetchedUuid.id;
+            profile = await this.minecraftProfileService.provideProfileByUsername(inputUser);
+          } else {
+            profile = await this.minecraftProfileService.provideProfileByUuid(inputUser);
           }
 
-          const profile = await this.minecraftProfileService.provideProfile(userId);
           if (profile == null) {
-            throw new NotFoundError('No profile found for UUID');
+            throw new NotFoundError(`Unable to find a profile for the given ${inputUserLooksLikeUsername ? 'username' : 'UUID'}`);
           }
-
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
             .send(profile.profile);

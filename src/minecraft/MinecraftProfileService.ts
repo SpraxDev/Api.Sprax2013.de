@@ -1,7 +1,7 @@
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../database/DatabaseClient.js';
 import SentrySdk from '../SentrySdk.js';
-import MinecraftApiClient, { UuidToProfileResponse } from './MinecraftApiClient.js';
+import MinecraftApiClient, { type UuidToProfileResponse } from './MinecraftApiClient.js';
 import SetWithTTL from './SetWithTTL.js';
 
 export type Profile = {
@@ -19,12 +19,41 @@ export default class MinecraftProfileService {
   ) {
   }
 
-  async provideProfile(uuid: string): Promise<Profile | null> {
+  async provideProfileByUsername(username: string): Promise<Profile | null> {
+    if (this.nullProfileCache.has(username.toLowerCase())) {
+      return null;
+    }
+
+    const profileInDatabase = await this.findProfileInDatabaseForUsername(username);
+    if (profileInDatabase != null && profileInDatabase.ageInSeconds <= 60) {
+      return profileInDatabase;
+    }
+
+    let uuid;
+    try {
+      uuid = await this.minecraftApiClient.fetchUuidForUsername(username);
+    } catch (err: any) {
+      if (profileInDatabase != null && profileInDatabase.ageInSeconds <= 5 * 60) {
+        SentrySdk.captureError(err);
+        return profileInDatabase;
+      }
+      throw err;
+    }
+
+    if (uuid == null) {
+      this.nullProfileCache.add(username.toLowerCase());
+      return null;
+    }
+
+    return this.provideProfileByUuid(uuid.id);
+  }
+
+  async provideProfileByUuid(uuid: string): Promise<Profile | null> {
     if (this.nullProfileCache.has(uuid.toLowerCase())) {
       return null;
     }
 
-    const profileInDatabase = await this.findProfileInDatabase(uuid);
+    const profileInDatabase = await this.findProfileInDatabaseForUuid(uuid);
     if (profileInDatabase != null && profileInDatabase.ageInSeconds <= 60) {
       return profileInDatabase;
     }
@@ -68,7 +97,7 @@ export default class MinecraftProfileService {
     });
   }
 
-  private async findProfileInDatabase(uuid: string): Promise<Profile | null> {
+  private async findProfileInDatabaseForUuid(uuid: string): Promise<Profile | null> {
     const profile = await this.databaseClient.profileCache.findUnique({
       select: {
         raw: true,
@@ -76,6 +105,26 @@ export default class MinecraftProfileService {
       },
       where: {
         id: uuid
+      }
+    });
+    if (profile == null) {
+      return null;
+    }
+
+    return {
+      profile: profile.raw as UuidToProfileResponse,
+      ageInSeconds: profile.ageInSeconds
+    };
+  }
+
+  private async findProfileInDatabaseForUsername(username: string): Promise<Profile | null> {
+    const profile = await this.databaseClient.profileCache.findFirst({
+      select: {
+        raw: true,
+        ageInSeconds: true
+      },
+      where: {
+        nameLowercase: username.toLowerCase()
       }
     });
     if (profile == null) {
