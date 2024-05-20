@@ -126,6 +126,7 @@ export default class MinecraftV2Router implements Router {
           const renderOverlay = parseBoolean(userInputOverlay) ?? true;
           const renderSlim = parseBoolean(userInputSlim) ?? minecraftProfile.parseTextures()?.slimPlayerModel ?? minecraftProfile.determineDefaultSkin() === 'alex';
           const renderSize = parseInteger(userInputSize) ?? 512;
+          const forceDownload = parseBoolean((request.query as any).download) ?? false;
 
           if (renderSize != null && (renderSize < 8 || renderSize > 1024)) {
             throw new BadRequestError('Size must be between 8 and 1024');
@@ -141,10 +142,17 @@ export default class MinecraftV2Router implements Router {
           }
 
           const responseResizeOptions = responseSkin === skin ? undefined : { width: renderSize, height: renderSize };
+          const responseBody = await responseSkin.toPngBuffer(responseResizeOptions);
+
+          reply.header('Content-Type', 'image/png');
+          if (forceDownload) {
+            reply.header('Content-Disposition', `attachment; filename="${profile.profile.name}${requestedSkinArea != null ? `-${requestedSkinArea}` : ''}.png"`);
+            reply.header('Content-Type', 'application/octet-stream');
+          }
+
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Content-Type', 'image/png')
-            .send(await responseSkin.toPngBuffer(responseResizeOptions));
+            .send(responseBody);
         }
       });
     });
