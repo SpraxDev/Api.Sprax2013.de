@@ -34,7 +34,7 @@
     "build": "tsc",
 
     "test": "jest --coverage",
-    "dev": "node --watch --env-file .env --loader ts-node/esm src/main.ts",
+    "dev": "node --watch --env-file .env --loader ts-node/esm --enable-source-maps src/main.ts",
 
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
