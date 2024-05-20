@@ -1,4 +1,5 @@
-import SkinImageManipulator, { Color } from './SkinImageManipulator.js';
+import type { Color } from './ImageManipulator.js';
+import SkinImageManipulator from './SkinImageManipulator.js';
 
 export default class MinecraftSkinNormalizer {
   private static readonly FIRST_SKIN_LAYER_AREAS = [
