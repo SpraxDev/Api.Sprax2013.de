@@ -1,5 +1,5 @@
-import ImageManipulator from './ImageManipulator.js';
-import SkinImageManipulator from './SkinImageManipulator.js';
+import ImageManipulator from '../manipulator/ImageManipulator.js';
+import SkinImageManipulator from '../manipulator/SkinImageManipulator.js';
 
 export default class SkinImage2DRenderer {
   async extractHead(skin: SkinImageManipulator, renderOverlay: boolean): Promise<ImageManipulator> {

@@ -7,7 +7,7 @@ import DatabaseClient from '../../database/DatabaseClient.js';
 import HttpClient from '../../http/HttpClient.js';
 import { UuidToProfileResponse } from '../MinecraftApiClient.js';
 import MinecraftProfile, { DefaultSkin } from '../value-objects/MinecraftProfile.js';
-import MinecraftSkinNormalizer from './MinecraftSkinNormalizer.js';
+import MinecraftSkinNormalizer from './manipulator/MinecraftSkinNormalizer.js';
 
 @singleton()
 export default class MinecraftSkinService {
