@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe';
 import Undici from 'undici';
+import { IS_PRODUCTION } from '../constants.js';
 import HttpResponse from './HttpResponse.js';
 import UserAgentGenerator from './UserAgentGenerator.js';
 
@@ -14,6 +15,8 @@ export interface GetRequestOptions extends RequestOptions {
 // TODO: Supporting cookies might be a good idea
 @injectable()
 export default class HttpClient {
+  private static readonly DEBUG_LOGGING = !IS_PRODUCTION;
+
   private readonly userAgent: string;
   private readonly agent: Undici.Agent;
 
@@ -27,12 +30,20 @@ export default class HttpClient {
   }
 
   async get(url: string, options?: GetRequestOptions): Promise<HttpResponse> {
+    if (HttpClient.DEBUG_LOGGING) {
+      console.debug(`[HttpClient] >> GET ${url}`);
+    }
     const response = await Undici.request(url, {
       dispatcher: this.agent,
       query: options?.query,
       headers: this.mergeWithDefaultHeaders(options?.headers)
     });
-    return HttpResponse.fromUndiciResponse(response);
+    const httpResponse = await HttpResponse.fromUndiciResponse(response);
+
+    if (HttpClient.DEBUG_LOGGING) {
+      console.debug(`[HttpClient] << Status ${httpResponse.statusCode} with ${httpResponse.body.length} bytes`);
+    }
+    return httpResponse;
   }
 
   private mergeWithDefaultHeaders(headers?: RequestOptions['headers']): Map<string, string | string[]> {
