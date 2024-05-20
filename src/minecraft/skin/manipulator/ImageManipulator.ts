@@ -141,12 +141,12 @@ export default class ImageManipulator {
     });
   }
 
-  static async createEmpty(height: number, width: number): Promise<ImageManipulator> {
+  static async createEmpty(width: number, height: number): Promise<ImageManipulator> {
     const rawImage = await Sharp({
       create: {
         channels: 4,
-        height,
         width,
+        height,
         background: {
           r: 0,
           g: 0,
