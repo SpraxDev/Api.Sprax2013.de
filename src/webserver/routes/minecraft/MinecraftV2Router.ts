@@ -81,6 +81,22 @@ export default class MinecraftV2Router implements Router {
         return input === '1' || input === 'true';
       }
 
+      function parseInteger(input: unknown): number | null {
+        if (input == null) {
+          return null;
+        }
+
+        if (typeof input !== 'string' || !/^\d+$/.test(input)) {
+          throw new BadRequestError(`Expected a number but got ${JSON.stringify(input)}`);
+        }
+
+        const result = parseInt(input, 10);
+        if (Number.isFinite(result)) {
+          return result;
+        }
+        throw new BadRequestError(`Expected a number but got ${JSON.stringify(input)}`);
+      }
+
       return FastifyWebServer.handleRestfully(request, reply, {
         get: async (): Promise<void> => {
           const profile = await this.resolveUserToProfile((request.params as any).user);
@@ -89,11 +105,19 @@ export default class MinecraftV2Router implements Router {
           }
 
           const userInputOverlay = (request.query as any).overlay;
+          const userInputSize = (request.query as any).size;
 
           const requestedSkinArea = parseSkinArea((request.params as any).skinArea);
           const renderOverlay = parseBoolean(userInputOverlay) ?? true;
+          const renderSize = parseInteger(userInputSize) ?? 512;
           if (userInputOverlay != null && requestedSkinArea == null) {
-            throw new BadRequestError('Cannot use "overlay" without specifying a "skinArea"');
+            throw new BadRequestError('Cannot use "overlay" when just requesting the skin file (without "skinArea" or "3d")');
+          }
+          if (userInputSize != null && requestedSkinArea == null) {
+            throw new BadRequestError('Cannot use "size" when just requesting the skin file (without "skinArea" or "3d")');
+          }
+          if (renderSize != null && (renderSize < 8 || renderSize > 1024)) {
+            throw new BadRequestError('Size must be between 8 and 1024');
           }
 
           const skin = await this.minecraftSkinService.fetchEffectiveSkin(new MinecraftProfile(profile.profile));
@@ -105,10 +129,11 @@ export default class MinecraftV2Router implements Router {
             responseSkin = await this.skinImage2DRenderer.extractBody(skin, renderOverlay, false /* FIXME */);
           }
 
+          const responseResizeOptions = responseSkin === skin ? undefined : { width: renderSize, height: renderSize };
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
             .header('Content-Type', 'image/png')
-            .send(await responseSkin.toPngBuffer());
+            .send(await responseSkin.toPngBuffer(responseResizeOptions));
         }
       });
     });
