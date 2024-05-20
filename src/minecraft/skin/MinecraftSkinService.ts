@@ -8,6 +8,7 @@ import HttpClient from '../../http/HttpClient.js';
 import { UuidToProfileResponse } from '../MinecraftApiClient.js';
 import MinecraftProfile, { DefaultSkin } from '../value-objects/MinecraftProfile.js';
 import MinecraftSkinNormalizer from './manipulator/MinecraftSkinNormalizer.js';
+import SkinImageManipulator from './manipulator/SkinImageManipulator.js';
 
 @singleton()
 export default class MinecraftSkinService {
@@ -21,7 +22,7 @@ export default class MinecraftSkinService {
   ) {
   }
 
-  async fetchEffectiveSkin(profile: MinecraftProfile): Promise<Buffer> {
+  async fetchEffectiveSkin(profile: MinecraftProfile): Promise<SkinImageManipulator> {
     const skinUrl = profile.parseTextures()?.getSecureSkinUrl();
     if (skinUrl == null) {
       return this.getDefaultSkin(profile.determineDefaultSkin());
@@ -30,7 +31,7 @@ export default class MinecraftSkinService {
     return this.fetchSkin(skinUrl, profile.getTexturesProperty() ?? undefined);
   }
 
-  private async fetchSkin(skinUrl: string, textureProperty?: UuidToProfileResponse['properties'][0]): Promise<Buffer> {
+  private async fetchSkin(skinUrl: string, textureProperty?: UuidToProfileResponse['properties'][0]): Promise<SkinImageManipulator> {
     let normalizedSkin = await this.findNormalizedSkinByUrl(skinUrl);
     if (normalizedSkin != null) {
       return normalizedSkin;
@@ -42,16 +43,16 @@ export default class MinecraftSkinService {
     }
 
     normalizedSkin = await this.minecraftSkinNormalizer.normalizeSkin(skinImage.body);
-    await this.persistSkin(skinUrl, skinImage.body, normalizedSkin, textureProperty);
+    await this.persistSkin(skinUrl, skinImage.body, await normalizedSkin.toPngBuffer(), textureProperty);
 
     return normalizedSkin;
   }
 
-  private getDefaultSkin(skin: DefaultSkin): Promise<Buffer> {
+  private async getDefaultSkin(skin: DefaultSkin): Promise<SkinImageManipulator> {
     if (skin === 'alex') {
-      return MinecraftSkinService.alex;
+      return SkinImageManipulator.forImage(await MinecraftSkinService.alex);
     }
-    return MinecraftSkinService.steve;
+    return SkinImageManipulator.forImage(await MinecraftSkinService.steve);
   }
 
   private async persistSkin(
@@ -104,12 +105,15 @@ export default class MinecraftSkinService {
     });
   }
 
-  private async findNormalizedSkinByUrl(skinUrl: string): Promise<Buffer | null> {
+  private async findNormalizedSkinByUrl(skinUrl: string): Promise<SkinImageManipulator | null> {
     const skinInDatabase = await this.databaseClient.skinUrl.findUnique({
       where: { url: skinUrl },
       select: { image: { select: { normalizedImage: true } } }
     });
-    return skinInDatabase?.image.normalizedImage ?? null;
+    if (skinInDatabase?.image.normalizedImage != null) {
+      return SkinImageManipulator.forImage(skinInDatabase.image.normalizedImage);
+    }
+    return null;
   }
 
   private computeSha256(buffer: Buffer): Buffer {

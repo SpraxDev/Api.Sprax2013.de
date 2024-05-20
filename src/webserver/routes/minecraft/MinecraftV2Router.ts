@@ -4,7 +4,9 @@ import BadRequestError from '../../../http/errors/BadRequestError.js';
 import NotFoundError from '../../../http/errors/NotFoundError.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService, { type Profile } from '../../../minecraft/MinecraftProfileService.js';
+import type ImageManipulator from '../../../minecraft/skin/manipulator/ImageManipulator.js';
 import MinecraftSkinService from '../../../minecraft/skin/MinecraftSkinService.js';
+import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
 import MinecraftProfile from '../../../minecraft/value-objects/MinecraftProfile.js';
 import FastifyWebServer from '../../FastifyWebServer.js';
 import Router from '../Router.js';
@@ -13,7 +15,8 @@ import Router from '../Router.js';
 export default class MinecraftV2Router implements Router {
   constructor(
     private readonly minecraftProfileService: MinecraftProfileService,
-    private readonly minecraftSkinService: MinecraftSkinService
+    private readonly minecraftSkinService: MinecraftSkinService,
+    private readonly skinImage2DRenderer: SkinImage2DRenderer
   ) {
   }
 
@@ -55,7 +58,29 @@ export default class MinecraftV2Router implements Router {
       });
     });
 
-    server.all('/mc/v2/skin/:user', (request, reply): Promise<void> => {
+    server.all('/mc/v2/skin/:user/:skinArea?', (request, reply): Promise<void> => {
+      function parseSkinArea(input: unknown): 'head' | 'body' | null {
+        if (input == null) {
+          return null;
+        }
+
+        if (input !== 'head' && input !== 'body') {
+          throw new BadRequestError(`Only supports "head" or "body" as skin area but got ${JSON.stringify(input)}`);
+        }
+        return input;
+      }
+
+      function parseBoolean(input: unknown): boolean | null {
+        if (input == null) {
+          return null;
+        }
+
+        if (input !== '1' && input !== '0' && input !== 'true' && input !== 'false') {
+          throw new BadRequestError(`Expected a "1", "0", "true" or "false" but got ${JSON.stringify(input)}`);
+        }
+        return input === '1' || input === 'true';
+      }
+
       return FastifyWebServer.handleRestfully(request, reply, {
         get: async (): Promise<void> => {
           const profile = await this.resolveUserToProfile((request.params as any).user);
@@ -63,11 +88,27 @@ export default class MinecraftV2Router implements Router {
             throw new NotFoundError(`Unable to find a profile for the given UUID or username`);
           }
 
-          const pngImage = await this.minecraftSkinService.fetchEffectiveSkin(new MinecraftProfile(profile.profile));
+          const userInputOverlay = (request.query as any).overlay;
+
+          const requestedSkinArea = parseSkinArea((request.params as any).skinArea);
+          const renderOverlay = parseBoolean(userInputOverlay) ?? true;
+          if (userInputOverlay != null && requestedSkinArea == null) {
+            throw new BadRequestError('Cannot use "overlay" without specifying a "skinArea"');
+          }
+
+          const skin = await this.minecraftSkinService.fetchEffectiveSkin(new MinecraftProfile(profile.profile));
+          let responseSkin: ImageManipulator = skin;
+
+          if (requestedSkinArea === 'head') {
+            responseSkin = await this.skinImage2DRenderer.extractHead(skin, renderOverlay);
+          } else if (requestedSkinArea === 'body') {
+            responseSkin = await this.skinImage2DRenderer.extractBody(skin, renderOverlay, false /* FIXME */);
+          }
+
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
             .header('Content-Type', 'image/png')
-            .send(pngImage);
+            .send(await responseSkin.toPngBuffer());
         }
       });
     });

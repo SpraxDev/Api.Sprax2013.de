@@ -17,14 +17,14 @@ export default class MinecraftSkinNormalizer {
     { x: 36, y: 48, w: 8, h: 4 }
   ];
 
-  async normalizeSkin(skin: Buffer): Promise<Buffer> {
+  async normalizeSkin(skin: Buffer): Promise<SkinImageManipulator> {
     let skinImage = await SkinImageManipulator.forImage(skin);
 
     skinImage = await this.upgradeSkin(skinImage);
     this.removeUnusedSkinParts(skinImage);
     this.correctAlphaForFirstSkinLayer(skinImage);
 
-    return skinImage.toPngBuffer();
+    return skinImage;
   }
 
   private async upgradeSkin(skinImageManipulator: SkinImageManipulator): Promise<SkinImageManipulator> {
