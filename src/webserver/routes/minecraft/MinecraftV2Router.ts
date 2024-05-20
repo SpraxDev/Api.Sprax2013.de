@@ -103,19 +103,30 @@ export default class MinecraftV2Router implements Router {
           if (profile == null) {
             throw new NotFoundError(`Unable to find a profile for the given UUID or username`);
           }
+          const minecraftProfile = new MinecraftProfile(profile.profile);
 
           const userInputOverlay = (request.query as any).overlay;
+          const userInputSlim = (request.query as any).slim;
           const userInputSize = (request.query as any).size;
 
           const requestedSkinArea = parseSkinArea((request.params as any).skinArea);
-          const renderOverlay = parseBoolean(userInputOverlay) ?? true;
-          const renderSize = parseInteger(userInputSize) ?? 512;
           if (userInputOverlay != null && requestedSkinArea == null) {
             throw new BadRequestError('Cannot use "overlay" when just requesting the skin file (without "skinArea" or "3d")');
           }
           if (userInputSize != null && requestedSkinArea == null) {
             throw new BadRequestError('Cannot use "size" when just requesting the skin file (without "skinArea" or "3d")');
           }
+          if (userInputSlim != null && requestedSkinArea == null) {
+            throw new BadRequestError('Cannot use "slim" when just requesting the skin file (without "skinArea" or "3d")');
+          }
+          if (userInputSlim != null && requestedSkinArea === 'head') {
+            throw new BadRequestError('Cannot use "slim" when requesting the rendered head');
+          }
+
+          const renderOverlay = parseBoolean(userInputOverlay) ?? true;
+          const renderSlim = parseBoolean(userInputSlim) ?? minecraftProfile.parseTextures()?.slimPlayerModel ?? minecraftProfile.determineDefaultSkin() === 'alex';
+          const renderSize = parseInteger(userInputSize) ?? 512;
+
           if (renderSize != null && (renderSize < 8 || renderSize > 1024)) {
             throw new BadRequestError('Size must be between 8 and 1024');
           }
@@ -126,7 +137,7 @@ export default class MinecraftV2Router implements Router {
           if (requestedSkinArea === 'head') {
             responseSkin = await this.skinImage2DRenderer.extractHead(skin, renderOverlay);
           } else if (requestedSkinArea === 'body') {
-            responseSkin = await this.skinImage2DRenderer.extractBody(skin, renderOverlay, false /* FIXME */);
+            responseSkin = await this.skinImage2DRenderer.extractBody(skin, renderOverlay, renderSlim);
           }
 
           const responseResizeOptions = responseSkin === skin ? undefined : { width: renderSize, height: renderSize };
