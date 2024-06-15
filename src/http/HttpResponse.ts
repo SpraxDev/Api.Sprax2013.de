@@ -1,4 +1,4 @@
-import Undici from 'undici';
+import type * as Undici from 'undici';
 import type { IncomingHttpHeaders } from 'undici/types/header.js';
 
 export default class HttpResponse {

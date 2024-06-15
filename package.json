@@ -33,7 +33,7 @@
   "scripts": {
     "build": "tsc",
 
-    "test": "jest --coverage",
+    "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" jest --coverage",
     "dev": "node --watch --env-file .env --loader ts-node/esm --enable-source-maps src/main.ts",
 
     "prisma:generate": "prisma generate",

@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe';
-import Undici from 'undici';
+import * as Undici from 'undici';
 import { IS_PRODUCTION } from '../constants.js';
 import HttpResponse from './HttpResponse.js';
 import UserAgentGenerator from './UserAgentGenerator.js';
