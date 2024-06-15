@@ -4,6 +4,7 @@ import BadRequestError from '../../../http/errors/BadRequestError.js';
 import NotFoundError from '../../../http/errors/NotFoundError.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService, { type Profile } from '../../../minecraft/MinecraftProfileService.js';
+import ServerBlocklistService from '../../../minecraft/ServerBlocklistService.js';
 import type ImageManipulator from '../../../minecraft/skin/manipulator/ImageManipulator.js';
 import MinecraftSkinService from '../../../minecraft/skin/MinecraftSkinService.js';
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
@@ -16,7 +17,8 @@ export default class MinecraftV2Router implements Router {
   constructor(
     private readonly minecraftProfileService: MinecraftProfileService,
     private readonly minecraftSkinService: MinecraftSkinService,
-    private readonly skinImage2DRenderer: SkinImage2DRenderer
+    private readonly skinImage2DRenderer: SkinImage2DRenderer,
+    private readonly serverBlocklistService: ServerBlocklistService
   ) {
   }
 
@@ -153,6 +155,16 @@ export default class MinecraftV2Router implements Router {
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
             .send(responseBody);
+        }
+      });
+    });
+
+    server.all('/mc/v2/server/blocklist', (request, reply): Promise<void> => {
+      return FastifyWebServer.handleRestfully(request, reply, {
+        get: async (): Promise<void> => {
+          const blocklist = await this.serverBlocklistService.provideBlocklist();
+          return reply
+            .send(blocklist);
         }
       });
     });
