@@ -24,6 +24,7 @@ export default class HttpClient {
     this.userAgent = UserAgentGenerator.generateDefault();
     this.agent = new Undici.Agent({
       maxRedirections: 5,
+      maxResponseSize: 20 * 1024 * 1024 /* 20 MiB */,
       bodyTimeout: 15_000,
       headersTimeout: 15_000
     });
