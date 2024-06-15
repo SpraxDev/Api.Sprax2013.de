@@ -15,6 +15,7 @@ export default class ServerBlocklistPersister {
 
     await this.databaseClient.$transaction(async (transaction) => {
       await transaction.$executeRaw`LOCK TABLE server_blocklist_changes IN EXCLUSIVE MODE NOWAIT;`;
+      await transaction.$executeRaw`REFRESH MATERIALIZED VIEW server_blocklist;`;
 
       const wroteAnyChanges1 = await this.updateHashesThatAreNoLongerBlocked(transaction, blockListHashes);
       const wroteAnyChanges2 = await this.updateHashesThatAreNowBlocked(transaction, blockListHashes);
