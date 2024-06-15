@@ -1,7 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { autoInjectable } from 'tsyringe';
-import BadRequestError from '../../../http/errors/BadRequestError.js';
-import NotFoundError from '../../../http/errors/NotFoundError.js';
+import { BadRequestError, NotFoundError } from '../../../http/errors/HttpErrors.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService, { type Profile } from '../../../minecraft/MinecraftProfileService.js';
 import ServerBlocklistService from '../../../minecraft/ServerBlocklistService.js';

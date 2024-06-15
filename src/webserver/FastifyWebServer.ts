@@ -1,9 +1,8 @@
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { injectAll, singleton } from 'tsyringe';
-import HttpError from '../http/errors/HttpError.js';
-import NotFoundError from '../http/errors/NotFoundError.js';
 import SentrySdk from '../SentrySdk.js';
 import Router from './routes/Router.js';
+import { HttpError, NotFoundError } from '../http/errors/HttpErrors.js';
 
 @singleton()
 export default class FastifyWebServer {
