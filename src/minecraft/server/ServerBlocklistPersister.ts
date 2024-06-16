@@ -2,7 +2,6 @@ import { Prisma } from '@prisma/client';
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../../database/DatabaseClient.js';
 
-// TODO: Call this every 5 minutes and fetch the blocklist for API responses from the database instead of Mojang's API
 @singleton()
 export default class ServerBlocklistPersister {
   constructor(
