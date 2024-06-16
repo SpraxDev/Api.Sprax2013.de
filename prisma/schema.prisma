@@ -60,3 +60,19 @@ model SkinImage {
 
   @@map("skin_images")
 }
+
+model ServerBlocklistChanges {
+  sha1         Bytes
+  changeIsAdd  Boolean  @map("change_is_add")
+  changeSeenAt DateTime @default(now()) @map("change_seen_at")
+
+  @@id([sha1, changeSeenAt])
+  @@index([sha1, changeSeenAt(sort: Desc)])
+  @@map("server_blocklist_changes")
+}
+
+view ServerBlocklist {
+  sha1 Bytes @id
+
+  @@map("server_blocklist")
+}
