@@ -194,6 +194,23 @@ export default class MinecraftV2Router implements Router {
         }
       });
     });
+
+    server.all('/mc/v2/server/blocklist/discovered', (request, reply): Promise<void> => {
+      return FastifyWebServer.handleRestfully(request, reply, {
+        get: async (): Promise<void> => {
+          const blocklist = await this.serverBlocklistService.provideBlocklistForKnownHosts();
+          const responseBody: { [key: string]: string } = {};
+          for (const listEntry of blocklist) {
+            if (listEntry.host != null) {
+              responseBody[listEntry.sha1.toString('hex')] = listEntry.host;
+            }
+          }
+
+          return reply
+            .send(responseBody);
+        }
+      });
+    });
   }
 
   private async resolveUserToProfile(inputUser: unknown): Promise<Profile | null> {

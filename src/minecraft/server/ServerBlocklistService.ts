@@ -28,8 +28,8 @@ export default class ServerBlocklistService {
       .map(blocklistEntry => blocklistEntry.sha1.toString('hex'));
   }
 
-  async provideBlocklistWithHost(): Promise<{ sha1: Buffer, host: string | null }[]> {
-    return this.databaseClient.serverBlocklist.findMany();
+  async provideBlocklistForKnownHosts(): Promise<{ sha1: Buffer, host: string | null }[]> {
+    return this.databaseClient.serverBlocklist.findMany({ where: { host: { not: null } } });
   }
 
   async checkBlocklist(host: string): Promise<Map<string, boolean>> {
