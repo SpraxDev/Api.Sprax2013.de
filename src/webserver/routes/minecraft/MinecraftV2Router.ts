@@ -3,7 +3,7 @@ import { autoInjectable } from 'tsyringe';
 import { BadRequestError, NotFoundError } from '../../../http/errors/HttpErrors.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService, { type Profile } from '../../../minecraft/MinecraftProfileService.js';
-import ServerBlocklistService from '../../../minecraft/ServerBlocklistService.js';
+import ServerBlocklistService, { InvalidHostError } from '../../../minecraft/server/ServerBlocklistService.js';
 import type ImageManipulator from '../../../minecraft/skin/manipulator/ImageManipulator.js';
 import MinecraftSkinService from '../../../minecraft/skin/MinecraftSkinService.js';
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
@@ -164,6 +164,33 @@ export default class MinecraftV2Router implements Router {
           const blocklist = await this.serverBlocklistService.provideBlocklist();
           return reply
             .send(blocklist);
+        }
+      });
+    });
+
+    server.all('/mc/v2/server/blocklist/check', (request, reply): Promise<void> => {
+      return FastifyWebServer.handleRestfully(request, reply, {
+        get: async (): Promise<void> => {
+          const inputHost = (request.query as any).host;
+          if (typeof inputHost !== 'string') {
+            throw new BadRequestError('Missing or invalid query parameter "host"');
+          }
+
+          let blocklist;
+          try {
+            blocklist = await this.serverBlocklistService.checkBlocklist(inputHost);
+          } catch (err: any) {
+            if (err instanceof InvalidHostError) {
+              throw new BadRequestError(err.message);
+            }
+            throw err;
+          }
+          const responseBody: { [key: string]: boolean } = {};
+          for (const [host, isBlocked] of blocklist) {
+            responseBody[host] = isBlocked;
+          }
+          return reply
+            .send(responseBody);
         }
       });
     });
