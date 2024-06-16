@@ -36,10 +36,11 @@ export default class ServerBlocklistService {
     host = this.normalizeHost(host);
 
     let hashesToCheck: Map<string, string>;
+    let additionalHostsToCheck: Map<string, string> | null = null;
     if (Net.isIPv4(host)) {
       hashesToCheck = this.determineHostHashesForIp4(host);
     } else if (Net.isIPv6(host)) {
-      hashesToCheck = new Map<string, string>([[host, this.hashHost(host)]]);
+      hashesToCheck = new Map([this.hashHost(host)]);
     } else {
       const fqdn = Url.domainToASCII(host);
       if (!this.fqdnService.validateFqdn(fqdn)) {
@@ -47,21 +48,26 @@ export default class ServerBlocklistService {
       }
 
       hashesToCheck = this.determineHostHashesForFqdn(fqdn);
+      additionalHostsToCheck = this.determineAdditionalHostHashesForFqdn(fqdn);
     }
+
+    const effectiveHostsToCheck = new Map([...hashesToCheck, ...(additionalHostsToCheck ?? [])]);
 
     const blocklist = await this.provideBlocklist();
     const result = new Map<string, boolean>();
     let atLeastOneHostIsBlocked = false;
-    for (const [hostToCheck, hash] of hashesToCheck) {
+    for (const [hostToCheck, hash] of effectiveHostsToCheck) {
       const hostBlocked = blocklist.includes(hash);
-      result.set(hostToCheck, hostBlocked);
-
       if (hostBlocked) {
         atLeastOneHostIsBlocked = true;
       }
+
+      if (hashesToCheck.has(hostToCheck)) {
+        result.set(hostToCheck, hostBlocked);
+      }
     }
 
-    const newHostHashesPersisted = await this.persistHostHashes(hashesToCheck);
+    const newHostHashesPersisted = await this.persistHostHashes(effectiveHostsToCheck);
     if (newHostHashesPersisted && atLeastOneHostIsBlocked) {
       await this.serverBlocklistPersister.updateMaterializedView();
     }
@@ -96,11 +102,11 @@ export default class ServerBlocklistService {
     const hostHashes = new Map<string, string>();
 
     let currentHost = host;
-    hostHashes.set(currentHost, this.hashHost(currentHost));
+    hostHashes.set(...this.hashHost(currentHost));
 
     while (currentHost.lastIndexOf('.') !== -1) {
       currentHost = currentHost.substring(0, currentHost.lastIndexOf('.'));
-      hostHashes.set(`${currentHost}.*`, this.hashHost(`${currentHost}.*`));
+      hostHashes.set(...this.hashHost(`${currentHost}.*`));
     }
     return hostHashes;
   }
@@ -109,20 +115,38 @@ export default class ServerBlocklistService {
     const hostHashes = new Map<string, string>();
 
     let currentHost = host;
-    hostHashes.set(currentHost, this.hashHost(currentHost));
-    hostHashes.set(`*.${currentHost}`, this.hashHost(`*.${currentHost}`));
+    hostHashes.set(...this.hashHost(currentHost));
+    hostHashes.set(...this.hashHost(`*.${currentHost}`));
 
     while (currentHost.indexOf('.') !== -1) {
       currentHost = currentHost.substring(currentHost.indexOf('.') + 1);
-      hostHashes.set(`*.${currentHost}`, this.hashHost(`*.${currentHost}`));
+      hostHashes.set(...this.hashHost(`*.${currentHost}`));
     }
     return hostHashes;
   }
 
-  private hashHost(host: string): string {
+  private determineAdditionalHostHashesForFqdn(fqdn: string): Map<string, string> {
+    const hosts = [
+      `www.${fqdn}`,
+      `play.${fqdn}`,
+      `mc.${fqdn}`,
+      `minecraft.${fqdn}`,
+      `eu.${fqdn}`,
+      `us.${fqdn}`
+    ];
+
+    const result = new Map<string, string>();
+    for (const host of hosts) {
+      result.set(...this.hashHost(host));
+      result.set(...this.hashHost(`*.${host}`));
+    }
+    return result;
+  }
+
+  private hashHost(host: string): [string, string] {
     const hash = Crypto.createHash('sha1');
     hash.update(host.toLowerCase());  // Node.js uses UTF-8 here, but the Minecraft client actually uses ISO-8859-1
-    return hash.digest('hex');
+    return [host, hash.digest('hex')];
   }
 
   private normalizeHost(host: string): string {
