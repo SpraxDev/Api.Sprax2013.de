@@ -3,7 +3,6 @@ import Net from 'node:net';
 import Url from 'node:url';
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../../database/DatabaseClient.js';
-import MinecraftApiClient from '../MinecraftApiClient.js';
 import FqdnValidator from './FqdnValidator.js';
 import ServerBlocklistPersister from './ServerBlocklistPersister.js';
 
@@ -16,7 +15,6 @@ export class InvalidHostError extends Error {
 @singleton()
 export default class ServerBlocklistService {
   constructor(
-    private readonly minecraftApiClient: MinecraftApiClient,
     private readonly fqdnService: FqdnValidator,
     private readonly databaseClient: DatabaseClient,
     private readonly serverBlocklistPersister: ServerBlocklistPersister
