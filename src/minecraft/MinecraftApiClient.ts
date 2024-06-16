@@ -54,9 +54,13 @@ export default class MinecraftApiClient {
       throw new Error(`Failed to get list of blocked servers: {status=${response.statusCode}, body=${response.parseBodyAsText()}}`);
     }
 
-    return response
+    const hashes = response
       .parseBodyAsText()
-      .split('\n')
-      .filter((line) => line.length > 0);  // TODO: verify all lines are valid SHA-1 hashes
+      .trim()
+      .split('\n');
+    if (!hashes.every(hash => hash.length === 40)) {
+      throw new Error(`Failed to get list of blocked servers: One or more lines are not valid SHA-1 hashes`);
+    }
+    return hashes;
   }
 }
