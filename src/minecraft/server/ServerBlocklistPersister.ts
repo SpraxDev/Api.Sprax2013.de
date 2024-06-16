@@ -15,14 +15,18 @@ export default class ServerBlocklistPersister {
 
     await this.databaseClient.$transaction(async (transaction) => {
       await transaction.$executeRaw`LOCK TABLE server_blocklist_changes IN EXCLUSIVE MODE NOWAIT;`;
-      await transaction.$executeRaw`REFRESH MATERIALIZED VIEW server_blocklist;`;
+      await this.updateMaterializedView(transaction);
 
       const wroteAnyChanges1 = await this.updateHashesThatAreNoLongerBlocked(transaction, blockListHashes);
       const wroteAnyChanges2 = await this.updateHashesThatAreNowBlocked(transaction, blockListHashes);
       if (wroteAnyChanges1 || wroteAnyChanges2) {
-        await transaction.$executeRaw`REFRESH MATERIALIZED VIEW server_blocklist;`;
+        await this.updateMaterializedView(transaction);
       }
     });
+  }
+
+  async updateMaterializedView(transaction?: Prisma.TransactionClient): Promise<void> {
+    await (transaction ?? this.databaseClient).$executeRaw`REFRESH MATERIALIZED VIEW server_blocklist;`;
   }
 
   private async updateHashesThatAreNoLongerBlocked(transaction: Prisma.TransactionClient, blocklist: Buffer[]): Promise<boolean> {

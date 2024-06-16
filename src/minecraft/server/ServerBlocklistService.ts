@@ -2,8 +2,10 @@ import Crypto from 'node:crypto';
 import Net from 'node:net';
 import Url from 'node:url';
 import { singleton } from 'tsyringe';
+import DatabaseClient from '../../database/DatabaseClient.js';
 import MinecraftApiClient from '../MinecraftApiClient.js';
 import FqdnValidator from './FqdnValidator.js';
+import ServerBlocklistPersister from './ServerBlocklistPersister.js';
 
 export class InvalidHostError extends Error {
   constructor() {
@@ -15,7 +17,9 @@ export class InvalidHostError extends Error {
 export default class ServerBlocklistService {
   constructor(
     private readonly minecraftApiClient: MinecraftApiClient,
-    private readonly fqdnService: FqdnValidator
+    private readonly fqdnService: FqdnValidator,
+    private readonly databaseClient: DatabaseClient,
+    private readonly serverBlocklistPersister: ServerBlocklistPersister
   ) {
   }
 
@@ -42,10 +46,45 @@ export default class ServerBlocklistService {
 
     const blocklist = await this.provideBlocklist();
     const result = new Map<string, boolean>();
+    let atLeastOneHostIsBlocked = false;
     for (const [hostToCheck, hash] of hashesToCheck) {
-      result.set(hostToCheck, blocklist.includes(hash));
+      const hostBlocked = blocklist.includes(hash);
+      result.set(hostToCheck, hostBlocked);
+
+      if (hostBlocked) {
+        atLeastOneHostIsBlocked = true;
+      }
     }
+
+    const newHostHashesPersisted = await this.persistHostHashes(hashesToCheck);
+    if (newHostHashesPersisted && atLeastOneHostIsBlocked) {
+      await this.serverBlocklistPersister.updateMaterializedView();
+    }
+
     return result;
+  }
+
+  private async persistHostHashes(hostHashes: Map<string, string>): Promise<boolean> {
+    return this.databaseClient.$transaction(async (transaction) => {
+      const persistedHosts = (await transaction.serverBlocklistHostHashes.findMany({
+        where: { sha1: { in: Array.from(hostHashes.values()).map(v => Buffer.from(v, 'hex')) } },
+        select: { host: true }
+      }))
+        .map(hostHash => hostHash.host);
+
+      const hostsToPersist = Array.from(hostHashes.keys()).filter(host => !persistedHosts.includes(host));
+      if (hostsToPersist.length <= 0) {
+        return false;
+      }
+
+      await transaction.serverBlocklistHostHashes.createMany({
+        data: hostsToPersist.map(host => ({
+          sha1: Buffer.from(hostHashes.get(host)!, 'hex'),
+          host
+        }))
+      });
+      return true;
+    });
   }
 
   private determineHostHashesForIp4(host: string): Map<string, string> {

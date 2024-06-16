@@ -71,8 +71,18 @@ model ServerBlocklistChanges {
   @@map("server_blocklist_changes")
 }
 
+model ServerBlocklistHostHashes {
+  sha1      Bytes    @id
+  host      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([host])
+  @@map("server_blocklist_host_hashes")
+}
+
 view ServerBlocklist {
-  sha1 Bytes @id
+  sha1 Bytes   @id
+  host String?
 
   @@map("server_blocklist")
 }
