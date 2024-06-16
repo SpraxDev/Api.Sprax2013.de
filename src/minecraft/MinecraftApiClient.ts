@@ -49,7 +49,7 @@ export default class MinecraftApiClient {
   }
 
   async fetchListOfBlockedServers(): Promise<string[]> {
-    const response = await this.httpApiClient.get('https://sessionserver.mojang.com/blockedservers');
+    const response = await this.httpApiClient.get('https://sessionserver.mojang.com/blockedservers', { headers: { 'Accept': 'text/plain' } });
     if (!response.ok) {
       throw new Error(`Failed to get list of blocked servers: {status=${response.statusCode}, body=${response.parseBodyAsText()}}`);
     }
