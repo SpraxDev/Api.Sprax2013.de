@@ -24,7 +24,12 @@ export default class ServerBlocklistService {
   }
 
   async provideBlocklist(): Promise<string[]> {
-    return this.minecraftApiClient.fetchListOfBlockedServers();
+    return (await this.databaseClient.serverBlocklist.findMany({ select: { sha1: true } }))
+      .map(blocklistEntry => blocklistEntry.sha1.toString('hex'));
+  }
+
+  async provideBlocklistWithHost(): Promise<{ sha1: Buffer, host: string | null }[]> {
+    return this.databaseClient.serverBlocklist.findMany();
   }
 
   async checkBlocklist(host: string): Promise<Map<string, boolean>> {
