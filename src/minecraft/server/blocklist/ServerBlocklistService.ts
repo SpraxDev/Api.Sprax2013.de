@@ -2,7 +2,7 @@ import Crypto from 'node:crypto';
 import Net from 'node:net';
 import Url from 'node:url';
 import { singleton } from 'tsyringe';
-import DatabaseClient from '../../database/DatabaseClient.js';
+import DatabaseClient from '../../../database/DatabaseClient.js';
 import FqdnValidator from './FqdnValidator.js';
 import ServerBlocklistPersister from './ServerBlocklistPersister.js';
 

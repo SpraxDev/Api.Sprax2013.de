@@ -1,7 +1,7 @@
 import Crypto from 'node:crypto';
 import { injectable } from 'tsyringe';
 import MinecraftApiClient from '../../minecraft/MinecraftApiClient.js';
-import ServerBlocklistPersister from '../../minecraft/server/ServerBlocklistPersister.js';
+import ServerBlocklistPersister from '../../minecraft/server/blocklist/ServerBlocklistPersister.js';
 import Task, { TaskPriority } from './Task.js';
 
 @injectable()

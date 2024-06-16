@@ -1,4 +1,4 @@
-import FqdnValidator from '../../../src/minecraft/server/FqdnValidator.js';
+import FqdnValidator from '../../../../src/minecraft/server/blocklist/FqdnValidator.js';
 
 describe('valid FQDNs', () => {
   test.each([

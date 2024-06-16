@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { singleton } from 'tsyringe';
-import DatabaseClient from '../../database/DatabaseClient.js';
+import DatabaseClient from '../../../database/DatabaseClient.js';
 
 @singleton()
 export default class ServerBlocklistPersister {

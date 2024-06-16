@@ -3,7 +3,7 @@ import { autoInjectable } from 'tsyringe';
 import { BadRequestError, NotFoundError } from '../../../http/errors/HttpErrors.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService, { type Profile } from '../../../minecraft/MinecraftProfileService.js';
-import ServerBlocklistService, { InvalidHostError } from '../../../minecraft/server/ServerBlocklistService.js';
+import ServerBlocklistService, { InvalidHostError } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
 import type ImageManipulator from '../../../minecraft/skin/manipulator/ImageManipulator.js';
 import MinecraftSkinService from '../../../minecraft/skin/MinecraftSkinService.js';
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
