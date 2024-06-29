@@ -49,6 +49,7 @@
     "@sentry/node": "^7.117.0",
     "@sentry/profiling-node": "^7.117.0",
     "fastify": "^4.28.0",
+    "ipaddr.js": "^2.2.0",
     "reflect-metadata": "^0.2.2",
     "sharp": "^0.33.4",
     "tsyringe": "^4.8.0",
