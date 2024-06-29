@@ -1,9 +1,16 @@
 import { FastifyInstance } from 'fastify';
+import Net from 'node:net';
 import { autoInjectable } from 'tsyringe';
 import { BadRequestError, NotFoundError } from '../../../http/errors/HttpErrors.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService, { type Profile } from '../../../minecraft/MinecraftProfileService.js';
-import ServerBlocklistService, { InvalidHostError } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
+import ServerBlocklistService, {
+  InvalidHostError
+} from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
+import ServerStatusPingError from '../../../minecraft/server/ping/error/ServerStatusPingError.js';
+import MinecraftServerStatusPinger from '../../../minecraft/server/ping/MinecraftServerStatusPinger.js';
+import HostNotResolvableError from '../../../minecraft/server/ping/resolve/HostNotResolvableError.js';
+import ResolvedToNonUnicastIpError from '../../../minecraft/server/ping/resolve/ResolvedToNonUnicastIpError.js';
 import type ImageManipulator from '../../../minecraft/skin/manipulator/ImageManipulator.js';
 import MinecraftSkinService from '../../../minecraft/skin/MinecraftSkinService.js';
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
@@ -17,7 +24,8 @@ export default class MinecraftV2Router implements Router {
     private readonly minecraftProfileService: MinecraftProfileService,
     private readonly minecraftSkinService: MinecraftSkinService,
     private readonly skinImage2DRenderer: SkinImage2DRenderer,
-    private readonly serverBlocklistService: ServerBlocklistService
+    private readonly serverBlocklistService: ServerBlocklistService,
+    private readonly minecraftServerStatusPinger: MinecraftServerStatusPinger
   ) {
   }
 
@@ -208,6 +216,53 @@ export default class MinecraftV2Router implements Router {
 
           return reply
             .send(responseBody);
+        }
+      });
+    });
+
+    server.all('/mc/v2/server/ping', (request, reply): Promise<void> => {
+      const validateHost = (inputHost: string) => {
+        if (Net.isIP(inputHost) > 0) {
+          return;
+        }
+
+        if (inputHost.includes(':')) {
+          throw new BadRequestError('Invalid host – If you want to provide a port, use the "port" query parameter');
+        }
+      };
+
+      return FastifyWebServer.handleRestfully(request, reply, {
+        get: async (): Promise<void> => {
+          const inputHost = (request.query as any).host;
+          if (typeof inputHost !== 'string') {
+            throw new BadRequestError('Missing or invalid query parameter "host"');
+          }
+          const inputPort = (request.query as any).port;
+          if (inputPort != null && (typeof inputPort !== 'string' || !inputPort.match(/^\d+$/))) {
+            throw new BadRequestError('Missing or invalid query parameter "port"');
+          }
+
+          const port = inputPort != null ? parseInt(inputPort, 10) : 25565;
+
+          validateHost(inputHost);
+
+          try {
+            const serverStatus = await this.minecraftServerStatusPinger.ping(inputHost, port);
+            return reply
+              .send(serverStatus);
+          } catch (err: any) {
+            if (err instanceof ResolvedToNonUnicastIpError) {
+              throw new BadRequestError('Invalid host – The given host resolves to a non-unicast IP range');
+            }
+            if (err instanceof ServerStatusPingError || err instanceof HostNotResolvableError) {
+              // FIXME: Unify success and "error" response content/layout
+              return reply
+                .status(200)
+                .send({ online: false });
+            }
+
+            throw err;
+          }
         }
       });
     });
