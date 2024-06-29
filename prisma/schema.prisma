@@ -86,3 +86,46 @@ view ServerBlocklist {
 
   @@map("server_blocklist")
 }
+
+model ServerStatusHistory {
+  id                BigInt   @id @default(autoincrement())
+  host              String
+  port              Int
+  rttInMs           Int      @map("rtt_in_ms")
+  resolvedIp        String   @map("resolved_ip") @db.Inet
+  wasLegacyProtocol Boolean  @map("was_legacy_protocol")
+  protocolVersion   Int      @map("protocol_version")
+  onlinePlayers     Int      @map("online_players")
+  faviconSha256     Bytes?   @map("favicon_sha256")
+  rawStatus         Json     @map("raw_status") // TODO: We probably want to delete the contents after some time to save space?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  favicon ServerStatusFavicon? @relation(fields: [faviconSha256], references: [sha256])
+
+  @@index([host, port])
+  @@index([createdAt(sort: Desc)])
+  @@map("server_status_history")
+}
+
+model ServerStatusFavicon {
+  sha256 Bytes @id
+  image  Bytes
+
+  ServerStatusHistory ServerStatusHistory[]
+
+  @@map("server_status_favicon")
+}
+
+view ServerStatusCache {
+  id                BigInt  @id
+  host              String
+  port              Int
+  rttInMs           Int     @map("rtt_in_ms")
+  resolvedIp        String  @map("resolved_ip") @db.Inet
+  wasLegacyProtocol Boolean @map("was_legacy_protocol")
+  rawStatus         Json    @map("raw_status")
+
+  ageInSeconds Int @map("age_in_seconds")
+
+  @@map("server_status_cache")
+}

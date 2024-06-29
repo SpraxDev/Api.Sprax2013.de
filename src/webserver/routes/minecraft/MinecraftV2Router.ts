@@ -7,10 +7,7 @@ import MinecraftProfileService, { type Profile } from '../../../minecraft/Minecr
 import ServerBlocklistService, {
   InvalidHostError
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
-import ServerStatusPingError from '../../../minecraft/server/ping/error/ServerStatusPingError.js';
-import MinecraftServerStatusPinger from '../../../minecraft/server/ping/MinecraftServerStatusPinger.js';
-import HostNotResolvableError from '../../../minecraft/server/ping/resolve/HostNotResolvableError.js';
-import ResolvedToNonUnicastIpError from '../../../minecraft/server/ping/resolve/ResolvedToNonUnicastIpError.js';
+import MinecraftServerStatusService from '../../../minecraft/server/ping/MinecraftServerStatusService.js';
 import type ImageManipulator from '../../../minecraft/skin/manipulator/ImageManipulator.js';
 import MinecraftSkinService from '../../../minecraft/skin/MinecraftSkinService.js';
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
@@ -25,7 +22,7 @@ export default class MinecraftV2Router implements Router {
     private readonly minecraftSkinService: MinecraftSkinService,
     private readonly skinImage2DRenderer: SkinImage2DRenderer,
     private readonly serverBlocklistService: ServerBlocklistService,
-    private readonly minecraftServerStatusPinger: MinecraftServerStatusPinger
+    private readonly minecraftServerStatusService: MinecraftServerStatusService
   ) {
   }
 
@@ -243,26 +240,20 @@ export default class MinecraftV2Router implements Router {
           }
 
           const port = inputPort != null ? parseInt(inputPort, 10) : 25565;
-
           validateHost(inputHost);
 
-          try {
-            const serverStatus = await this.minecraftServerStatusPinger.ping(inputHost, port);
+          const serverStatus = await this.minecraftServerStatusService.provideServerStatus(inputHost, port);
+          if (serverStatus != null) {
             return reply
+              .header('Age', serverStatus.ageInSeconds)
               .send(serverStatus);
-          } catch (err: any) {
-            if (err instanceof ResolvedToNonUnicastIpError) {
-              throw new BadRequestError('Invalid host – The given host resolves to a non-unicast IP range');
-            }
-            if (err instanceof ServerStatusPingError || err instanceof HostNotResolvableError) {
-              // FIXME: Unify success and "error" response content/layout
-              return reply
-                .status(200)
-                .send({ online: false });
-            }
-
-            throw err;
           }
+
+          // FIXME: Unify success and "error" response content/layout
+          return reply
+            .status(200)
+            // TODO: Age header
+            .send({ online: false });
         }
       });
     });
