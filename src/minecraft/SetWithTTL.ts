@@ -22,6 +22,14 @@ export default class SetWithTTL<T> {
     return expiration != null && !this.isExpired(expiration);
   }
 
+  getAgeInSeconds(key: T): number {
+    const expiration = this.values.get(key);
+    if (expiration == null) {
+      return 0;
+    }
+    return Math.floor((expiration - Date.now()) / 1000);
+  }
+
   clear(): void {
     this.values.clear();
   }

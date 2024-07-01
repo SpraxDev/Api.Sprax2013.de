@@ -254,7 +254,8 @@ export default class MinecraftV2Router implements Router {
           const serverStatus = await this.minecraftServerStatusService.provideServerStatus(inputHost, port);
 
           await reply
-            .header('Cache-Control', `public, max-age=${Math.max(0, 30 - serverStatus.ageInSeconds)}, s-maxage=${Math.max(0, 30 - serverStatus.ageInSeconds)}`);
+            .header('Cache-Control', `public, max-age=${Math.max(0, 30 - serverStatus.ageInSeconds)}, s-maxage=${Math.max(0, 30 - serverStatus.ageInSeconds)}`)
+            .header('Age', serverStatus.ageInSeconds);
 
           if (serverStatus.serverStatus != null) {
             return reply
@@ -264,7 +265,6 @@ export default class MinecraftV2Router implements Router {
           // FIXME: Unify success and "error" response content/layout
           return reply
             .status(200)
-            // TODO: Age header
             .send({ online: false });
         }
       });

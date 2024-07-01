@@ -10,8 +10,8 @@ import HostNotResolvableError from './resolve/HostNotResolvableError.js';
 import ResolvedToNonUnicastIpError from './resolve/ResolvedToNonUnicastIpError.js';
 
 export type CachedServerStatus = {
-  serverStatus: PingResult;
   ageInSeconds: number;
+  serverStatus: PingResult | null;
 }
 
 @singleton()
@@ -24,10 +24,13 @@ export default class MinecraftServerStatusService {
   ) {
   }
 
-  async provideServerStatus(host: string, port: number): Promise<CachedServerStatus | null> {
+  async provideServerStatus(host: string, port: number): Promise<CachedServerStatus> {
     const cacheKey = this.createCacheKey(host, port);
     if (this.offlineServerCache.has(cacheKey)) {
-      return null;
+      return {
+        ageInSeconds: this.offlineServerCache.getAgeInSeconds(cacheKey),
+        serverStatus: null
+      };
     }
 
     const cachedServerStatus = await this.fetchCachedServerStatusFromDatabase(host, port);
@@ -38,13 +41,16 @@ export default class MinecraftServerStatusService {
     const serverStatus = await this.performServerStatusCheck(host, port);
     if (serverStatus == null) {
       this.offlineServerCache.add(cacheKey);
-      return null;
+      return {
+        ageInSeconds: 0,
+        serverStatus: null
+      }
     }
 
     await this.persistServerStatusInDatabase(serverStatus, host, port);
     return {
-      serverStatus,
-      ageInSeconds: 0
+      ageInSeconds: 0,
+      serverStatus
     };
   }
 
