@@ -37,11 +37,13 @@ export default class MinecraftV2Router implements Router {
 
           const profile = await this.minecraftProfileService.provideProfileByUsername(inputUsername);
           if (profile == null) {
+            await reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
             throw new NotFoundError('No UUID found for username');
           }
 
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
             .send({
               id: profile.profile.id,
               name: profile.profile.name
@@ -55,10 +57,12 @@ export default class MinecraftV2Router implements Router {
         get: async (): Promise<void> => {
           const profile = await this.resolveUserToProfile((request.params as any).user);
           if (profile == null) {
+            await reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
             throw new NotFoundError(`Unable to find a profile for the given UUID or username`);
           }
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
             .send(profile.profile);
         }
       });
@@ -107,6 +111,7 @@ export default class MinecraftV2Router implements Router {
         get: async (): Promise<void> => {
           const profile = await this.resolveUserToProfile((request.params as any).user);
           if (profile == null) {
+            await reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
             throw new NotFoundError(`Unable to find a profile for the given UUID or username`);
           }
           const minecraftProfile = new MinecraftProfile(profile.profile);
@@ -158,6 +163,7 @@ export default class MinecraftV2Router implements Router {
 
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
             .send(responseBody);
         }
       });
@@ -168,6 +174,7 @@ export default class MinecraftV2Router implements Router {
         get: async (): Promise<void> => {
           const blocklist = await this.serverBlocklistService.provideBlocklist();
           return reply
+            .header('Cache-Control', 'public, max-age=120, s-maxage=120')
             .send(blocklist);
         }
       });
@@ -195,6 +202,7 @@ export default class MinecraftV2Router implements Router {
             responseBody[host] = isBlocked;
           }
           return reply
+            .header('Cache-Control', 'public, max-age=120, s-maxage=120')
             .send(responseBody);
         }
       });
@@ -212,6 +220,7 @@ export default class MinecraftV2Router implements Router {
           }
 
           return reply
+            .header('Cache-Control', 'public, max-age=120, s-maxage=120')
             .send(responseBody);
         }
       });
@@ -243,10 +252,13 @@ export default class MinecraftV2Router implements Router {
           validateHost(inputHost);
 
           const serverStatus = await this.minecraftServerStatusService.provideServerStatus(inputHost, port);
-          if (serverStatus != null) {
+
+          await reply
+            .header('Cache-Control', `public, max-age=${Math.max(0, 30 - serverStatus.ageInSeconds)}, s-maxage=${Math.max(0, 30 - serverStatus.ageInSeconds)}`);
+
+          if (serverStatus.serverStatus != null) {
             return reply
-              .header('Age', serverStatus.ageInSeconds)
-              .send(serverStatus);
+              .send(serverStatus.serverStatus);
           }
 
           // FIXME: Unify success and "error" response content/layout
