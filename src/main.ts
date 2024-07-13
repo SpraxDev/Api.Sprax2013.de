@@ -35,7 +35,14 @@ async function bootstrap(): Promise<void> {
 }
 
 function registerShutdownHooks(): void {
+  let shutdownInProgress = false;
   const handleShutdown = async () => {
+    if (shutdownInProgress) {
+      console.warn('Received seconds shutdown signal – Forcing shutdown');
+      process.exit(90);
+    }
+
+    shutdownInProgress = true;
     console.log('Shutting down...');
 
     taskScheduler?.shutdown();
