@@ -18,7 +18,7 @@ export default class MinecraftV1Router implements Router {
   }
 
   register(server: FastifyInstance): void {
-    server.all('/mc/v1/uuid/:username', (request, reply): Promise<void> => {
+    server.all('/mc/v1/uuid/:username?', (request, reply): Promise<void> => {
       return FastifyWebServer.handleRestfully(request, reply, {
         get: async (): Promise<void> => {
           const inputUsername = (request.params as any).username;
@@ -63,7 +63,7 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
-    server.all('/mc/v1/profile/:user', (request, reply): Promise<void> => {
+    server.all('/mc/v1/profile/:user?', (request, reply): Promise<void> => {
       return FastifyWebServer.handleRestfully(request, reply, {
         get: async (): Promise<void> => {
           let profile: Profile | null;
@@ -99,7 +99,7 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
-    server.all('/mc/v1/history/:usernameOrId', (request, reply): Promise<void> => {
+    server.all('/mc/v1/history/:usernameOrId?', (request, reply): Promise<void> => {
       return FastifyWebServer.handleRestfully(request, reply, {
         get: async (): Promise<void> => {
           return reply

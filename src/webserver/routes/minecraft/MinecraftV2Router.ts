@@ -27,7 +27,7 @@ export default class MinecraftV2Router implements Router {
   }
 
   register(server: FastifyInstance): void {
-    server.all('/mc/v2/uuid/:username', (request, reply): Promise<void> => {
+    server.all('/mc/v2/uuid/:username?', (request, reply): Promise<void> => {
       return FastifyWebServer.handleRestfully(request, reply, {
         get: async (): Promise<void> => {
           const inputUsername = (request.params as any).username;
@@ -52,7 +52,7 @@ export default class MinecraftV2Router implements Router {
       });
     });
 
-    server.all('/mc/v2/profile/:user', (request, reply): Promise<void> => {
+    server.all('/mc/v2/profile/:user?', (request, reply): Promise<void> => {
       return FastifyWebServer.handleRestfully(request, reply, {
         get: async (): Promise<void> => {
           const profile = await this.resolveUserToProfile((request.params as any).user);
