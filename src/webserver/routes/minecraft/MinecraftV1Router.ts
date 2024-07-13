@@ -14,6 +14,19 @@ export default class MinecraftV1Router implements Router {
   }
 
   register(server: FastifyInstance): void {
+    server.all('/mc/v1/history/:usernameOrId', (request, reply): Promise<void> => {
+      return FastifyWebServer.handleRestfully(request, reply, {
+        get: async (): Promise<void> => {
+          return reply
+            .status(410)
+            .send({
+              error: 'Gone',
+              message: 'This endpoint has been removed as Mojang removed the username history API (https://web.archive.org/web/20221006001721/https://help.minecraft.net/hc/en-us/articles/8969841895693-Username-History-API-Removal-FAQ-)'
+            });
+        }
+      });
+    });
+
     server.all('/mc/v1/servers/blocked', (request, reply): Promise<void> => {
       return FastifyWebServer.handleRestfully(request, reply, {
         get: async (): Promise<void> => {
