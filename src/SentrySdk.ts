@@ -38,11 +38,11 @@ export default class SentrySdk {
       return;
     }
 
-    const appVersion = getAppInfo().version;
+    const appInfo = getAppInfo();
     Sentry.init({
       dsn,
       environment: IS_PRODUCTION ? 'production' : 'development',
-      release: appVersion,
+      release: `${appInfo.name}@${appInfo.version}`,
 
       tracesSampleRate: 1.0,
       profilesSampleRate: 1.0,
