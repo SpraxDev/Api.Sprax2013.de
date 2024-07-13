@@ -1,7 +1,6 @@
 import { singleton } from 'tsyringe';
 
 export type AppConfig = {
-  readonly sentryDsn: string;
 };
 
 @singleton()
@@ -10,7 +9,6 @@ export default class AppConfiguration {
 
   constructor() {
     this.config = this.deepFreeze({
-      sentryDsn: this.getAndRemoveEnvVar('SENTRY_DSN') ?? ''
     } satisfies AppConfig);
   }
 

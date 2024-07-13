@@ -34,7 +34,7 @@
     "build": "tsc",
 
     "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" jest --coverage",
-    "dev": "node --watch --env-file .env --loader ts-node/esm --enable-source-maps src/main.ts",
+    "dev": "node --watch --env-file .env --loader ts-node/esm --import ./src/sentry-init.ts --enable-source-maps src/main.ts",
 
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
@@ -46,8 +46,8 @@
   },
   "dependencies": {
     "@prisma/client": "^5.16.2",
-    "@sentry/node": "^7.118.0",
-    "@sentry/profiling-node": "^7.118.0",
+    "@sentry/node": "^8.17.0",
+    "@sentry/profiling-node": "^8.17.0",
     "fastify": "^4.28.1",
     "ipaddr.js": "^2.2.0",
     "reflect-metadata": "^0.2.2",

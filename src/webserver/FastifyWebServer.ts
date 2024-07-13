@@ -1,8 +1,8 @@
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { injectAll, singleton } from 'tsyringe';
+import { HttpError, NotFoundError } from '../http/errors/HttpErrors.js';
 import SentrySdk from '../SentrySdk.js';
 import Router from './routes/Router.js';
-import { HttpError, NotFoundError } from '../http/errors/HttpErrors.js';
 
 @singleton()
 export default class FastifyWebServer {
@@ -31,7 +31,6 @@ export default class FastifyWebServer {
         .code(500)
         .send('Internal Server Error');
     });
-    SentrySdk.setupSentryFastifyIntegration(this.fastify);
 
     this.setupRouters(routers);
   }

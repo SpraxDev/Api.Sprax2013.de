@@ -7,7 +7,6 @@ import SentrySdk from '../SentrySdk.js';
 export default class DatabaseClient extends PrismaClient {
   constructor() {
     super();
-    SentrySdk.setupSentryPrismIntegration(this);
   }
 
   /**

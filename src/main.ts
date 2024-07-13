@@ -14,7 +14,6 @@ let webServer: FastifyWebServer | undefined;
 await bootstrap();
 
 async function bootstrap(): Promise<void> {
-  await SentrySdk.init();
   registerShutdownHooks();
 
   if (IS_PRODUCTION) {
