@@ -1,5 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { autoInjectable } from 'tsyringe';
+import { BadRequestError } from '../../../http/errors/HttpErrors.js';
+import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
+import MinecraftProfileService, { type Profile } from '../../../minecraft/MinecraftProfileService.js';
 import ServerBlocklistService, {
   InvalidHostError
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
@@ -9,11 +12,93 @@ import Router from '../Router.js';
 @autoInjectable()
 export default class MinecraftV1Router implements Router {
   constructor(
+    private readonly minecraftProfileService: MinecraftProfileService,
     private readonly serverBlocklistService: ServerBlocklistService
   ) {
   }
 
   register(server: FastifyInstance): void {
+    server.all('/mc/v1/uuid/:username', (request, reply): Promise<void> => {
+      return FastifyWebServer.handleRestfully(request, reply, {
+        get: async (): Promise<void> => {
+          const inputUsername = (request.params as any).username;
+          if (typeof inputUsername !== 'string' || inputUsername.length <= 0) {
+            return reply
+              .status(400)
+              .send({
+                error: 'Bad Request',
+                message: 'Missing or invalid url parameters',
+                details: [{ param: 'name', condition: 'name.length > 0' }]
+              });
+          }
+          if (inputUsername.length > 16 || inputUsername.length < 3) {
+            return reply
+              .status(400)
+              .send({
+                error: 'Bad Request',
+                message: 'Invalid username',
+                details: [{ param: 'name', condition: 'name.length >= 3 && name.length <= 16' }]
+              });
+          }
+
+          const profile = await this.minecraftProfileService.provideProfileByUsername(inputUsername);
+          if (profile == null) {
+            await reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            return reply
+              .status(404)
+              .send({
+                error: 'Not Found',
+                message: 'UUID for given username'
+              });
+          }
+
+          return reply
+            .header('Age', Math.floor(profile.ageInSeconds).toString())
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .send({
+              id: profile.profile.id,
+              name: profile.profile.name
+            } satisfies UsernameToUuidResponse);
+        }
+      });
+    });
+
+    server.all('/mc/v1/profile/:user', (request, reply): Promise<void> => {
+      return FastifyWebServer.handleRestfully(request, reply, {
+        get: async (): Promise<void> => {
+          let profile: Profile | null;
+          try {
+            profile = await this.resolveUserToProfile((request.params as any).user);
+          } catch (err: any) {
+            if (err instanceof BadRequestError) {
+              return reply
+                .status(400)
+                .send({
+                  error: 'Bad Request',
+                  message: 'Missing or invalid url parameters',
+                  details: [{ param: 'user', condition: 'user.length > 0' }]
+                });
+            }
+            throw err;
+          }
+
+          if (profile == null) {
+            await reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            return reply
+              .status(404)
+              .send({
+                error: 'Not Found',
+                message: 'Profile for given user'
+              });
+          }
+          return reply
+            .header('Age', Math.floor(profile.ageInSeconds).toString())
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .send(profile.profile);
+        }
+      });
+    });
+
     server.all('/mc/v1/history/:usernameOrId', (request, reply): Promise<void> => {
       return FastifyWebServer.handleRestfully(request, reply, {
         get: async (): Promise<void> => {
@@ -95,5 +180,22 @@ export default class MinecraftV1Router implements Router {
         }
       });
     });
+  }
+
+  private async resolveUserToProfile(inputUser: unknown): Promise<Profile | null> {
+    if (typeof inputUser !== 'string') {
+      throw new BadRequestError('Invalid username or UUID');
+    }
+
+    const inputUserLooksLikeUsername = inputUser.length <= 16;
+    const inputUserLooksLikeUuid = inputUser.replaceAll('-', '').length === 32;
+    if (!inputUserLooksLikeUsername && !inputUserLooksLikeUuid) {
+      throw new BadRequestError('Invalid username or UUID');
+    }
+
+    if (inputUserLooksLikeUsername) {
+      return await this.minecraftProfileService.provideProfileByUsername(inputUser);
+    }
+    return await this.minecraftProfileService.provideProfileByUuid(inputUser);
   }
 }
