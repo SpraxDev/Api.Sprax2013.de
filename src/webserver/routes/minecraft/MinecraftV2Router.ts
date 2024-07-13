@@ -235,7 +235,7 @@ export default class MinecraftV2Router implements Router {
 
           const serverStatus = await this.minecraftServerStatusService.provideServerStatus(inputHost, port);
 
-          await reply
+          reply
             .header('Cache-Control', `public, max-age=${Math.max(0, 30 - serverStatus.ageInSeconds)}, s-maxage=${Math.max(0, 30 - serverStatus.ageInSeconds)}`)
             .header('Age', serverStatus.ageInSeconds);
 
