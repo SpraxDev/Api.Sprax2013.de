@@ -116,6 +116,19 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
+    server.all('/mc/v1/capes/all/:user?', (request, reply): Promise<void> => {
+      return FastifyWebServer.handleRestfully(request, reply, {
+        get: async (): Promise<void> => {
+          return reply
+            .status(410)
+            .send({
+              error: 'Gone',
+              message: 'This endpoint was never intended for the general public and only returned the internal IDs used by this API to identify the skins (or null) – Please use one of the other cape endpoints instead'
+            });
+        }
+      });
+    });
+
     server.all('/mc/v1/capes/:capeType/:user?', (request, reply): Promise<void> => {
       return FastifyWebServer.handleRestfully(request, reply, {
         get: async (): Promise<void> => {
