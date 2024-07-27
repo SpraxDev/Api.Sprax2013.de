@@ -17,14 +17,42 @@ export default class MinecraftSkinNormalizer {
     { x: 36, y: 48, w: 8, h: 4 }
   ];
 
-  async normalizeSkin(skin: Buffer): Promise<SkinImageManipulator> {
-    let skinImage = await SkinImageManipulator.createByImage(skin);
+  private static readonly SECOND_SKIN_LAYER_AREAS = [
+    { x: 40, y: 0, w: 16, h: 8 },
+    { x: 32, y: 8, w: 32, h: 8 },
 
-    skinImage = await this.upgradeSkin(skinImage);
-    this.removeUnusedSkinParts(skinImage);
-    this.correctAlphaForFirstSkinLayer(skinImage);
+    { x: 0, y: 36, w: 56, h: 12 },
+    { x: 4, y: 32, w: 8, h: 4 },
+    { x: 20, y: 32, w: 16, h: 4 },
+    { x: 44, y: 32, w: 8, h: 4 },
 
-    return skinImage;
+    { x: 0, y: 52, w: 16, h: 12 },
+    { x: 48, y: 52, w: 16, h: 12 },
+    { x: 4, y: 48, w: 8, h: 4 },
+    { x: 52, y: 48, w: 8, h: 4 }
+  ];
+
+  async normalizeSkin(skin: SkinImageManipulator): Promise<SkinImageManipulator> {
+    skin = await this.upgradeSkin(skin);
+    this.removeUnusedSkinParts(skin);
+    this.correctAlphaForFirstSkinLayer(skin);
+
+    return skin;
+  }
+
+  enforceMinMaxAlphaOnSecondLayer(skinImageManipulator: SkinImageManipulator): void {
+    const black = { r: 0, g: 0, b: 0, alpha: 0 };
+
+    for (const area of MinecraftSkinNormalizer.SECOND_SKIN_LAYER_AREAS) {
+      for (let i = 0; i < area.w; ++i) {
+        for (let j = 0; j < area.h; ++j) {
+          const x = area.x + i;
+          const y = area.y + j;
+          const color = skinImageManipulator.getColor(x, y);
+          skinImageManipulator.setColor(x, y, color.alpha > 0 ? { ...color, alpha: 255 } : black);
+        }
+      }
+    }
   }
 
   private async upgradeSkin(skinImageManipulator: SkinImageManipulator): Promise<SkinImageManipulator> {

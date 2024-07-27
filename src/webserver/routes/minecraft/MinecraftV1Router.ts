@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import assert from 'node:assert';
 import Sharp from 'sharp';
 import { autoInjectable } from 'tsyringe';
 import { BadRequestError } from '../../../http/errors/HttpErrors.js';
@@ -182,10 +183,78 @@ export default class MinecraftV1Router implements Router {
               });
           }
 
-          const skin = await this.minecraftSkinNormalizer.normalizeSkin(fetchedSkinImage.body);
+          const skin = await this.minecraftSkinNormalizer.normalizeSkin(await SkinImageManipulator.createByImage(fetchedSkinImage.body));
           const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin) === 'alex';
 
           const skinResponse = await this.processSkinRequest(request, skin, renderSlim);
+
+          reply.header('Content-Type', 'image/png');
+          if (skinResponse.forceDownload) {
+            reply.header('Content-Disposition', `attachment; filename="x-url${skinResponse.skinArea != null ? `-${skinResponse.skinArea}` : ''}.png"`);
+            reply.header('Content-Type', 'application/octet-stream');
+          }
+
+          return reply
+            // .header('Age', Math.floor(profile.ageInSeconds).toString())
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .send(skinResponse.pngBody);
+        }
+      });
+    });
+
+    server.all('/mc/v1/skin/x-url/:skinArea/3d', (request, reply): Promise<void> => {
+      return FastifyWebServer.handleRestfully(request, reply, {
+        get: async (): Promise<void> => {
+          const skinUrl = (request.query as any).url;
+          if (typeof skinUrl !== 'string' || skinUrl.length <= 0) {
+            return reply
+              .status(400)
+              .send({
+                error: 'Bad Request',
+                message: 'Missing or invalid query parameters',
+                details: [{ param: 'url', condition: 'url.length > 0' }]
+              });
+          }
+
+          let parsedSkinUrl: URL;
+          try {
+            parsedSkinUrl = new URL(skinUrl);
+          } catch (err: any) {
+            return reply
+              .status(400)
+              .send({
+                error: 'Bad Request',
+                message: 'Provided URL is invalid'
+              });
+          }
+
+          if (parsedSkinUrl.protocol !== 'https:') {
+            return reply
+              .status(400)
+              .send({
+                error: 'Bad Request',
+                message: 'Provided URL is not an HTTPS URL'
+              });
+          }
+          // TODO: disallow local, private, etc. IP addresses (also check dns resolution!)
+          // TODO: Have trusted domains that don't need to hide the host's IP address
+
+          // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
+          // TODO: Properly handle errors when requesting the skin (check content-type?)
+          const fetchedSkinImage = await this.httpClient.get(skinUrl);
+          if (fetchedSkinImage.statusCode !== 200) {
+            return reply
+              .status(400)
+              .send({
+                error: 'Bad Request',
+                message: 'Provided URL returned status code ' + fetchedSkinImage.statusCode
+              });
+          }
+
+          const skin = await this.minecraftSkinNormalizer.normalizeSkin(await SkinImageManipulator.createByImage(fetchedSkinImage.body));
+          const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin) === 'alex';
+
+          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, true);
 
           reply.header('Content-Type', 'image/png');
           if (skinResponse.forceDownload) {
@@ -220,6 +289,40 @@ export default class MinecraftV1Router implements Router {
           const skin = await this.minecraftSkinService.fetchEffectiveSkin(new MinecraftProfile(profile.profile));
 
           const skinResponse = await this.processSkinRequest(request, skin, renderSlim);
+
+          reply.header('Content-Type', 'image/png');
+          if (skinResponse.forceDownload) {
+            reply.header('Content-Disposition', `attachment; filename="${profile.profile.name}${skinResponse.skinArea != null ? `-${skinResponse.skinArea}` : ''}.png"`);
+            reply.header('Content-Type', 'application/octet-stream');
+          }
+
+          return reply
+            .header('Age', Math.floor(profile.ageInSeconds).toString())
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .send(skinResponse.pngBody);
+        }
+      });
+    });
+
+    server.all('/mc/v1/skin/:user/:skinArea/3d', (request, reply): Promise<void> => {
+      return FastifyWebServer.handleRestfully(request, reply, {
+        get: async (): Promise<void> => {
+          const profile = await this.resolveUserToProfile((request.params as any).user);
+          if (profile == null) {
+            return reply
+              .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+              .status(404)
+              .send({
+                error: 'Not Found',
+                message: 'Profile for given user'
+              });
+          }
+          const minecraftProfile = new MinecraftProfile(profile.profile);
+
+          const renderSlim = this.parseBoolean((request.query as any).slim) ?? minecraftProfile.parseTextures()?.slimPlayerModel ?? minecraftProfile.determineDefaultSkin() === 'alex';
+          const skin = await this.minecraftSkinService.fetchEffectiveSkin(new MinecraftProfile(profile.profile));
+
+          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, true);
 
           reply.header('Content-Type', 'image/png');
           if (skinResponse.forceDownload) {
@@ -558,7 +661,7 @@ export default class MinecraftV1Router implements Router {
     return await this.minecraftProfileService.provideProfileByUuid(inputUser);
   }
 
-  private async processSkinRequest(request: FastifyRequest, skin: SkinImageManipulator, renderSlim: boolean): Promise<{ pngBody: Buffer, skinArea: 'head' | 'body' | null, forceDownload: boolean }> {
+  private async processSkinRequest(request: FastifyRequest, skin: SkinImageManipulator, renderSlim: boolean, is3d: boolean = false): Promise<{ pngBody: Buffer, skinArea: 'head' | 'body' | null, forceDownload: boolean }> {
     function parseSkinArea(input: unknown): 'head' | 'body' | null {
       if (input == null) {
         return null;
@@ -613,12 +716,13 @@ export default class MinecraftV1Router implements Router {
     }
 
     let responseSkin: ImageManipulator = skin;
-
-    if (requestedSkinArea === 'head') {
-      responseSkin = await this.skinImage2DRenderer.extractHead(skin, renderOverlay);
-    } else if (requestedSkinArea === 'body') {
-      responseSkin = await this.skinImage2DRenderer.extractBody(skin, renderOverlay, renderSlim);
+    if (is3d) {
+      assert(requestedSkinArea != null);
+      responseSkin = await this.renderSkin3d(skin, requestedSkinArea, renderOverlay, renderSlim);
+    } else if (requestedSkinArea != null) {
+      responseSkin = await this.renderSkin2d(skin, requestedSkinArea, renderOverlay, renderSlim);
     }
+
 
     const responseResizeOptions = responseSkin === skin ? undefined : { width: renderSize, height: renderSize };
     const responseBody = await responseSkin.toPngBuffer(responseResizeOptions);
@@ -628,6 +732,20 @@ export default class MinecraftV1Router implements Router {
       skinArea: requestedSkinArea,
       forceDownload
     };
+  }
+
+  private async renderSkin2d(skin: SkinImageManipulator, area: 'head' | 'body', overlay: boolean, slimModel: boolean): Promise<ImageManipulator> {
+    if (area === 'head') {
+      return this.skinImage2DRenderer.extractHead(skin, overlay);
+    }
+    return this.skinImage2DRenderer.extractBody(skin, overlay, slimModel);
+  }
+
+  private async renderSkin3d(skin: SkinImageManipulator, area: 'head' | 'body', overlay: boolean, slimModel: boolean): Promise<ImageManipulator> {
+    if (area === 'head') {
+      return this.legacyMinecraft3DRenderer.renderSkin(skin, area, overlay, slimModel);
+    }
+    return this.legacyMinecraft3DRenderer.renderSkin(skin, area, overlay, slimModel);
   }
 
   private parseBoolean(input: unknown): boolean | null {

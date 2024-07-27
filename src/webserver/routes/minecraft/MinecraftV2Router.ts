@@ -103,7 +103,7 @@ export default class MinecraftV2Router implements Router {
             throw new BadRequestError(`Failed to fetch skin from URL, got status code ${fetchedSkinImage.statusCode}`);
           }
 
-          const skin = await this.minecraftSkinNormalizer.normalizeSkin(fetchedSkinImage.body);
+          const skin = await this.minecraftSkinNormalizer.normalizeSkin(await SkinImageManipulator.createByImage(fetchedSkinImage.body));
           const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin) === 'alex';
 
           const skinResponse = await this.processSkinRequest(request, skin, renderSlim);

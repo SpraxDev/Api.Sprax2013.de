@@ -42,7 +42,7 @@ export default class MinecraftSkinService {
       throw new Error(`Failed to fetch skin from URL: ${skinUrl}`);
     }
 
-    normalizedSkin = await this.minecraftSkinNormalizer.normalizeSkin(skinImage.body);
+    normalizedSkin = await this.minecraftSkinNormalizer.normalizeSkin(await SkinImageManipulator.createByImage(skinImage.body));
     await this.persistSkin(skinUrl, skinImage.body, await normalizedSkin.toPngBuffer(), textureProperty);
 
     return normalizedSkin;
