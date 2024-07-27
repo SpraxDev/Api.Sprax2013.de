@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import ChildProcess from 'node:child_process';
 import { singleton } from 'tsyringe';
-import SentrySdk from '../SentrySdk.js';
 
 @singleton()
 export default class DatabaseClient extends PrismaClient {
