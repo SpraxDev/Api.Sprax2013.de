@@ -9,7 +9,7 @@ import ServerBlocklistService, {
   InvalidHostError
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
 import MinecraftServerStatusService from '../../../minecraft/server/ping/MinecraftServerStatusService.js';
-import type ImageManipulator from '../../../minecraft/skin/manipulator/ImageManipulator.js';
+import type ImageManipulator from '../../../minecraft/image/ImageManipulator.js';
 import MinecraftSkinNormalizer from '../../../minecraft/skin/manipulator/MinecraftSkinNormalizer.js';
 import SkinImageManipulator from '../../../minecraft/skin/manipulator/SkinImageManipulator.js';
 import MinecraftSkinService from '../../../minecraft/skin/MinecraftSkinService.js';

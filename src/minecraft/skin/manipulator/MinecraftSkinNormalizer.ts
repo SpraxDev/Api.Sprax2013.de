@@ -1,4 +1,4 @@
-import type { Color } from './ImageManipulator.js';
+import type { Color } from '../../image/ImageManipulator.js';
 import SkinImageManipulator from './SkinImageManipulator.js';
 
 export default class MinecraftSkinNormalizer {
@@ -18,7 +18,7 @@ export default class MinecraftSkinNormalizer {
   ];
 
   async normalizeSkin(skin: Buffer): Promise<SkinImageManipulator> {
-    let skinImage = await SkinImageManipulator.forImage(skin);
+    let skinImage = await SkinImageManipulator.createByImage(skin);
 
     skinImage = await this.upgradeSkin(skinImage);
     this.removeUnusedSkinParts(skinImage);

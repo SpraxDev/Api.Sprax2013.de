@@ -1,5 +1,5 @@
 import Sharp from 'sharp';
-import ImageManipulator from './ImageManipulator.js';
+import ImageManipulator from '../../image/ImageManipulator.js';
 
 export default class SkinImageManipulator extends ImageManipulator {
   protected constructor(pixelData: Buffer, imageInfo: Sharp.OutputInfo) {
@@ -13,7 +13,7 @@ export default class SkinImageManipulator extends ImageManipulator {
     return this.imageInfo.width === 64 && (this.imageInfo.height === 64 || this.imageInfo.height === 32);
   }
 
-  static async forImage(image: Buffer): Promise<SkinImageManipulator> {
+  static async createByImage(image: Buffer): Promise<SkinImageManipulator> {
     const rawImage = await Sharp(image)
       .ensureAlpha()
       .raw()

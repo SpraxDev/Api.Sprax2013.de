@@ -1,4 +1,4 @@
-import ImageManipulator from '../manipulator/ImageManipulator.js';
+import ImageManipulator from '../../image/ImageManipulator.js';
 import SkinImageManipulator from '../manipulator/SkinImageManipulator.js';
 
 export default class SkinImage2DRenderer {

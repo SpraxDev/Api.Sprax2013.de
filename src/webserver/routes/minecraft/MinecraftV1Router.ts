@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { autoInjectable } from 'tsyringe';
 import { BadRequestError } from '../../../http/errors/HttpErrors.js';
 import { CAPE_TYPE_STRINGS, CapeType } from '../../../minecraft/cape/CapeType.js';
+import Cape2dRenderer from '../../../minecraft/cape/renderer/Cape2dRenderer.js';
 import UserCapeProvider from '../../../minecraft/cape/UserCapeProvider.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService, { type Profile } from '../../../minecraft/MinecraftProfileService.js';
@@ -17,7 +18,8 @@ export default class MinecraftV1Router implements Router {
   constructor(
     private readonly minecraftProfileService: MinecraftProfileService,
     private readonly userCapeProvider: UserCapeProvider,
-    private readonly serverBlocklistService: ServerBlocklistService
+    private readonly cape2dRenderer: Cape2dRenderer,
+    private readonly serverBlocklistService: ServerBlocklistService,
   ) {
   }
 
@@ -196,6 +198,97 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
+    server.all('/mc/v1/capes/:capeType/:user/render', (request, reply): Promise<void> => {
+      return FastifyWebServer.handleRestfully(request, reply, {
+        get: async (): Promise<void> => {
+          const inputCapeType = (request.params as any).capeType;
+          if (typeof inputCapeType !== 'string' || !CAPE_TYPE_STRINGS.includes(inputCapeType.toLowerCase())) {
+            return reply
+              .status(400)
+              .send({
+                error: 'Bad Request',
+                message: 'Missing or invalid url parameters',
+                details: [{ param: 'capeType', condition: `capeType in [${CAPE_TYPE_STRINGS.join(', ')}]` }]
+              });
+          }
+
+          const size = typeof (request.query as any).size === 'string' ? this.parseInteger((request.query as any).size) : 512;
+          if (size == null || size < 8 || size > 1024) {
+            return reply
+              .status(400)
+              .send({
+                error: 'Bad Request',
+                message: 'Missing or invalid query parameters',
+                details: [{ param: 'size', condition: 'size >= 8 and size <= 1024' }]
+              });
+          }
+
+          const capeType = inputCapeType.toLowerCase() as CapeType;
+
+          if (capeType == CapeType.LABYMOD) {
+            return reply
+              .status(503)
+              .send({
+                error: 'Service Unavailable',
+                message: 'Rendering LabyMod-Capes is currently not supported'
+              });
+          }
+
+          let profile: Profile | null;
+          try {
+            profile = await this.resolveUserToProfile((request.params as any).user);
+          } catch (err: any) {
+            if (err instanceof BadRequestError) {
+              return reply
+                .status(400)
+                .send({
+                  error: 'Bad Request',
+                  message: 'Missing or invalid url parameters',
+                  details: [{ param: 'user', condition: 'user.length > 0' }]
+                });
+            }
+            throw err;
+          }
+
+          if (profile == null) {
+            await reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            return reply
+              .status(404)
+              .send({
+                error: 'Not Found',
+                message: 'Profile for given user'
+              });
+          }
+
+          const minecraftProfile = new MinecraftProfile(profile.profile);
+          const capeResponse = await this.userCapeProvider.provide(minecraftProfile, capeType);
+          if (capeResponse == null) {
+            return reply
+              .status(404)
+              .send({
+                error: 'Not Found',
+                message: 'User does not have a cape for that type'
+              });
+          }
+
+          const capeRenderResult = await this.cape2dRenderer.renderCape(capeResponse.image, capeType);
+          const renderCapeImage = await capeRenderResult.toPngBuffer({ width: size, height: size });
+
+          const forceDownload = this.parseBoolean((request.query as any).download) ?? false;
+
+          reply.header('Content-Type', 'image/png');
+          if (forceDownload) {
+            reply.header('Content-Disposition', `attachment; filename="${profile.profile.name}-${capeType}.png"`);
+            reply.header('Content-Type', 'application/octet-stream');
+          }
+
+          return reply
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .send(renderCapeImage);
+        }
+      });
+    });
+
     server.all('/mc/v1/servers/blocked', (request, reply): Promise<void> => {
       return FastifyWebServer.handleRestfully(request, reply, {
         get: async (): Promise<void> => {
@@ -292,5 +385,21 @@ export default class MinecraftV1Router implements Router {
       throw new BadRequestError(`Expected a "1", "0", "true" or "false" but got ${JSON.stringify(input)}`);
     }
     return input === '1' || input === 'true';
+  }
+
+  private parseInteger(input: unknown): number | null {
+    if (input == null) {
+      return null;
+    }
+
+    if (typeof input !== 'string' || !/^\d+$/.test(input)) {
+      throw new BadRequestError(`Expected a number but got ${JSON.stringify(input)}`);
+    }
+
+    const result = parseInt(input, 10);
+    if (Number.isFinite(result)) {
+      return result;
+    }
+    throw new BadRequestError(`Expected a number but got ${JSON.stringify(input)}`);
   }
 }

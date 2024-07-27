@@ -160,6 +160,14 @@ export default class ImageManipulator {
     return new ImageManipulator(rawImage.data, rawImage.info);
   }
 
+  static async createByImage(image: Buffer): Promise<ImageManipulator> {
+    const rawImage = await Sharp(image)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    return new ImageManipulator(rawImage.data, rawImage.info);
+  }
+
   /**
    * Combine (additive) two RGBA colors
    */

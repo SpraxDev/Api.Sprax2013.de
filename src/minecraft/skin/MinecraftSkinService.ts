@@ -50,9 +50,9 @@ export default class MinecraftSkinService {
 
   private async getDefaultSkin(skin: DefaultSkin): Promise<SkinImageManipulator> {
     if (skin === 'alex') {
-      return SkinImageManipulator.forImage(await MinecraftSkinService.alex);
+      return SkinImageManipulator.createByImage(await MinecraftSkinService.alex);
     }
-    return SkinImageManipulator.forImage(await MinecraftSkinService.steve);
+    return SkinImageManipulator.createByImage(await MinecraftSkinService.steve);
   }
 
   private async persistSkin(
@@ -111,7 +111,7 @@ export default class MinecraftSkinService {
       select: { image: { select: { normalizedImage: true } } }
     });
     if (skinInDatabase?.image.normalizedImage != null) {
-      return SkinImageManipulator.forImage(skinInDatabase.image.normalizedImage);
+      return SkinImageManipulator.createByImage(skinInDatabase.image.normalizedImage);
     }
     return null;
   }
