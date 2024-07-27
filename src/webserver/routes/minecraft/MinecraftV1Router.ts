@@ -1,14 +1,21 @@
-import { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { autoInjectable } from 'tsyringe';
 import { BadRequestError } from '../../../http/errors/HttpErrors.js';
+import HttpClient from '../../../http/HttpClient.js';
 import { CAPE_TYPE_STRINGS, CapeType } from '../../../minecraft/cape/CapeType.js';
 import Cape2dRenderer from '../../../minecraft/cape/renderer/Cape2dRenderer.js';
 import UserCapeProvider from '../../../minecraft/cape/UserCapeProvider.js';
+import type ImageManipulator from '../../../minecraft/image/ImageManipulator.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService, { type Profile } from '../../../minecraft/MinecraftProfileService.js';
 import ServerBlocklistService, {
   InvalidHostError
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
+import MinecraftSkinNormalizer from '../../../minecraft/skin/manipulator/MinecraftSkinNormalizer.js';
+import SkinImageManipulator from '../../../minecraft/skin/manipulator/SkinImageManipulator.js';
+import MinecraftSkinService from '../../../minecraft/skin/MinecraftSkinService.js';
+import MinecraftSkinTypeDetector from '../../../minecraft/skin/MinecraftSkinTypeDetector.js';
+import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
 import MinecraftProfile from '../../../minecraft/value-objects/MinecraftProfile.js';
 import FastifyWebServer from '../../FastifyWebServer.js';
 import Router from '../Router.js';
@@ -17,9 +24,14 @@ import Router from '../Router.js';
 export default class MinecraftV1Router implements Router {
   constructor(
     private readonly minecraftProfileService: MinecraftProfileService,
+    private readonly minecraftSkinService: MinecraftSkinService,
+    private readonly skinImage2DRenderer: SkinImage2DRenderer,
     private readonly userCapeProvider: UserCapeProvider,
     private readonly cape2dRenderer: Cape2dRenderer,
     private readonly serverBlocklistService: ServerBlocklistService,
+    private readonly httpClient: HttpClient,
+    private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
+    private readonly minecraftSkinTypeDetector: MinecraftSkinTypeDetector
   ) {
   }
 
@@ -114,6 +126,108 @@ export default class MinecraftV1Router implements Router {
               error: 'Gone',
               message: 'This endpoint has been removed as Mojang removed the username history API (https://web.archive.org/web/20221006001721/https://help.minecraft.net/hc/en-us/articles/8969841895693-Username-History-API-Removal-FAQ-)'
             });
+        }
+      });
+    });
+
+    server.all('/mc/v1/skin/x-url/:skinArea?', (request, reply): Promise<void> => {
+      return FastifyWebServer.handleRestfully(request, reply, {
+        get: async (): Promise<void> => {
+          const skinUrl = (request.query as any).url;
+          if (typeof skinUrl !== 'string' || skinUrl.length <= 0) {
+            return reply
+              .status(400)
+              .send({
+                error: 'Bad Request',
+                message: 'Missing or invalid query parameters',
+                details: [{ param: 'url', condition: 'url.length > 0' }]
+              });
+          }
+
+          let parsedSkinUrl: URL;
+          try {
+            parsedSkinUrl = new URL(skinUrl);
+          } catch (err: any) {
+            return reply
+              .status(400)
+              .send({
+                error: 'Bad Request',
+                message: 'Provided URL is invalid'
+              });
+          }
+
+          if (parsedSkinUrl.protocol !== 'https:') {
+            return reply
+              .status(400)
+              .send({
+                error: 'Bad Request',
+                message: 'Provided URL is not an HTTPS URL'
+              });
+          }
+          // TODO: disallow local, private, etc. IP addresses (also check dns resolution!)
+          // TODO: Have trusted domains that don't need to hide the host's IP address
+
+          // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
+          // TODO: Properly handle errors when requesting the skin (check content-type?)
+          const fetchedSkinImage = await this.httpClient.get(skinUrl);
+          if (fetchedSkinImage.statusCode !== 200) {
+            return reply
+              .status(400)
+              .send({
+                error: 'Bad Request',
+                message: 'Provided URL returned status code ' + fetchedSkinImage.statusCode
+              });
+          }
+
+          const skin = await this.minecraftSkinNormalizer.normalizeSkin(fetchedSkinImage.body);
+          const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin) === 'alex';
+
+          const skinResponse = await this.processSkinRequest(request, skin, renderSlim);
+
+          reply.header('Content-Type', 'image/png');
+          if (skinResponse.forceDownload) {
+            reply.header('Content-Disposition', `attachment; filename="x-url${skinResponse.skinArea != null ? `-${skinResponse.skinArea}` : ''}.png"`);
+            reply.header('Content-Type', 'application/octet-stream');
+          }
+
+          return reply
+            // .header('Age', Math.floor(profile.ageInSeconds).toString())
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .send(skinResponse.pngBody);
+        }
+      });
+    });
+
+    server.all('/mc/v1/skin/:user/:skinArea?', (request, reply): Promise<void> => {
+      return FastifyWebServer.handleRestfully(request, reply, {
+        get: async (): Promise<void> => {
+          const profile = await this.resolveUserToProfile((request.params as any).user);
+          if (profile == null) {
+            return reply
+              .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+              .status(404)
+              .send({
+                error: 'Not Found',
+                message: 'Profile for given user'
+              });
+          }
+          const minecraftProfile = new MinecraftProfile(profile.profile);
+
+          const renderSlim = this.parseBoolean((request.query as any).slim) ?? minecraftProfile.parseTextures()?.slimPlayerModel ?? minecraftProfile.determineDefaultSkin() === 'alex';
+          const skin = await this.minecraftSkinService.fetchEffectiveSkin(new MinecraftProfile(profile.profile));
+
+          const skinResponse = await this.processSkinRequest(request, skin, renderSlim);
+
+          reply.header('Content-Type', 'image/png');
+          if (skinResponse.forceDownload) {
+            reply.header('Content-Disposition', `attachment; filename="${profile.profile.name}${skinResponse.skinArea != null ? `-${skinResponse.skinArea}` : ''}.png"`);
+            reply.header('Content-Type', 'application/octet-stream');
+          }
+
+          return reply
+            .header('Age', Math.floor(profile.ageInSeconds).toString())
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .send(skinResponse.pngBody);
         }
       });
     });
@@ -374,6 +488,78 @@ export default class MinecraftV1Router implements Router {
       return await this.minecraftProfileService.provideProfileByUsername(inputUser);
     }
     return await this.minecraftProfileService.provideProfileByUuid(inputUser);
+  }
+
+  private async processSkinRequest(request: FastifyRequest, skin: SkinImageManipulator, renderSlim: boolean): Promise<{ pngBody: Buffer, skinArea: 'head' | 'body' | null, forceDownload: boolean }> {
+    function parseSkinArea(input: unknown): 'head' | 'body' | null {
+      if (input == null) {
+        return null;
+      }
+
+      if (input !== 'head' && input !== 'body') {
+        throw new BadRequestError(`Only supports "head" or "body" as skin area but got ${JSON.stringify(input)}`);
+      }
+      return input;
+    }
+
+    function parseInteger(input: unknown): number | null {
+      if (input == null) {
+        return null;
+      }
+
+      if (typeof input !== 'string' || !/^\d+$/.test(input)) {
+        throw new BadRequestError(`Expected a number but got ${JSON.stringify(input)}`);
+      }
+
+      const result = parseInt(input, 10);
+      if (Number.isFinite(result)) {
+        return result;
+      }
+      throw new BadRequestError(`Expected a number but got ${JSON.stringify(input)}`);
+    }
+
+    const userInputOverlay = (request.query as any).overlay;
+    const userInputSlim = (request.query as any).slim;
+    const userInputSize = (request.query as any).size;
+
+    const requestedSkinArea = parseSkinArea((request.params as any).skinArea);
+    if (userInputOverlay != null && requestedSkinArea == null) {
+      throw new BadRequestError('Cannot use "overlay" when just requesting the skin file (without "skinArea" or "3d")');
+    }
+    if (userInputSize != null && requestedSkinArea == null) {
+      throw new BadRequestError('Cannot use "size" when just requesting the skin file (without "skinArea" or "3d")');
+    }
+    if (userInputSlim != null && requestedSkinArea == null) {
+      throw new BadRequestError('Cannot use "slim" when just requesting the skin file (without "skinArea" or "3d")');
+    }
+    if (userInputSlim != null && requestedSkinArea === 'head') {
+      throw new BadRequestError('Cannot use "slim" when requesting the rendered head');
+    }
+
+    const renderOverlay = this.parseBoolean(userInputOverlay) ?? true;
+    const renderSize = parseInteger(userInputSize) ?? 512;
+    const forceDownload = this.parseBoolean((request.query as any).download) ?? false;
+
+    if (renderSize != null && (renderSize < 8 || renderSize > 1024)) {
+      throw new BadRequestError('Size must be between 8 and 1024');
+    }
+
+    let responseSkin: ImageManipulator = skin;
+
+    if (requestedSkinArea === 'head') {
+      responseSkin = await this.skinImage2DRenderer.extractHead(skin, renderOverlay);
+    } else if (requestedSkinArea === 'body') {
+      responseSkin = await this.skinImage2DRenderer.extractBody(skin, renderOverlay, renderSlim);
+    }
+
+    const responseResizeOptions = responseSkin === skin ? undefined : { width: renderSize, height: renderSize };
+    const responseBody = await responseSkin.toPngBuffer(responseResizeOptions);
+
+    return {
+      pngBody: responseBody,
+      skinArea: requestedSkinArea,
+      forceDownload
+    };
   }
 
   private parseBoolean(input: unknown): boolean | null {
