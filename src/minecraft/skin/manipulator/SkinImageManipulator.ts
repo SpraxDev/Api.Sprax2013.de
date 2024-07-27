@@ -10,7 +10,7 @@ export default class SkinImageManipulator extends ImageManipulator {
   }
 
   private hasValidSkinDimensions(): boolean {
-    return this.imageInfo.width === 64 && (this.imageInfo.height === 64 || this.imageInfo.height === 32);
+    return this.width === 64 && (this.height === 64 || this.height === 32);
   }
 
   static async createByImage(image: Buffer): Promise<SkinImageManipulator> {

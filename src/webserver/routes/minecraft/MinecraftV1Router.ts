@@ -1,11 +1,12 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import Sharp from 'sharp';
 import { autoInjectable } from 'tsyringe';
 import { BadRequestError } from '../../../http/errors/HttpErrors.js';
 import HttpClient from '../../../http/HttpClient.js';
 import { CAPE_TYPE_STRINGS, CapeType } from '../../../minecraft/cape/CapeType.js';
 import Cape2dRenderer from '../../../minecraft/cape/renderer/Cape2dRenderer.js';
 import UserCapeProvider from '../../../minecraft/cape/UserCapeProvider.js';
-import type ImageManipulator from '../../../minecraft/image/ImageManipulator.js';
+import ImageManipulator from '../../../minecraft/image/ImageManipulator.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService, { type Profile } from '../../../minecraft/MinecraftProfileService.js';
 import ServerBlocklistService, {
@@ -15,6 +16,7 @@ import MinecraftSkinNormalizer from '../../../minecraft/skin/manipulator/Minecra
 import SkinImageManipulator from '../../../minecraft/skin/manipulator/SkinImageManipulator.js';
 import MinecraftSkinService from '../../../minecraft/skin/MinecraftSkinService.js';
 import MinecraftSkinTypeDetector from '../../../minecraft/skin/MinecraftSkinTypeDetector.js';
+import LegacyMinecraft3DRenderer from '../../../minecraft/skin/renderer/LegacyMinecraft3DRenderer.js';
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
 import MinecraftProfile from '../../../minecraft/value-objects/MinecraftProfile.js';
 import FastifyWebServer from '../../FastifyWebServer.js';
@@ -31,7 +33,8 @@ export default class MinecraftV1Router implements Router {
     private readonly serverBlocklistService: ServerBlocklistService,
     private readonly httpClient: HttpClient,
     private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
-    private readonly minecraftSkinTypeDetector: MinecraftSkinTypeDetector
+    private readonly minecraftSkinTypeDetector: MinecraftSkinTypeDetector,
+    private readonly legacyMinecraft3DRenderer: LegacyMinecraft3DRenderer
   ) {
   }
 
@@ -468,6 +471,71 @@ export default class MinecraftV1Router implements Router {
           return reply
             .header('Cache-Control', 'public, max-age=120, s-maxage=120')
             .send(responseBody);
+        }
+      });
+    });
+
+    server.all('/mc/v1/render/block', (request, reply): Promise<void> => {
+      return FastifyWebServer.handleRestfully(request, reply, {
+        get: async (): Promise<void> => {
+          const size = typeof (request.query as any).size === 'string' ? this.parseInteger((request.query as any).size) : 150;
+          if (size == null || size < 8 || size > 1024) {
+            return reply
+              .status(400)
+              .send({
+                error: 'Bad Request',
+                message: 'Missing or invalid query parameters',
+                details: [{ param: 'size', condition: 'size >= 8 and size <= 1024' }]
+              });
+          }
+
+          if (request.headers['content-type'] !== 'image/png') {
+            return reply
+              .status(400)
+              .send({
+                error: 'Bad Request',
+                message: 'Missing or invalid body',
+                details: [{ param: 'Content-Type', condition: 'image/png' }]
+              });
+          }
+
+          let body = Buffer.alloc(0);
+          for await (const chunk of request.raw) {
+            body = Buffer.concat([body, chunk]);
+
+            if (body.length > 3 * 1024 * 1024) {
+              return reply
+                .status(400)
+                .send({
+                  error: 'Bad Request',
+                  message: 'Missing or invalid body',
+                  details: [{ param: 'body', condition: 'body under 3 MiB' }]
+                });
+            }
+          }
+
+          let blockTexture: ImageManipulator;
+          try {
+            const textureImage = await Sharp(body)
+              .ensureAlpha()
+              .resize(64, 64, { kernel: 'nearest', fit: 'outside' })
+              .raw()
+              .toBuffer({ resolveWithObject: true });
+            blockTexture = new ImageManipulator(textureImage.data, textureImage.info);
+          } catch (err: any) {
+            return reply
+              .status(400)
+              .send({
+                error: 'Bad Request',
+                message: 'Missing or invalid body',
+                details: [{ param: 'body', condition: 'Valid PNG' }]
+              });
+          }
+
+          const renderedBlock = await this.legacyMinecraft3DRenderer.renderBlock(blockTexture);
+          return reply
+            .header('Content-Type', 'image/png')
+            .send(await renderedBlock.toPngBuffer({ width: size, height: size }));
         }
       });
     });

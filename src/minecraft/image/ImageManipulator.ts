@@ -8,13 +8,15 @@ export interface Color {
 }
 
 export default class ImageManipulator {
+  public readonly channels: 1 | 2 | 3 | 4;
   public readonly width: number;
   public readonly height: number;
 
-  protected constructor(
+  constructor(
     protected readonly pixelData: Buffer,
-    protected readonly imageInfo: Sharp.OutputInfo
+    imageInfo: { width: number, height: number, channels: 1 | 2 | 3 | 4 }
   ) {
+    this.channels = imageInfo.channels;
     this.width = imageInfo.width;
     this.height = imageInfo.height;
   }
@@ -131,10 +133,14 @@ export default class ImageManipulator {
       .toBuffer();
   }
 
+  async toRaw(): Promise<{ data: Buffer; info: Sharp.OutputInfo }> {
+    return this.toSharp().raw().toBuffer({ resolveWithObject: true });
+  }
+
   toSharp(): Sharp.Sharp {
     return Sharp(this.pixelData, {
       raw: {
-        channels: 4,
+        channels: this.channels,
         width: this.width,
         height: this.height
       }
