@@ -126,6 +126,7 @@ export default class MinecraftV1Router implements Router {
         get: async (): Promise<FastifyReply> => {
           return reply
             .status(410)
+            .header('Cache-Control', 'public, max-age=300, s-maxage=300')
             .send({
               error: 'Gone',
               message: 'This endpoint has been removed as Mojang removed the username history API (https://web.archive.org/web/20221006001721/https://help.minecraft.net/hc/en-us/articles/8969841895693-Username-History-API-Removal-FAQ-)'
