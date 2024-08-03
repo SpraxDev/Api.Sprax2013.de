@@ -1,5 +1,6 @@
 import './container-init.js';
 import { container } from 'tsyringe';
+import AppConfiguration from './config/AppConfiguration.js';
 import { IS_PRODUCTION } from './constants.js';
 import DatabaseClient from './database/DatabaseClient.js';
 import SentrySdk from './SentrySdk.js';
@@ -24,14 +25,16 @@ async function bootstrap(): Promise<void> {
   taskScheduler = container.resolve(TaskScheduler);
   taskScheduler.start();
 
+  const appConfig = container.resolve(AppConfiguration);
+
   webServer = container.resolve(FastifyWebServer);
-  await webServer.listen('0.0.0.0', 8087);
+  await webServer.listen('0.0.0.0', appConfig.config.serverPort);
 
   console.log();
   if (!IS_PRODUCTION) {
-    console.log('RUNNING IN DEVELOPMENT MODE');
+    console.log(`RUNNING IN DEVELOPMENT MODE (http://127.0.0.1:${appConfig.config.serverPort}/)`);
   }
-  console.log(`Application is ready to accept requests (http://127.0.0.1:8087/)`);
+  console.log('Application is ready to accept requests');
 }
 
 function registerShutdownHooks(): void {

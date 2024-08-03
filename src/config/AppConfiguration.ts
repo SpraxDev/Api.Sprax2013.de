@@ -1,6 +1,7 @@
 import { singleton } from 'tsyringe';
 
 export type AppConfig = {
+  serverPort: number;
 };
 
 @singleton()
@@ -9,6 +10,7 @@ export default class AppConfiguration {
 
   constructor() {
     this.config = this.deepFreeze({
+      serverPort: parseInt(process.env.SPRAXAPI_SERVER_PORT ?? '', 10) || 8087
     } satisfies AppConfig);
   }
 
