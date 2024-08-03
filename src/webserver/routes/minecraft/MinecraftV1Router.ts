@@ -67,7 +67,7 @@ export default class MinecraftV1Router implements Router {
           if (profile == null) {
             return reply
               .status(404)
-              .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+              .header('Cache-Control', 'public, max-age=300, s-maxage=300')
               .send({
                 error: 'Not Found',
                 message: 'UUID for given username'
