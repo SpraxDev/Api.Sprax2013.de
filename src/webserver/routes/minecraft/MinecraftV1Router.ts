@@ -55,11 +55,11 @@ export default class MinecraftV1Router implements Router {
           }
           if (inputUsername.length > 16 || inputUsername.length < 3) {
             return reply
-              .status(400)
+              .status(404)
+              .header('Cache-Control', 'public, max-age=60, s-maxage=60')
               .send({
-                error: 'Bad Request',
-                message: 'Invalid username',
-                details: [{ param: 'name', condition: 'name.length >= 3 && name.length <= 16' }]
+                error: 'Not Found',
+                message: 'UUID for given username'
               });
           }
 
