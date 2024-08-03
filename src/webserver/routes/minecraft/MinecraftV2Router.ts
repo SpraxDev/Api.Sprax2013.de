@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import Net from 'node:net';
 import { autoInjectable } from 'tsyringe';
 import { BadRequestError, NotFoundError } from '../../../http/errors/HttpErrors.js';
@@ -34,9 +34,9 @@ export default class MinecraftV2Router implements Router {
   }
 
   register(server: FastifyInstance): void {
-    server.all('/mc/v2/uuid/:username?', (request, reply): Promise<void> => {
+    server.all('/mc/v2/uuid/:username?', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const inputUsername = (request.params as any).username;
           if (typeof inputUsername !== 'string' || inputUsername.length > 16 || inputUsername.length < 3) {
             throw new BadRequestError('Invalid username');
@@ -59,9 +59,9 @@ export default class MinecraftV2Router implements Router {
       });
     });
 
-    server.all('/mc/v2/profile/:user?', (request, reply): Promise<void> => {
+    server.all('/mc/v2/profile/:user?', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const profile = await this.resolveUserToProfile((request.params as any).user);
           if (profile == null) {
             await reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
@@ -75,9 +75,9 @@ export default class MinecraftV2Router implements Router {
       });
     });
 
-    server.all('/mc/v2/skin/x-url/:skinArea?', (request, reply): Promise<void> => {
+    server.all('/mc/v2/skin/x-url/:skinArea?', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const skinUrl = (request.query as any).url;
           if (typeof skinUrl !== 'string' || skinUrl.length <= 0) {
             throw new BadRequestError('Missing or invalid url parameters');
@@ -122,9 +122,9 @@ export default class MinecraftV2Router implements Router {
       });
     });
 
-    server.all('/mc/v2/skin/:user/:skinArea?', (request, reply): Promise<void> => {
+    server.all('/mc/v2/skin/:user/:skinArea?', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const profile = await this.resolveUserToProfile((request.params as any).user);
           if (profile == null) {
             await reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
@@ -151,9 +151,9 @@ export default class MinecraftV2Router implements Router {
       });
     });
 
-    server.all('/mc/v2/server/blocklist', (request, reply): Promise<void> => {
+    server.all('/mc/v2/server/blocklist', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const blocklist = await this.serverBlocklistService.provideBlocklist();
           return reply
             .header('Cache-Control', 'public, max-age=120, s-maxage=120')
@@ -162,9 +162,9 @@ export default class MinecraftV2Router implements Router {
       });
     });
 
-    server.all('/mc/v2/server/blocklist/check', (request, reply): Promise<void> => {
+    server.all('/mc/v2/server/blocklist/check', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const inputHost = (request.query as any).host;
           if (typeof inputHost !== 'string') {
             throw new BadRequestError('Missing or invalid query parameter "host"');
@@ -190,9 +190,9 @@ export default class MinecraftV2Router implements Router {
       });
     });
 
-    server.all('/mc/v2/server/blocklist/discovered', (request, reply): Promise<void> => {
+    server.all('/mc/v2/server/blocklist/discovered', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const blocklist = await this.serverBlocklistService.provideBlocklistForKnownHosts();
           const responseBody: { [key: string]: string } = {};
           for (const listEntry of blocklist) {
@@ -208,7 +208,7 @@ export default class MinecraftV2Router implements Router {
       });
     });
 
-    server.all('/mc/v2/server/ping', (request, reply): Promise<void> => {
+    server.all('/mc/v2/server/ping', (request, reply): Promise<FastifyReply> => {
       const validateHost = (inputHost: string) => {
         if (Net.isIP(inputHost) > 0) {
           return;
@@ -220,7 +220,7 @@ export default class MinecraftV2Router implements Router {
       };
 
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const inputHost = (request.query as any).host;
           if (typeof inputHost !== 'string') {
             throw new BadRequestError('Missing or invalid query parameter "host"');

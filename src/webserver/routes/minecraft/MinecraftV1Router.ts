@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import assert from 'node:assert';
 import Sharp from 'sharp';
 import { autoInjectable } from 'tsyringe';
@@ -40,9 +40,9 @@ export default class MinecraftV1Router implements Router {
   }
 
   register(server: FastifyInstance): void {
-    server.all('/mc/v1/uuid/:username?', (request, reply): Promise<void> => {
+    server.all('/mc/v1/uuid/:username?', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const inputUsername = (request.params as any).username;
           if (typeof inputUsername !== 'string' || inputUsername.length <= 0) {
             return reply
@@ -65,9 +65,9 @@ export default class MinecraftV1Router implements Router {
 
           const profile = await this.minecraftProfileService.provideProfileByUsername(inputUsername);
           if (profile == null) {
-            await reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
             return reply
               .status(404)
+              .header('Cache-Control', 'public, max-age=60, s-maxage=60')
               .send({
                 error: 'Not Found',
                 message: 'UUID for given username'
@@ -85,9 +85,9 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
-    server.all('/mc/v1/profile/:user?', (request, reply): Promise<void> => {
+    server.all('/mc/v1/profile/:user?', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           let profile: Profile | null;
           try {
             profile = await this.resolveUserToProfile((request.params as any).user);
@@ -121,9 +121,9 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
-    server.all('/mc/v1/history/:user?', (request, reply): Promise<void> => {
+    server.all('/mc/v1/history/:user?', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           return reply
             .status(410)
             .send({
@@ -134,9 +134,9 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
-    server.all('/mc/v1/skin/x-url/:skinArea?', (request, reply): Promise<void> => {
+    server.all('/mc/v1/skin/x-url/:skinArea?', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const skinUrl = (request.query as any).url;
           if (typeof skinUrl !== 'string' || skinUrl.length <= 0) {
             return reply
@@ -202,9 +202,9 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
-    server.all('/mc/v1/skin/x-url/:skinArea/3d', (request, reply): Promise<void> => {
+    server.all('/mc/v1/skin/x-url/:skinArea/3d', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const skinUrl = (request.query as any).url;
           if (typeof skinUrl !== 'string' || skinUrl.length <= 0) {
             return reply
@@ -270,9 +270,9 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
-    server.all('/mc/v1/skin/:user/:skinArea?', (request, reply): Promise<void> => {
+    server.all('/mc/v1/skin/:user/:skinArea?', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const profile = await this.resolveUserToProfile((request.params as any).user);
           if (profile == null) {
             return reply
@@ -304,9 +304,9 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
-    server.all('/mc/v1/skin/:user/:skinArea/3d', (request, reply): Promise<void> => {
+    server.all('/mc/v1/skin/:user/:skinArea/3d', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const profile = await this.resolveUserToProfile((request.params as any).user);
           if (profile == null) {
             return reply
@@ -338,9 +338,9 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
-    server.all('/mc/v1/capes/all/:user?', (request, reply): Promise<void> => {
+    server.all('/mc/v1/capes/all/:user?', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           return reply
             .status(410)
             .send({
@@ -351,9 +351,9 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
-    server.all('/mc/v1/capes/:capeType/:user?', (request, reply): Promise<void> => {
+    server.all('/mc/v1/capes/:capeType/:user?', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const inputCapeType = (request.params as any).capeType;
           if (typeof inputCapeType !== 'string' || !CAPE_TYPE_STRINGS.includes(inputCapeType.toLowerCase())) {
             return reply
@@ -418,9 +418,9 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
-    server.all('/mc/v1/capes/:capeType/:user/render', (request, reply): Promise<void> => {
+    server.all('/mc/v1/capes/:capeType/:user/render', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const inputCapeType = (request.params as any).capeType;
           if (typeof inputCapeType !== 'string' || !CAPE_TYPE_STRINGS.includes(inputCapeType.toLowerCase())) {
             return reply
@@ -509,9 +509,9 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
-    server.all('/mc/v1/servers/blocked', (request, reply): Promise<void> => {
+    server.all('/mc/v1/servers/blocked', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const blocklist = await this.serverBlocklistService.provideBlocklist();
           return reply
             .header('Cache-Control', 'public, max-age=120, s-maxage=120')
@@ -520,9 +520,9 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
-    server.all('/mc/v1/servers/blocked/known', (request, reply): Promise<void> => {
+    server.all('/mc/v1/servers/blocked/known', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const blocklist = await this.serverBlocklistService.provideBlocklistForKnownHosts();
           const responseBody: { [key: string]: string } = {};
           for (const listEntry of blocklist) {
@@ -538,9 +538,9 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
-    server.all('/mc/v1/servers/blocked/check', (request, reply): Promise<void> => {
+    server.all('/mc/v1/servers/blocked/check', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const inputHost = (request.query as any).host;
           if (typeof inputHost !== 'string' || inputHost.length <= 0) {
             return reply
@@ -578,9 +578,9 @@ export default class MinecraftV1Router implements Router {
       });
     });
 
-    server.all('/mc/v1/render/block', (request, reply): Promise<void> => {
+    server.all('/mc/v1/render/block', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<void> => {
+        get: async (): Promise<FastifyReply> => {
           const size = typeof (request.query as any).size === 'string' ? this.parseInteger((request.query as any).size) : 150;
           if (size == null || size < 8 || size > 1024) {
             return reply

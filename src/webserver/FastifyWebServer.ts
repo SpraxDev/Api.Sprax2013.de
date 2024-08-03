@@ -52,17 +52,17 @@ export default class FastifyWebServer {
   static async handleRestfully(
     request: FastifyRequest,
     reply: FastifyReply,
-    handlers: { [key: string]: () => void | Promise<void> }
-  ): Promise<void> {
+    handlers: { [key: string]: () => FastifyReply | Promise<FastifyReply> }
+  ): Promise<FastifyReply> {
     const method = (request.method || '').toLowerCase();
 
     if (method in handlers) {
       await handlers[method]();
-      return;
+      return reply;
     }
     if (method == 'head' && 'get' in handlers) {
       await handlers['get']();
-      return;
+      return reply;
     }
 
     const allowedMethods: string[] = Object.keys(handlers);
@@ -70,7 +70,9 @@ export default class FastifyWebServer {
       allowedMethods.push('head');
     }
 
-    reply.header('Allow', allowedMethods.join(', ').toUpperCase());
-    await reply.status(405);
+    return reply
+      .status(405)
+      .header('Allow', allowedMethods.join(', ').toUpperCase())
+      .send('Method Not Allowed');
   }
 }
