@@ -23,6 +23,7 @@ import MinecraftProfile from '../../../minecraft/value-objects/MinecraftProfile.
 import FastifyWebServer from '../../FastifyWebServer.js';
 import Router from '../Router.js';
 
+// FIXME: Cache-Control header should take 'Age' header into account
 @autoInjectable()
 export default class MinecraftV1Router implements Router {
   constructor(
@@ -115,18 +116,55 @@ export default class MinecraftV1Router implements Router {
           }
 
           if (profile == null) {
-            await reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
             return reply
               .status(404)
+              .header('Cache-Control', 'public, max-age=60, s-maxage=60')
               .send({
                 error: 'Not Found',
                 message: 'Profile for given user'
               });
           }
-          return reply
+
+          let sendProcessedProfile = false;
+
+          const inputRaw = this.parseBoolean((request.query as any).raw);
+          const inputFull = this.parseBoolean((request.query as any).full);
+          if (inputRaw != null) {
+            sendProcessedProfile = !inputRaw;
+          } else if (inputFull != null) {
+            sendProcessedProfile = inputFull;
+          }
+
+          reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
-            .send(profile.profile);
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60');
+
+          if (!sendProcessedProfile) {
+            return reply
+              .send({
+                legacy: false,
+                ...profile.profile
+              });
+          }
+
+          const minecraftProfile = new MinecraftProfile(profile.profile);
+          return reply
+            .send({
+              id: profile.profile.id,
+              id_hyphens: profile.profile.id.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5'),
+              name: profile.profile.name,
+              legacy: false,
+
+              textures: {
+                skinUrl: minecraftProfile.parseTextures()?.skinUrl ?? null,
+                capeUrl: minecraftProfile.parseTextures()?.capeUrl ?? null,
+                texture_value: minecraftProfile.getTexturesProperty()?.value,
+                texture_signature: minecraftProfile.getTexturesProperty()?.signature
+              },
+
+              profile_actions: [],
+              name_history: []
+            });
         }
       });
     });
