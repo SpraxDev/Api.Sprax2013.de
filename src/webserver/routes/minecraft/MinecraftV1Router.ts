@@ -93,6 +93,16 @@ export default class MinecraftV1Router implements Router {
             profile = await this.resolveUserToProfile((request.params as any).user);
           } catch (err: any) {
             if (err instanceof BadRequestError) {
+              if (err.httpErrorMessage === 'Invalid username or UUID' && ((request.params as any).user?.length ?? 0) > 0) {
+                return reply
+                  .status(404)
+                  .header('Cache-Control', 'public, max-age=300, s-maxage=300')
+                  .send({
+                    error: 'Not Found',
+                    message: 'Profile for given user'
+                  });
+              }
+
               return reply
                 .status(400)
                 .send({
