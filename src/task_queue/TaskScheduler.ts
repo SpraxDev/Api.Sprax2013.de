@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe';
 import TaskExecutingQueue from './TaskExecutingQueue.js';
+import ClearExpiredEntriesInSetsWithTtlTask from './tasks/ClearExpiredEntriesInSetsWithTtlTask.js';
 import Task from './tasks/Task.js';
 import UpdateMinecraftServerBlocklistTask from './tasks/UpdateMinecraftServerBlocklistTask.js';
 
@@ -9,12 +10,16 @@ export default class TaskScheduler {
 
   constructor(
     private readonly taskQueue: TaskExecutingQueue,
-    private readonly updateMinecraftServerBlocklistTask: UpdateMinecraftServerBlocklistTask
+    private readonly updateMinecraftServerBlocklistTask: UpdateMinecraftServerBlocklistTask,
+    private readonly clearExpiredEntriesInSetsWithTtlTask: ClearExpiredEntriesInSetsWithTtlTask
   ) {
   }
 
   start(): void {
-    this.scheduleAndRun(this.updateMinecraftServerBlocklistTask, 5 * 60 * 1000 /* 5m */);
+    const fiveMinutes = 5 * 60 * 1000;
+
+    this.scheduleAndRun(this.updateMinecraftServerBlocklistTask, fiveMinutes);
+    this.scheduleAndRun(this.clearExpiredEntriesInSetsWithTtlTask, fiveMinutes);
   }
 
   shutdown(): void {

@@ -1,16 +1,12 @@
-export default class SetWithTTL<T> {
+import { container } from 'tsyringe';
+import ClearExpiredEntriesInSetsWithTtlTask from '../task_queue/tasks/ClearExpiredEntriesInSetsWithTtlTask.js';
+
+export default class SetWithTtl<T> {
   private readonly values = new Map<T, number>();
   private readonly ttlInMilliseconds: number;
 
-  private readonly interval: NodeJS.Timeout;
-
-  constructor(ttlInSeconds: number) {
+  private constructor(ttlInSeconds: number) {
     this.ttlInMilliseconds = ttlInSeconds * 1000;
-    this.interval = setInterval(() => this.clearExpired(), this.ttlInMilliseconds);
-  }
-
-  destroy(): void {
-    clearInterval(this.interval);
   }
 
   add(key: T): void {
@@ -34,8 +30,7 @@ export default class SetWithTTL<T> {
     this.values.clear();
   }
 
-  private clearExpired(): void {
-    const now = Date.now();
+  clearExpired(): void {
     for (const [value, expiration] of this.values.entries()) {
       if (this.isExpired(expiration)) {
         this.values.delete(value);
@@ -45,5 +40,11 @@ export default class SetWithTTL<T> {
 
   private isExpired(expiration: number): boolean {
     return expiration < Date.now();
+  }
+
+  static create<T>(ttlInSeconds: number): SetWithTtl<T> {
+    const setWithTTL = new SetWithTtl<T>(ttlInSeconds);
+    container.resolve(ClearExpiredEntriesInSetsWithTtlTask).registerSet(setWithTTL);
+    return setWithTTL;
   }
 }

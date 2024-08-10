@@ -2,7 +2,7 @@ import { singleton } from 'tsyringe';
 import DatabaseClient from '../database/DatabaseClient.js';
 import SentrySdk from '../SentrySdk.js';
 import MinecraftApiClient, { type UuidToProfileResponse } from './MinecraftApiClient.js';
-import SetWithTTL from './SetWithTTL.js';
+import SetWithTtl from './SetWithTtl.js';
 
 export type Profile = {
   profile: UuidToProfileResponse;
@@ -11,7 +11,7 @@ export type Profile = {
 
 @singleton()
 export default class MinecraftProfileService {
-  private readonly nullProfileCache = new SetWithTTL<string>(60);
+  private readonly nullProfileCache = SetWithTtl.create<string>(60);
 
   constructor(
     private readonly minecraftApiClient: MinecraftApiClient,

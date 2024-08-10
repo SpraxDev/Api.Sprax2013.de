@@ -2,7 +2,7 @@ import Crypto from 'node:crypto';
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../../../database/DatabaseClient.js';
 import SentrySdk from '../../../SentrySdk.js';
-import SetWithTTL from '../../SetWithTTL.js';
+import SetWithTtl from '../../SetWithTtl.js';
 import { PingResult } from './AbstractMinecraftServerPing.js';
 import ServerStatusPingError from './error/ServerStatusPingError.js';
 import MinecraftServerStatusPinger from './MinecraftServerStatusPinger.js';
@@ -16,7 +16,7 @@ export type CachedServerStatus = {
 
 @singleton()
 export default class MinecraftServerStatusService {
-  private readonly offlineServerCache = new SetWithTTL<string>(60);
+  private readonly offlineServerCache = SetWithTtl.create<string>(60);
 
   constructor(
     private readonly minecraftServerStatusPinger: MinecraftServerStatusPinger,
