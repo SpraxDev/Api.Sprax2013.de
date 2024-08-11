@@ -151,6 +151,10 @@ export default class ServerBlocklistService {
   }
 
   private normalizeHost(host: string): string {
+    if (Net.isIPv6(host)) {
+      return host;
+    }
+
     while (host.endsWith('.')) {
       host = host.substring(0, host.length - 1);
     }
