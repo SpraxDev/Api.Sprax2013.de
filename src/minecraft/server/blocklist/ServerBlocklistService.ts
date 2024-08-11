@@ -118,6 +118,9 @@ export default class ServerBlocklistService {
 
     while (currentHost.indexOf('.') !== -1) {
       currentHost = currentHost.substring(currentHost.indexOf('.') + 1);
+      if (currentHost.includes('.')) {
+        hostHashes.set(...this.hashHost(`${currentHost}`));
+      }
       hostHashes.set(...this.hashHost(`*.${currentHost}`));
     }
     return hostHashes;
