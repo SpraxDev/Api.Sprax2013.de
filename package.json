@@ -42,7 +42,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy"
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=22.0.0",
     "npm": ">=10.0.0"
   },
   "dependencies": {
@@ -58,10 +58,10 @@
     "undici": "^6.19.7"
   },
   "devDependencies": {
-    "@tsconfig/node20": "^20.1.4",
+    "@tsconfig/node22": "^22.0.0",
     "@types/gl": "^6.0.5",
     "@types/jest": "^29.5.12",
-    "@types/node": "^20.14.15",
+    "@types/node": "^22.0.0",
     "@types/webgl-ext": "^0.0.37",
     "jest": "^29.7.0",
     "jest-mock-extended": "^3.0.7",
