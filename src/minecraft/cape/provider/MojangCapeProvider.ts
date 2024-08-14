@@ -16,9 +16,12 @@ export default class MojangCapeProvider implements CapeProvider {
   }
 
   async provide(profile: MinecraftProfile): Promise<CapeResponse | null> {
-    const capeUrl = profile.parseTextures()?.capeUrl;
+    let capeUrl = profile.parseTextures()?.capeUrl;
     if (capeUrl == null) {
       return null;
+    }
+    if (capeUrl.startsWith('http://')) {
+      capeUrl = capeUrl.replace('http://', 'https://');
     }
 
     const capeResponse = await this.httpClient.get(capeUrl);
