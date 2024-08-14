@@ -392,6 +392,7 @@ export default class MinecraftV1Router implements Router {
         get: async (): Promise<FastifyReply> => {
           return reply
             .status(410)
+            .header('Cache-Control', 'public, max-age=300, s-maxage=300')
             .send({
               error: 'Gone',
               message: 'This endpoint was never intended for the general public and only returned the internal IDs used by this API to identify the skins (or null) – Please use one of the other cape endpoints instead'
@@ -432,9 +433,9 @@ export default class MinecraftV1Router implements Router {
           }
 
           if (profile == null) {
-            await reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
             return reply
               .status(404)
+              .header('Cache-Control', 'public, max-age=60, s-maxage=60')
               .send({
                 error: 'Not Found',
                 message: 'Profile for given user'
@@ -446,6 +447,7 @@ export default class MinecraftV1Router implements Router {
           if (capeResponse == null) {
             return reply
               .status(404)
+              .header('Cache-Control', 'public, max-age=60, s-maxage=60')
               .send({
                 error: 'Not Found',
                 message: 'User does not have a cape for that type'
@@ -520,9 +522,9 @@ export default class MinecraftV1Router implements Router {
           }
 
           if (profile == null) {
-            await reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
             return reply
               .status(404)
+              .header('Cache-Control', 'public, max-age=60, s-maxage=60')
               .send({
                 error: 'Not Found',
                 message: 'Profile for given user'
@@ -534,6 +536,7 @@ export default class MinecraftV1Router implements Router {
           if (capeResponse == null) {
             return reply
               .status(404)
+              .header('Cache-Control', 'public, max-age=60, s-maxage=60')
               .send({
                 error: 'Not Found',
                 message: 'User does not have a cape for that type'
