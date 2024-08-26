@@ -8,13 +8,13 @@ import { EXISTING_MC_ID, EXISTING_MC_ID_WITH_HYPHENS, EXISTING_MC_NAME } from '.
 const LEGACY_SKIN_URL = 'https://textures.minecraft.net/texture/292009a4925b58f02c77dadc3ecef07ea4c7472f64e0fdc32ce5522489362680';
 
 describe('/mc/v1/skin/:user', () => {
-  async function executeSkinRequest(user: string): Promise<LightMyRequestResponse> {
+  async function executeSkinRequest(user: string, urlSuffix = ''): Promise<LightMyRequestResponse> {
     const fastifyWebServer = container.resolve(FastifyWebServer);
     const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
 
     const response = await fastify.inject({
       method: 'GET',
-      url: `/mc/v1/skin/${user}`
+      url: `/mc/v1/skin/${user}${urlSuffix}`
     });
 
     if (response.statusCode === 200 || response.statusCode === 404) {
@@ -48,16 +48,18 @@ describe('/mc/v1/skin/:user', () => {
   });
 
   test.each([
-    [EXISTING_MC_ID_WITH_HYPHENS],
-    [EXISTING_MC_NAME],
-    [EXISTING_MC_NAME + '?download=0'],
-    [EXISTING_MC_NAME + '?download=false'],
-    [EXISTING_MC_NAME + '?raw=0'],
-    [EXISTING_MC_NAME + '?raw=false'],
-    [EXISTING_MC_NAME + '?raw=false&download=false'],
-    [EXISTING_MC_NAME + '?raw=0&download=0']
-  ])('Expect skin PNG for: %j', async (user: string) => {
-    const response = await executeSkinRequest(user);
+    [EXISTING_MC_ID_WITH_HYPHENS, ''],
+    [EXISTING_MC_NAME, ''],
+    [EXISTING_MC_NAME, '?download=0'],
+    [EXISTING_MC_NAME, '?download=false'],
+    [EXISTING_MC_NAME, '?raw=0'],
+    [EXISTING_MC_NAME, '?raw=false'],
+    [EXISTING_MC_NAME, '?raw=false&download=false'],
+    [EXISTING_MC_NAME, '?raw=0&download=0'],
+    ['x-url', `?url=${LEGACY_SKIN_URL}`],
+    ['x-url', `?url=${LEGACY_SKIN_URL}&raw=0`]
+  ])('Expect skin PNG for: %j', async (user: string, urlSuffix: string) => {
+    const response = await executeSkinRequest(user, urlSuffix);
 
     expect(response.headers['content-type']).toBe('image/png');
     expect(response.statusCode).toBe(200);
@@ -70,12 +72,13 @@ describe('/mc/v1/skin/:user', () => {
   });
 
   test.each([
-    [EXISTING_MC_ID + '?download=1'],
-    [EXISTING_MC_NAME + '?download=true'],
-    [EXISTING_MC_NAME + '?download=true&raw=false'],
-    [EXISTING_MC_NAME + '?download=1&raw=0']
-  ])('Expect skin PNG with forced-download headers for: %j', async (user: string) => {
-    const response = await executeSkinRequest(user);
+    [EXISTING_MC_ID, '?download=1'],
+    [EXISTING_MC_NAME, '?download=true'],
+    [EXISTING_MC_NAME, '?download=true&raw=false'],
+    [EXISTING_MC_NAME, '?download=1&raw=0'],
+    ['x-url', `?url=${LEGACY_SKIN_URL}&download=1`]
+  ])('Expect skin PNG with forced-download headers for: %j', async (user: string, urlSuffix: string) => {
+    const response = await executeSkinRequest(user, urlSuffix);
 
     expect(response.headers['content-type']).toBe('application/octet-stream');
     expect(response.headers['content-disposition']).toBe(`attachment; filename="${user === 'x-url' ? 'x-url' : EXISTING_MC_NAME}.png"`);
@@ -116,6 +119,39 @@ describe('/mc/v1/skin/:user', () => {
     expect(skinMetadata.format).toBe('png');
     expect(skinMetadata.width).toBe(64);
     expect(skinMetadata.height).toBe(32);
+  });
+
+  test('Expect 400 when setting overlay parameter for normal skin request', async () => {
+    const response = await executeSkinRequest(EXISTING_MC_ID, '?overlay=1');
+
+    expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
+    expect(response.json()).toEqual({
+      error: 'Bad Request',
+      message: 'Cannot use "overlay" when just requesting the skin file (without "skinArea" or "3d")'
+    });
+    expect(response.statusCode).toBe(400);
+  });
+
+  test('Expect 400 when setting size parameter for normal skin request', async () => {
+    const response = await executeSkinRequest(EXISTING_MC_ID, '?size=250');
+
+    expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
+    expect(response.json()).toEqual({
+      error: 'Bad Request',
+      message: 'Cannot use "size" when just requesting the skin file (without "skinArea" or "3d")'
+    });
+    expect(response.statusCode).toBe(400);
+  });
+
+  test('Expect 400 when setting slim parameter for normal skin request', async () => {
+    const response = await executeSkinRequest(EXISTING_MC_ID, '?slim=0');
+
+    expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
+    expect(response.json()).toEqual({
+      error: 'Bad Request',
+      message: 'Cannot use "slim" when just requesting the skin file (without "skinArea" or "3d")'
+    });
+    expect(response.statusCode).toBe(400);
   });
 
   test('Expect 405 Method Not Allowed on POST', async () => {
@@ -190,6 +226,28 @@ describe.each([
       error: 'Bad Request',
       message: 'Provided URL returned 404 (Not Found)'
     });
+  });
+
+  test('Expect 400 for setting raw=1 when requesting a rendered image', async () => {
+    const response = await executeSkinRequest(`?raw=1&url=${LEGACY_SKIN_URL}`);
+
+    expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
+    expect(response.json()).toEqual({
+      error: 'Bad Request',
+      message: 'Cannot use "raw" when requesting a rendered skin (3d or skinArea)'
+    });
+    expect(response.statusCode).toBe(400);
+  });
+
+  test('Expect 400 for setting slim parameter when requesting a rendered head', async () => {
+    const response = await executeSkinRequest(`?slim=1&url=${LEGACY_SKIN_URL}`);
+
+    expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
+    expect(response.json()).toEqual({
+      error: 'Bad Request',
+      message: 'Cannot use "slim" when requesting the rendered head'
+    });
+    expect(response.statusCode).toBe(400);
   });
 });
 
@@ -363,6 +421,16 @@ describe.each([
     }
   });
 
+  test('Expect 400 for invalid size parameter', async () => {
+    const response = await executeSkinRequest('head', '?size=invalid');
+
+    expect(response.json()).toEqual({
+      error: 'Bad Request',
+      message: 'Missing or invalid query parameters',
+      details: [{ param: 'size', condition: 'size >= 8 and size <= 1024' }]
+    });
+  });
+
   test('Expect 400 for invalid skinArea', async () => {
     const response = await executeSkinRequest('invalid' as any);
 
@@ -370,6 +438,16 @@ describe.each([
       error: 'Bad Request',
       message: 'Missing or invalid url parameters',
       details: [{ param: 'skinArea', condition: 'Equal (ignore case) one of the following: "HEAD", "BODY"' }]
+    });
+    expect(response.statusCode).toBe(400);
+  });
+
+  test('Expect 400 for invalid download parameter', async () => {
+    const response = await executeSkinRequest('head', '?download=invalid');
+
+    expect(response.json()).toEqual({
+      error: 'Bad Request',
+      message: 'Expected a "1", "0", "true" or "false" but got "invalid"'
     });
     expect(response.statusCode).toBe(400);
   });

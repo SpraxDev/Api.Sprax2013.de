@@ -215,10 +215,11 @@ export default class MinecraftV1Router implements Router {
             throw new ApiV1BadRequestError(`Provided URL returned ${fetchedSkinImage.statusCode} (${https.STATUS_CODES[fetchedSkinImage.statusCode]})`);
           }
 
+          const requestedRawSkin = this.parseBoolean((request.query as any).raw) ?? false;
           const skin = await this.minecraftSkinNormalizer.normalizeSkin(await SkinImageManipulator.createByImage(fetchedSkinImage.body));
           const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin) === 'alex';
 
-          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, false, true);
+          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, requestedRawSkin, true);
 
           reply.header('Content-Type', 'image/png');
           if (skinResponse.forceDownload) {
@@ -276,10 +277,11 @@ export default class MinecraftV1Router implements Router {
           }
           const minecraftProfile = new MinecraftProfile(profile.profile);
 
+          const requestedRawSkin = this.parseBoolean((request.query as any).raw) ?? false;
           const renderSlim = this.parseBoolean((request.query as any).slim) ?? minecraftProfile.parseTextures()?.slimPlayerModel ?? minecraftProfile.determineDefaultSkin() === 'alex';
           const skin = await this.minecraftSkinService.fetchEffectiveSkin(new MinecraftProfile(profile.profile));
 
-          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, false, true);
+          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, requestedRawSkin, true);
 
           reply.header('Content-Type', 'image/png');
           if (skinResponse.forceDownload) {
