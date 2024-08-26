@@ -36,7 +36,7 @@ export default class FastifyWebServer {
       SentrySdk.logAndCaptureError(err);
       return reply
         .code(500)
-        .send('Internal Server Error');
+        .send({ error: 'Internal Server Error' });
     });
 
     this.setupRouters(routers);
