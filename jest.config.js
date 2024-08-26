@@ -23,7 +23,7 @@ const config = {
       ...defaultProjectConfig,
       displayName: 'acceptance',
       testMatch: ['<rootDir>/tests/acceptance/**/*.test.ts'],
-      coveragePathIgnorePatterns: ['^(?!<rootDir>/src/webserver/routes/).*\\.ts$'],
+      coveragePathIgnorePatterns: ['^(?!<rootDir>/src/webserver/).*\\.ts$'],
 
       setupFilesAfterEnv: ['<rootDir>/tests/acceptance/jest.setup.ts'],
     },
