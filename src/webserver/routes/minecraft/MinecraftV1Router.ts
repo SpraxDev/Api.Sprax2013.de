@@ -236,7 +236,24 @@ export default class MinecraftV1Router implements Router {
           const skin = await SkinImageManipulator.createByImage(fetchedSkinImage.body);
           const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin) === 'alex';
 
-          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, requestedRawSkin);
+          let skinResponse;
+          try {
+            skinResponse = await this.processSkinRequest(request, skin, renderSlim, requestedRawSkin);
+          } catch (err: any) {
+            if (err instanceof BadRequestError && err.httpErrorMessage.includes(' as skin area but got ')) {
+              return reply
+                .status(400)
+                .send({
+                  error: 'Bad Request',
+                  message: 'Missing or invalid url parameters',
+                  details: [{
+                    param: 'skinArea',
+                    condition: 'Equal (ignore case) one of the following: "HEAD", "BODY"'
+                  }]
+                });
+            }
+            throw err;
+          }
 
           reply.header('Content-Type', 'image/png');
           if (skinResponse.forceDownload) {
@@ -304,7 +321,24 @@ export default class MinecraftV1Router implements Router {
           const skin = await this.minecraftSkinNormalizer.normalizeSkin(await SkinImageManipulator.createByImage(fetchedSkinImage.body));
           const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin) === 'alex';
 
-          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, false, true);
+          let skinResponse;
+          try {
+            skinResponse = await this.processSkinRequest(request, skin, renderSlim, false, true);
+          } catch (err: any) {
+            if (err instanceof BadRequestError && err.httpErrorMessage.includes(' as skin area but got ')) {
+              return reply
+                .status(400)
+                .send({
+                  error: 'Bad Request',
+                  message: 'Missing or invalid url parameters',
+                  details: [{
+                    param: 'skinArea',
+                    condition: 'Equal (ignore case) one of the following: "HEAD", "BODY"'
+                  }]
+                });
+            }
+            throw err;
+          }
 
           reply.header('Content-Type', 'image/png');
           if (skinResponse.forceDownload) {
@@ -339,7 +373,24 @@ export default class MinecraftV1Router implements Router {
           const renderSlim = this.parseBoolean((request.query as any).slim) ?? minecraftProfile.parseTextures()?.slimPlayerModel ?? minecraftProfile.determineDefaultSkin() === 'alex';
           const skin = await this.minecraftSkinService.fetchEffectiveSkin(new MinecraftProfile(profile.profile));
 
-          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, requestedRawSkin);
+          let skinResponse;
+          try {
+            skinResponse = await this.processSkinRequest(request, skin, renderSlim, requestedRawSkin);
+          } catch (err: any) {
+            if (err instanceof BadRequestError && err.httpErrorMessage.includes(' as skin area but got ')) {
+              return reply
+                .status(400)
+                .send({
+                  error: 'Bad Request',
+                  message: 'Missing or invalid url parameters',
+                  details: [{
+                    param: 'skinArea',
+                    condition: 'Equal (ignore case) one of the following: "HEAD", "BODY"'
+                  }]
+                });
+            }
+            throw err;
+          }
 
           reply.header('Content-Type', 'image/png');
           if (skinResponse.forceDownload) {
@@ -373,7 +424,24 @@ export default class MinecraftV1Router implements Router {
           const renderSlim = this.parseBoolean((request.query as any).slim) ?? minecraftProfile.parseTextures()?.slimPlayerModel ?? minecraftProfile.determineDefaultSkin() === 'alex';
           const skin = await this.minecraftSkinService.fetchEffectiveSkin(new MinecraftProfile(profile.profile));
 
-          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, false, true);
+          let skinResponse;
+          try {
+            skinResponse = await this.processSkinRequest(request, skin, renderSlim, false, true);
+          } catch (err: any) {
+            if (err instanceof BadRequestError && err.httpErrorMessage.includes(' as skin area but got ')) {
+              return reply
+                .status(400)
+                .send({
+                  error: 'Bad Request',
+                  message: 'Missing or invalid url parameters',
+                  details: [{
+                    param: 'skinArea',
+                    condition: 'Equal (ignore case) one of the following: "HEAD", "BODY"'
+                  }]
+                });
+            }
+            throw err;
+          }
 
           reply.header('Content-Type', 'image/png');
           if (skinResponse.forceDownload) {
