@@ -3,7 +3,7 @@ import { container, Lifecycle } from 'tsyringe';
 import LabymodCapeProvider from './minecraft/cape/provider/LabymodCapeProvider.js';
 import MojangCapeProvider from './minecraft/cape/provider/MojangCapeProvider.js';
 import OptifineCapeProvider from './minecraft/cape/provider/OptifineCapeProvider.js';
-import MinecraftV1Router from './webserver/routes/minecraft/v1/MinecraftV1Router.js';
+import MinecraftV1Router from './webserver/routes/minecraft/MinecraftV1Router.js';
 import MinecraftV2Router from './webserver/routes/minecraft/MinecraftV2Router.js';
 import StatusRouter from './webserver/routes/StatusRouter.js';
 

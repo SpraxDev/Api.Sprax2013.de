@@ -1,8 +1,7 @@
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { injectAll, singleton } from 'tsyringe';
-import { HttpError, NotFoundError } from '../http/errors/HttpErrors.js';
 import SentrySdk from '../SentrySdk.js';
-import { ApiV1HttpError } from './routes/minecraft/v1/errors/ApiV1HttpError.js';
+import { HttpError, NotFoundError } from './errors/HttpErrors.js';
 import Router from './routes/Router.js';
 
 @singleton()
@@ -21,13 +20,7 @@ export default class FastifyWebServer {
       throw new NotFoundError('Requested resource not found');
     });
     this.fastify.setErrorHandler((err: Error, _req: FastifyRequest, reply: FastifyReply): FastifyReply => {
-      // TODO: refactor and use one common interface or something for both errors
       if (err instanceof HttpError) {
-        return reply
-          .code(err.httpStatusCode)
-          .send({ error: err.httpErrorMessage });
-      }
-      if (err instanceof ApiV1HttpError) {
         return reply
           .code(err.httpStatusCode)
           .send(err.createResponseBody());

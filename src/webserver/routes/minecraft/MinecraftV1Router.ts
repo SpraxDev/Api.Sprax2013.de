@@ -3,26 +3,26 @@ import assert from 'node:assert';
 import https from 'node:http';
 import Sharp from 'sharp';
 import { autoInjectable } from 'tsyringe';
-import HttpClient from '../../../../http/HttpClient.js';
-import { CAPE_TYPE_STRINGS, CapeType } from '../../../../minecraft/cape/CapeType.js';
-import Cape2dRenderer from '../../../../minecraft/cape/renderer/Cape2dRenderer.js';
-import UserCapeProvider from '../../../../minecraft/cape/UserCapeProvider.js';
-import ImageManipulator from '../../../../minecraft/image/ImageManipulator.js';
-import type { UsernameToUuidResponse } from '../../../../minecraft/MinecraftApiClient.js';
-import MinecraftProfileService, { type Profile } from '../../../../minecraft/MinecraftProfileService.js';
+import HttpClient from '../../../http/HttpClient.js';
+import { CAPE_TYPE_STRINGS, CapeType } from '../../../minecraft/cape/CapeType.js';
+import Cape2dRenderer from '../../../minecraft/cape/renderer/Cape2dRenderer.js';
+import UserCapeProvider from '../../../minecraft/cape/UserCapeProvider.js';
+import ImageManipulator from '../../../minecraft/image/ImageManipulator.js';
+import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
+import MinecraftProfileService, { type Profile } from '../../../minecraft/MinecraftProfileService.js';
 import ServerBlocklistService, {
   InvalidHostError
-} from '../../../../minecraft/server/blocklist/ServerBlocklistService.js';
-import MinecraftSkinNormalizer from '../../../../minecraft/skin/manipulator/MinecraftSkinNormalizer.js';
-import SkinImageManipulator from '../../../../minecraft/skin/manipulator/SkinImageManipulator.js';
-import MinecraftSkinService from '../../../../minecraft/skin/MinecraftSkinService.js';
-import MinecraftSkinTypeDetector from '../../../../minecraft/skin/MinecraftSkinTypeDetector.js';
-import LegacyMinecraft3DRenderer from '../../../../minecraft/skin/renderer/LegacyMinecraft3DRenderer.js';
-import SkinImage2DRenderer from '../../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
-import MinecraftProfile from '../../../../minecraft/value-objects/MinecraftProfile.js';
-import FastifyWebServer from '../../../FastifyWebServer.js';
-import Router from '../../Router.js';
-import { ApiV1BadRequestError, ApiV1NotFoundError } from './errors/ApiV1HttpError.js';
+} from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
+import MinecraftSkinNormalizer from '../../../minecraft/skin/manipulator/MinecraftSkinNormalizer.js';
+import SkinImageManipulator from '../../../minecraft/skin/manipulator/SkinImageManipulator.js';
+import MinecraftSkinService from '../../../minecraft/skin/MinecraftSkinService.js';
+import MinecraftSkinTypeDetector from '../../../minecraft/skin/MinecraftSkinTypeDetector.js';
+import LegacyMinecraft3DRenderer from '../../../minecraft/skin/renderer/LegacyMinecraft3DRenderer.js';
+import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
+import MinecraftProfile from '../../../minecraft/value-objects/MinecraftProfile.js';
+import FastifyWebServer from '../../FastifyWebServer.js';
+import Router from '../Router.js';
+import { ApiV1BadRequestError, ApiV1NotFoundError } from '../../errors/ApiV1HttpError.js';
 
 // FIXME: Cache-Control header should take 'Age' header into account
 @autoInjectable()

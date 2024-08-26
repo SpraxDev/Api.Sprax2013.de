@@ -1,23 +1,14 @@
-export abstract class ApiV1HttpError extends Error {
-  protected constructor(
-    public readonly httpStatusCode: number,
-    public readonly httpErrorMessage: string
-  ) {
-    super(`[${httpStatusCode}] ${httpErrorMessage}`);
-  }
+import { BadRequestError, NotFoundError } from './HttpErrors.js';
 
-  abstract createResponseBody(): any;
-}
-
-export class ApiV1BadRequestError extends ApiV1HttpError {
+export class ApiV1BadRequestError extends BadRequestError {
   constructor(
     httpErrorMessage: string,
     private readonly details?: any[]
   ) {
-    super(400, httpErrorMessage);
+    super(httpErrorMessage);
   }
 
-  createResponseBody(): any {
+  createResponseBody(): Record<string, any> {
     return {
       error: 'Bad Request',
       message: this.httpErrorMessage,
@@ -33,17 +24,17 @@ export class ApiV1BadRequestError extends ApiV1HttpError {
     return new ApiV1BadRequestError('Missing or invalid query parameters', [{ param: param, condition: condition }]);
   }
 
-  static missingOrInvalidBody(param:string, condition:string): ApiV1BadRequestError {
+  static missingOrInvalidBody(param: string, condition: string): ApiV1BadRequestError {
     return new ApiV1BadRequestError('Missing or invalid body', [{ param: param, condition: condition }]);
   }
 }
 
-export class ApiV1NotFoundError extends ApiV1HttpError {
+export class ApiV1NotFoundError extends NotFoundError {
   constructor(httpErrorMessage: string) {
-    super(404, httpErrorMessage);
+    super(httpErrorMessage);
   }
 
-  createResponseBody(): any {
+  createResponseBody(): Record<string, any> {
     return {
       error: 'Not Found',
       message: this.httpErrorMessage
