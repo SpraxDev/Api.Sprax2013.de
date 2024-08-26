@@ -24,7 +24,7 @@ describe('/mc/v1/skin/:user', () => {
     return response;
   }
 
-  // FIXME: optional parameters in the URL work differently in Fastify vs. Express
+  // FIXME: [skipped] optional parameters in the URL work differently in Fastify vs. Express
   test.skip('Expect 400 for empty user', async () => {
     const response = await executeSkinRequest('');
 
@@ -133,12 +133,73 @@ describe('/mc/v1/skin/:user', () => {
 });
 
 describe.each([
+  [false],
+  [true]
+])('/mc/v1/skin/x-url/* error cases (request3D=%j)', (request3D: boolean) => {
+  async function executeSkinRequest(urlSuffix: string): Promise<LightMyRequestResponse> {
+    const fastifyWebServer = container.resolve(FastifyWebServer);
+    const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
+
+    return fastify.inject({
+      method: 'GET',
+      url: `/mc/v1/skin/x-url/head${request3D ? '/3d' : ''}${urlSuffix}`
+    });
+  }
+
+  test.each([
+    [''],
+    ['?url=']
+  ])('Expect 400 for empty skin URL parameter: %j', async (urlSuffix: string) => {
+    const response = await executeSkinRequest(urlSuffix);
+
+    expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
+    expect(response.json()).toEqual({
+      error: 'Bad Request',
+      message: 'Missing or invalid query parameters',
+      details: [{ param: 'url', condition: 'url.length > 0' }]
+    });
+  });
+
+  test('Expect 400 for invalid skin URL parameter', async () => {
+    const response = await executeSkinRequest('?url=invalid');
+
+    expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
+    expect(response.json()).toEqual({
+      error: 'Bad Request',
+      message: 'Missing or invalid query parameters',
+      details: [{ param: 'url', condition: 'url needs to be a valid URL (e.g. start with https://)' }]
+    });
+  });
+
+  test('Expect 400 for non-https skin URL parameter', async () => {
+    const response = await executeSkinRequest('?url=http://example.com');
+
+    expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
+    expect(response.json()).toEqual({
+      error: 'Bad Request',
+      message: 'Missing or invalid query parameters',
+      details: [{ param: 'url', condition: 'url needs to be an https URL' }]
+    });
+  });
+
+  test('Expect 400 for skin URL that responds non successful', async () => {
+    const response = await executeSkinRequest('?url=https://textures.minecraft.net/texture/non-existant');
+
+    expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
+    expect(response.json()).toEqual({
+      error: 'Bad Request',
+      message: 'Provided URL returned 404 (Not Found)'
+    });
+  });
+});
+
+describe.each([
   [false, EXISTING_MC_NAME, null],
   [true, EXISTING_MC_NAME, null],
 
   [false, 'x-url', LEGACY_SKIN_URL],
   [true, 'x-url', LEGACY_SKIN_URL]
-])('/mc/v1/skin/:user/:skinArea (3D: %j, user: %j)', (request3D: boolean, user: string, skinUrl: string | null) => {
+])('/mc/v1/skin/:user/:skinArea(/3d) (3D: %j, user: %j)', (request3D: boolean, user: string, skinUrl: string | null) => {
   async function executeSkinRequest(skinArea: 'head' | 'body', suffix = '', method: 'GET' | 'POST' = 'GET'): Promise<LightMyRequestResponse> {
     const fastifyWebServer = container.resolve(FastifyWebServer);
     const fastify = (fastifyWebServer as any).fastify as FastifyInstance;

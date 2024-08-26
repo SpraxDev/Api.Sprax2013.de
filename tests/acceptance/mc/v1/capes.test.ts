@@ -89,7 +89,7 @@ describe('/mc/v1/capes/:capeType/:user?', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid url parameters',
-      details: [{ param: 'user', condition: 'user.length > 0' }]
+      details: [{ param: 'user', condition: 'Is valid uuid string or user.length <= 16' }]
     });
     expect(response.statusCode).toBe(400);
   });
@@ -202,7 +202,7 @@ describe('/mc/v1/capes/:capeType/:user/render', () => {
     });
 
     if (response.statusCode === 200 || response.statusCode === 404) {
-      expect(response.headers['cache-control']).toBe('public, max-age=60, s-maxage=60');
+      expect(response.headers['cache-control']).toMatch(/^public, max-age=(60|300), s-maxage=\1$/);
     }
 
     return response;
@@ -219,14 +219,14 @@ describe('/mc/v1/capes/:capeType/:user/render', () => {
     expect(response.statusCode).toBe(400);
   });
 
-  test('Expect 400 for invalid user', async () => {
+  test('Expect 400 for invalid username', async () => {
     const response = await executeCapeRenderRequest('mojang', 'a'.repeat(20));
 
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid url parameters',
-      details: [{ param: 'user', condition: 'user.length > 0' }]
+      details: [{ param: 'user', condition: 'Is valid uuid string or user.length <= 16' }]
     });
     expect(response.statusCode).toBe(400);
   });

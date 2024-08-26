@@ -87,7 +87,6 @@ describe('/mc/v1/profile/*', () => {
 
   test.each([
     ['non-existing-$'],
-    ['a'.repeat(30)],
     ['fdddfd0c-21ed-385b-a01a-ec96f6e0ffbe'] // UUIDv3
   ])('Expect 404: %j', async (username: string) => {
     const response = await executeProfileRequest(username);
@@ -97,6 +96,17 @@ describe('/mc/v1/profile/*', () => {
       message: 'Profile for given user'
     });
     expect(response.statusCode).toBe(404);
+  });
+
+  test('Expect 400 for invalid username', async () => {
+    const response = await executeProfileRequest('a'.repeat(30));
+
+    expect(response.json()).toEqual({
+      error: 'Bad Request',
+      message: 'Missing or invalid url parameters',
+      details: [{ param: 'user', condition: 'Is valid uuid string or user.length <= 16' }]
+    });
+    expect(response.statusCode).toBe(400);
   });
 
   test('Expect 405 Method Not Allowed on POST', async () => {
