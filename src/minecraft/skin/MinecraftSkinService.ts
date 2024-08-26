@@ -32,9 +32,9 @@ export default class MinecraftSkinService {
   }
 
   private async fetchSkin(skinUrl: string, textureProperty?: UuidToProfileResponse['properties'][0]): Promise<SkinImageManipulator> {
-    let normalizedSkin = await this.findNormalizedSkinByUrl(skinUrl);
-    if (normalizedSkin != null) {
-      return normalizedSkin;
+    let skin = await this.findSkinByUrl(skinUrl);
+    if (skin != null) {
+      return skin;
     }
 
     const skinImage = await this.httpClient.get(skinUrl);
@@ -42,10 +42,13 @@ export default class MinecraftSkinService {
       throw new Error(`Failed to fetch skin from URL: ${skinUrl}`);
     }
 
-    normalizedSkin = await this.minecraftSkinNormalizer.normalizeSkin(await SkinImageManipulator.createByImage(skinImage.body));
+    skin = await SkinImageManipulator.createByImage(skinImage.body);
+
+    // TODO: Maybe we can optimize this whole method by knowing whether to fetch the original image or the normalized one
+    const normalizedSkin = await this.minecraftSkinNormalizer.normalizeSkin(skin);
     await this.persistSkin(skinUrl, skinImage.body, await normalizedSkin.toPngBuffer(), textureProperty);
 
-    return normalizedSkin;
+    return skin;
   }
 
   private async getDefaultSkin(skin: DefaultSkin): Promise<SkinImageManipulator> {
@@ -105,13 +108,13 @@ export default class MinecraftSkinService {
     });
   }
 
-  private async findNormalizedSkinByUrl(skinUrl: string): Promise<SkinImageManipulator | null> {
+  private async findSkinByUrl(skinUrl: string): Promise<SkinImageManipulator | null> {
     const skinInDatabase = await this.databaseClient.skinUrl.findUnique({
       where: { url: skinUrl },
-      select: { image: { select: { normalizedImage: true } } }
+      select: { image: { select: { originalImage: true } } }
     });
-    if (skinInDatabase?.image.normalizedImage != null) {
-      return SkinImageManipulator.createByImage(skinInDatabase.image.normalizedImage);
+    if (skinInDatabase?.image.originalImage != null) {
+      return SkinImageManipulator.createByImage(skinInDatabase.image.originalImage);
     }
     return null;
   }

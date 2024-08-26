@@ -232,10 +232,11 @@ export default class MinecraftV1Router implements Router {
               });
           }
 
-          const skin = await this.minecraftSkinNormalizer.normalizeSkin(await SkinImageManipulator.createByImage(fetchedSkinImage.body));
+          const requestedRawSkin = this.parseBoolean((request.query as any).raw) ?? false;
+          const skin = await SkinImageManipulator.createByImage(fetchedSkinImage.body);
           const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin) === 'alex';
 
-          const skinResponse = await this.processSkinRequest(request, skin, renderSlim);
+          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, requestedRawSkin);
 
           reply.header('Content-Type', 'image/png');
           if (skinResponse.forceDownload) {
@@ -303,7 +304,7 @@ export default class MinecraftV1Router implements Router {
           const skin = await this.minecraftSkinNormalizer.normalizeSkin(await SkinImageManipulator.createByImage(fetchedSkinImage.body));
           const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin) === 'alex';
 
-          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, true);
+          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, false, true);
 
           reply.header('Content-Type', 'image/png');
           if (skinResponse.forceDownload) {
@@ -334,10 +335,11 @@ export default class MinecraftV1Router implements Router {
           }
           const minecraftProfile = new MinecraftProfile(profile.profile);
 
+          const requestedRawSkin = this.parseBoolean((request.query as any).raw) ?? false;
           const renderSlim = this.parseBoolean((request.query as any).slim) ?? minecraftProfile.parseTextures()?.slimPlayerModel ?? minecraftProfile.determineDefaultSkin() === 'alex';
           const skin = await this.minecraftSkinService.fetchEffectiveSkin(new MinecraftProfile(profile.profile));
 
-          const skinResponse = await this.processSkinRequest(request, skin, renderSlim);
+          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, requestedRawSkin);
 
           reply.header('Content-Type', 'image/png');
           if (skinResponse.forceDownload) {
@@ -371,7 +373,7 @@ export default class MinecraftV1Router implements Router {
           const renderSlim = this.parseBoolean((request.query as any).slim) ?? minecraftProfile.parseTextures()?.slimPlayerModel ?? minecraftProfile.determineDefaultSkin() === 'alex';
           const skin = await this.minecraftSkinService.fetchEffectiveSkin(new MinecraftProfile(profile.profile));
 
-          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, true);
+          const skinResponse = await this.processSkinRequest(request, skin, renderSlim, false, true);
 
           reply.header('Content-Type', 'image/png');
           if (skinResponse.forceDownload) {
@@ -713,7 +715,13 @@ export default class MinecraftV1Router implements Router {
     return await this.minecraftProfileService.provideProfileByUuid(inputUser);
   }
 
-  private async processSkinRequest(request: FastifyRequest, skin: SkinImageManipulator, renderSlim: boolean, is3d: boolean = false): Promise<{ pngBody: Buffer, skinArea: 'head' | 'body' | null, forceDownload: boolean }> {
+  private async processSkinRequest(
+    request: FastifyRequest,
+    skin: SkinImageManipulator,
+    renderSlim: boolean,
+    requestedRawSkin: boolean,
+    is3d: boolean = false
+  ): Promise<{ pngBody: Buffer; skinArea: 'head' | 'body' | null; forceDownload: boolean }> {
     function parseSkinArea(input: unknown): 'head' | 'body' | null {
       if (input == null) {
         return null;
@@ -758,6 +766,9 @@ export default class MinecraftV1Router implements Router {
     if (userInputSlim != null && requestedSkinArea === 'head') {
       throw new BadRequestError('Cannot use "slim" when requesting the rendered head');
     }
+    if (requestedRawSkin && requestedSkinArea != null) {
+      throw new BadRequestError('Cannot use "raw" when requesting a rendered skin (3d or skinArea)');
+    }
 
     const renderOverlay = this.parseBoolean(userInputOverlay) ?? true;
     const renderSize = parseInteger(userInputSize) ?? 512;
@@ -768,15 +779,23 @@ export default class MinecraftV1Router implements Router {
     }
 
     let responseSkin: ImageManipulator = skin;
+    let responseSkinIsRendered = false;
+
+    if (!requestedRawSkin) {
+      responseSkin = await this.minecraftSkinNormalizer.normalizeSkin(skin);
+    }
     if (is3d) {
       assert(requestedSkinArea != null);
-      responseSkin = await this.renderSkin3d(skin, requestedSkinArea, renderOverlay, renderSlim);
+      assert(responseSkin instanceof SkinImageManipulator);
+      responseSkin = await this.renderSkin3d(responseSkin, requestedSkinArea, renderOverlay, renderSlim);
+      responseSkinIsRendered = true;
     } else if (requestedSkinArea != null) {
-      responseSkin = await this.renderSkin2d(skin, requestedSkinArea, renderOverlay, renderSlim);
+      assert(responseSkin instanceof SkinImageManipulator);
+      responseSkin = await this.renderSkin2d(responseSkin, requestedSkinArea, renderOverlay, renderSlim);
+      responseSkinIsRendered = true;
     }
 
-
-    const responseResizeOptions = responseSkin === skin ? undefined : { width: renderSize, height: renderSize };
+    const responseResizeOptions = responseSkinIsRendered ? { width: renderSize, height: renderSize } : undefined;
     const responseBody = await responseSkin.toPngBuffer(responseResizeOptions);
 
     return {
