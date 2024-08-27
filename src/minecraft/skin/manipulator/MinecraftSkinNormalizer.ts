@@ -62,8 +62,17 @@ export default class MinecraftSkinNormalizer {
 
     const newImageManipulator = await SkinImageManipulator.createEmpty();
 
-    newImageManipulator.drawImage(skinImageManipulator, 0, 0);
+    // head
+    newImageManipulator.drawSubImg(skinImageManipulator, 8, 0, 16, 8, 8, 0);
+    newImageManipulator.drawSubImg(skinImageManipulator, 0, 8, 32, 8, 0, 8);
 
+    // body
+    newImageManipulator.drawSubImg(skinImageManipulator, 0, 20, 56, 12, 0, 20);
+    newImageManipulator.drawSubImg(skinImageManipulator, 4, 16, 8, 4, 4, 16);
+    newImageManipulator.drawSubImg(skinImageManipulator, 20, 16, 16, 4, 20, 16);
+    newImageManipulator.drawSubImg(skinImageManipulator, 44, 16, 8, 4, 44, 16);
+
+    // left arm/leg
     newImageManipulator.drawSubImageFlipped(skinImageManipulator, 8, 16, 4, 4, 24, 48);
     newImageManipulator.drawSubImageFlipped(skinImageManipulator, 4, 16, 4, 4, 20, 48);
     newImageManipulator.drawSubImageFlipped(skinImageManipulator, 44, 16, 4, 4, 36, 48);
@@ -104,14 +113,16 @@ export default class MinecraftSkinNormalizer {
     skinImageManipulator.drawRect(60, 48, 4, 4, noColor);
     skinImageManipulator.drawRect(56, 32, 8, 16, noColor);
 
-    // FIXME: Die Loop setzt alle "unsichtbaren" Pixel auf `noColor`
-    //        Brauchen wir das? Kann Sharp das für uns machen?
+    this.removeColorInformationForInvisiblePixels(skinImageManipulator);
+  }
+
+  private removeColorInformationForInvisiblePixels(skinImageManipulator: SkinImageManipulator): void {
     for (let x = 0; x < skinImageManipulator.width; ++x) {
       for (let y = 0; y < skinImageManipulator.height; ++y) {
-        const col = skinImageManipulator.getColor(x, y);
+        const color = skinImageManipulator.getColor(x, y);
 
-        if (col.alpha === 0 && (col.r !== 0 || col.g !== 0 || col.b !== 0)) {
-          skinImageManipulator.setColor(x, y, noColor);
+        if (color.alpha === 0 && (color.r !== 0 || color.g !== 0 || color.b !== 0)) {
+          skinImageManipulator.setColor(x, y, { r: 0, g: 0, b: 0, alpha: 0 });
         }
       }
     }
