@@ -54,7 +54,7 @@ export default class FastifyWebServer {
     reply: FastifyReply,
     handlers: { [key: string]: () => FastifyReply | Promise<FastifyReply> }
   ): Promise<FastifyReply> {
-    const method = (request.method || '').toLowerCase();
+    const method = request.method.toLowerCase();
 
     if (method in handlers) {
       await handlers[method]();
