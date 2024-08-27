@@ -82,10 +82,6 @@ export default class MinecraftSkinNormalizer {
   }
 
   private removeUnusedSkinParts(skinImageManipulator: SkinImageManipulator): void {
-    if (skinImageManipulator.height != 64) {
-      throw new Error('Legacy skin dimensions are not supported');
-    }
-
     const noColor: Color = { r: 0, g: 0, b: 0, alpha: 0 };
 
     skinImageManipulator.drawRect(0, 0, 8, 8, noColor);
@@ -122,10 +118,6 @@ export default class MinecraftSkinNormalizer {
   }
 
   private correctAlphaForFirstSkinLayer(skinImageManipulator: SkinImageManipulator): void {
-    if (skinImageManipulator.height != 64) {
-      throw new Error('Legacy skin dimensions are not supported');
-    }
-
     const black: Color = { r: 0, g: 0, b: 0, alpha: 255 };
 
     for (const area of MinecraftSkinNormalizer.FIRST_SKIN_LAYER_AREAS) {
