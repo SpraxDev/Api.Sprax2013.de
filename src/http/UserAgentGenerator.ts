@@ -20,6 +20,4 @@ export default class UserAgentGenerator {
 
     return userAgent;
   }
-
-
 }

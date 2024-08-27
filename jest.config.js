@@ -3,6 +3,7 @@ const defaultProjectConfig = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   clearMocks: true,
+  restoreMocks: true,
 
   extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: { '(.+\/.+)\\.js': '$1' },
