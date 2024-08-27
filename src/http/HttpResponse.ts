@@ -19,7 +19,7 @@ export default class HttpResponse {
   getHeader(key: string): string | null;
   getHeader(key: 'Set-Cookie'): string[] | null;
   getHeader(key: string): string | string[] | null {
-    return this.headers.get(key) ?? null;
+    return this.headers.get(key.toLowerCase()) ?? null;
   }
 
   parseBodyAsText(): string {
