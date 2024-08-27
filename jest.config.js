@@ -30,6 +30,11 @@ const config = {
     },
   ],
 
-  collectCoverageFrom: ['<rootDir>/src/**/*.ts'],
+  collectCoverageFrom: [
+    '<rootDir>/src/**/*.ts',
+    '!<rootDir>/src/sentry-init.ts',
+    '!<rootDir>/src/container-init.ts',
+    '!<rootDir>/src/main.ts',
+  ],
 };
 export default config;
