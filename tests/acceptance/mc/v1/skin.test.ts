@@ -218,6 +218,29 @@ describe.each([
     });
   });
 
+  test.each([
+    ['https://127.0.0.1'],
+    ['https://127.0.0.2'],
+    ['https://192.168.1.1'],
+    ['https://10.0.0.1'],
+    ['https://224.0.0.1'],
+    ['https://[::1]'],
+    ['https://[fc00::1]'],
+    ['https://[fe80::1]'],
+    ['https://[ff00::1]'],
+    ['https://spraxapi-automated-test-private-ipv4.sprax.me'],
+    ['https://spraxapi-automated-test-private-ipv6.sprax.me']
+  ])('Expect 400 for non-unicast URL %j', async (url: string) => {
+    const response = await executeSkinRequest('?url=' + url);
+
+    expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
+    expect(response.json()).toEqual({
+      error: 'Bad Request',
+      message: 'Missing or invalid query parameters',
+      details: [{ param: 'url', condition: 'url needs to point to a public IP address' }]
+    });
+  });
+
   test('Expect 400 for skin URL that responds non successful', async () => {
     const response = await executeSkinRequest('?url=https://textures.minecraft.net/texture/non-existant');
 

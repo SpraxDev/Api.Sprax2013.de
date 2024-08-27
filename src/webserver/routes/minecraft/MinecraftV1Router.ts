@@ -3,6 +3,7 @@ import assert from 'node:assert';
 import https from 'node:http';
 import Sharp from 'sharp';
 import { autoInjectable } from 'tsyringe';
+import ResolvedToNonUnicastIpError from '../../../http/dns/errors/ResolvedToNonUnicastIpError.js';
 import HttpClient from '../../../http/HttpClient.js';
 import { CAPE_TYPE_STRINGS, CapeType } from '../../../minecraft/cape/CapeType.js';
 import Cape2dRenderer from '../../../minecraft/cape/renderer/Cape2dRenderer.js';
@@ -20,9 +21,9 @@ import MinecraftSkinTypeDetector from '../../../minecraft/skin/MinecraftSkinType
 import LegacyMinecraft3DRenderer from '../../../minecraft/skin/renderer/LegacyMinecraft3DRenderer.js';
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
 import MinecraftProfile from '../../../minecraft/value-objects/MinecraftProfile.js';
+import { ApiV1BadRequestError, ApiV1NotFoundError } from '../../errors/ApiV1HttpError.js';
 import FastifyWebServer from '../../FastifyWebServer.js';
 import Router from '../Router.js';
-import { ApiV1BadRequestError, ApiV1NotFoundError } from '../../errors/ApiV1HttpError.js';
 
 // FIXME: Cache-Control header should take 'Age' header into account
 @autoInjectable()
@@ -157,12 +158,21 @@ export default class MinecraftV1Router implements Router {
           if (parsedSkinUrl.protocol !== 'https:') {
             throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to be an https URL');
           }
-          // TODO: disallow local, private, etc. IP addresses (also check dns resolution!)
-          // TODO: Have trusted domains that don't need to hide the host's IP address
 
+          // TODO: Always connect through a proxy (Have trusted domains that don't need to hide the host's IP address)
           // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
           // TODO: Properly handle errors when requesting the skin (check content-type?)
-          const fetchedSkinImage = await this.httpClient.get(skinUrl);
+
+          let fetchedSkinImage;
+          try {
+            fetchedSkinImage = await this.httpClient.get(skinUrl);
+          } catch (err: any) {
+            if (err instanceof ResolvedToNonUnicastIpError) {
+              throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to point to a public IP address');
+            }
+            throw err;
+          }
+
           if (fetchedSkinImage.statusCode !== 200) {
             throw new ApiV1BadRequestError(`Provided URL returned ${fetchedSkinImage.statusCode} (${https.STATUS_CODES[fetchedSkinImage.statusCode]})`);
           }
@@ -205,12 +215,21 @@ export default class MinecraftV1Router implements Router {
           if (parsedSkinUrl.protocol !== 'https:') {
             throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to be an https URL');
           }
-          // TODO: disallow local, private, etc. IP addresses (also check dns resolution!)
-          // TODO: Have trusted domains that don't need to hide the host's IP address
 
+          // TODO: Always connect through a proxy (Have trusted domains that don't need to hide the host's IP address)
           // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
           // TODO: Properly handle errors when requesting the skin (check content-type?)
-          const fetchedSkinImage = await this.httpClient.get(skinUrl);
+
+          let fetchedSkinImage;
+          try {
+            fetchedSkinImage = await this.httpClient.get(skinUrl);
+          } catch (err: any) {
+            if (err instanceof ResolvedToNonUnicastIpError) {
+              throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to point to a public IP address');
+            }
+            throw err;
+          }
+
           if (fetchedSkinImage.statusCode !== 200) {
             throw new ApiV1BadRequestError(`Provided URL returned ${fetchedSkinImage.statusCode} (${https.STATUS_CODES[fetchedSkinImage.statusCode]})`);
           }

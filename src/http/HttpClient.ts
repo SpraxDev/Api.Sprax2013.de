@@ -1,6 +1,10 @@
+import IpAddrJs from 'ipaddr.js';
+import Net from 'node:net';
 import { injectable } from 'tsyringe';
 import * as Undici from 'undici';
 import { IS_PRODUCTION } from '../constants.js';
+import ResolvedToNonUnicastIpError from './dns/errors/ResolvedToNonUnicastIpError.js';
+import UnicastOnlyDnsResolver from './dns/UnicastOnlyDnsResolver.js';
 import HttpResponse from './HttpResponse.js';
 import UserAgentGenerator from './UserAgentGenerator.js';
 
@@ -26,7 +30,10 @@ export default class HttpClient {
       maxRedirections: 5,
       maxResponseSize: 20 * 1024 * 1024 /* 20 MiB */,
       bodyTimeout: 15_000,
-      headersTimeout: 15_000
+      headersTimeout: 15_000,
+      connect: {
+        lookup: new UnicastOnlyDnsResolver().lookup
+      }
     });
   }
 
@@ -34,6 +41,8 @@ export default class HttpClient {
     if (HttpClient.DEBUG_LOGGING) {
       console.debug(`[HttpClient] >> GET ${url}`);
     }
+
+    this.ensureUrlLooksLikePublicServer(url);
     const response = await Undici.request(url, {
       dispatcher: this.agent,
       query: options?.query,
@@ -45,6 +54,22 @@ export default class HttpClient {
       console.debug(`[HttpClient] << Status ${httpResponse.statusCode} with ${httpResponse.body.length} bytes`);
     }
     return httpResponse;
+  }
+
+  private ensureUrlLooksLikePublicServer(url: string): void {
+    let hostname = new URL(url).hostname;
+
+    if (Net.isIP(hostname) === 0) {
+      hostname = hostname.substring(1, hostname.length - 1);
+      if (!hostname.includes(':') || !Net.isIPv6(hostname)) {
+        return;
+      }
+    }
+
+    const parsedHost = IpAddrJs.parse(hostname);
+    if (parsedHost.range() !== 'unicast') {
+      throw new ResolvedToNonUnicastIpError(parsedHost.range());
+    }
   }
 
   private mergeWithDefaultHeaders(headers?: RequestOptions['headers']): Map<string, string | string[]> {

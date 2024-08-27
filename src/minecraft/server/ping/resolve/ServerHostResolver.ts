@@ -2,8 +2,8 @@ import IpAddrJs from 'ipaddr.js';
 import Dns from 'node:dns/promises';
 import Net from 'node:net';
 import { injectable } from 'tsyringe';
+import ResolvedToNonUnicastIpError from '../../../../http/dns/errors/ResolvedToNonUnicastIpError.js';
 import HostNotResolvableError from './HostNotResolvableError.js';
-import ResolvedToNonUnicastIpError from './ResolvedToNonUnicastIpError.js';
 
 @injectable()
 export default class ServerHostResolver {
