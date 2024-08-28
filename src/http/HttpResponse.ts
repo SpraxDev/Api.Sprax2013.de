@@ -7,9 +7,6 @@ export default class HttpResponse {
     public readonly headers: Map<string, string | string[]>,
     public readonly body: Buffer
   ) {
-    this.statusCode = statusCode;
-    this.headers = headers;
-    this.body = body;
   }
 
   get ok(): boolean {
