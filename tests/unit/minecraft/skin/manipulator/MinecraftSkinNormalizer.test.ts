@@ -1,4 +1,3 @@
-import Fs from 'node:fs';
 import ImageManipulator from '../../../../../src/minecraft/image/ImageManipulator.js';
 import MinecraftSkinNormalizer from '../../../../../src/minecraft/skin/manipulator/MinecraftSkinNormalizer.js';
 import SkinImageManipulator from '../../../../../src/minecraft/skin/manipulator/SkinImageManipulator.js';
@@ -37,8 +36,6 @@ describe('MinecraftSkinNormalizer', () => {
 
     const normalizedSkin = await new MinecraftSkinNormalizer().normalizeSkin(await SkinImageManipulator.createByImage(inputSkinBytes));
     const normalizedSkinBuffer = await normalizedSkin.toRaw();
-
-    await Fs.promises.writeFile('/tmp/_normalized-skin.png', (await normalizedSkin.toPngBuffer()));
 
     const expectedSkin = await (await ImageManipulator.createByImage(await readTestResource('skins/legacy-black-normalized.png'))).toRaw();
     expect(normalizedSkinBuffer.info).toEqual(expectedSkin.info);
