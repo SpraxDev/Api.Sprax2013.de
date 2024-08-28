@@ -1,0 +1,41 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - full-recode
+      - main
+  pull_request:
+    branches:
+      - full-recode
+      - main
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system packages needed for headless gl
+        run: >-
+          sudo apt-get install -y
+          build-essential
+          libgl1-mesa-dri
+          libglapi-mesa
+          libglew-dev
+          libglu1-mesa-dev
+          libosmesa6
+          libxi-dev
+          mesa-utils
+          pkg-config
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install project dependencies
+        run: npm ci
+      - name: Run the tests
+        run: npm run test:ci
