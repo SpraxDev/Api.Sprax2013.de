@@ -23,7 +23,7 @@ export default class LabymodCapeProvider implements CapeProvider {
       return null;
     }
     if (!capeResponse.ok) {
-      throw new Error(`Failed to fetch cape from ${capeUrl}`);
+      throw new Error(`Failed to fetch cape from ${capeUrl} (status code ${capeResponse.statusCode})`);
     }
     if (capeResponse.body.byteLength === 0) {
       return null;

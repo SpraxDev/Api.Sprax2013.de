@@ -10,7 +10,7 @@ export default class UserCapeProvider {
   ) {
   }
 
-  provide(profile: MinecraftProfile, type: CapeType): Promise<CapeResponse | null> {
+  async provide(profile: MinecraftProfile, type: CapeType): Promise<CapeResponse | null> {
     for (const capeProvider of this.capeProviders) {
       if (capeProvider.capeType === type) {
         return capeProvider.provide(profile);

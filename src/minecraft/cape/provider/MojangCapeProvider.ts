@@ -26,12 +26,12 @@ export default class MojangCapeProvider implements CapeProvider {
 
     const capeResponse = await this.httpClient.get(capeUrl);
     if (!capeResponse.ok) {
-      throw new Error(`Failed to fetch cape from ${capeUrl}`);
+      throw new Error(`Failed to fetch cape from ${capeUrl} (status code ${capeResponse.statusCode})`);
     }
 
     const contentType = capeResponse.headers.get('content-type') ?? '';
     if (!contentType.includes('image/png') && !contentType.includes('application/octet-stream')) {
-      throw new Error(`Failed to fetch cape from ${capeUrl}: Content-Type is not image/png (or application/octet-stream) (got ${capeResponse.headers.get('content-type')})`);
+      throw new Error(`Failed to fetch cape from ${capeUrl}: Content-Type is not image/png (or application/octet-stream) (got ${contentType})`);
     }
 
     return {
