@@ -38,4 +38,4 @@ jobs:
       - name: Install project dependencies
         run: npm ci
       - name: Run the tests
-        run: npm run test:ci
+        run: xvfb-run npm run test:ci
