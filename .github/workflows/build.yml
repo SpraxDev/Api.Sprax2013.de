@@ -1,0 +1,28 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - full-recode
+      - main
+  pull_request:
+    branches:
+      - full-recode
+      - main
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install project dependencies
+        run: npm ci
+      - name: Build the project
+        run: npm run build
