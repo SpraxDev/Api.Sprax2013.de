@@ -1,4 +1,4 @@
-name: Tests
+name: Tests + SonarCloud
 
 on:
   push:
@@ -12,10 +12,12 @@ on:
 
 jobs:
   tests:
-    name: Tests
+    name: Tests + SonarCloud
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install system packages needed for headless gl
         run: >-
@@ -39,3 +41,20 @@ jobs:
         run: npm ci
       - name: Run the tests
         run: xvfb-run npm run test:ci
+
+      - name: Run SonarCloud analysis
+        if: '!cancelled()'
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+          args: >
+            -Dsonar.organization=spraxdev
+            -Dsonar.projectKey=SpraxDev_Api.Sprax2013.de
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.typescript.tsconfigPaths=tsconfig.json
+            -Dsonar.javascript.lcov.reportPaths=./coverage/lcov.info
+            -Dsonar.sources=src/
+            -Dsonar.tests=tests/
+            -Dsonar.test.inclusions=tests/**/*.test.ts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
