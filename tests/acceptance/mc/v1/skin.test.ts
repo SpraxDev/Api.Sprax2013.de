@@ -3,7 +3,7 @@ import { FastifyInstance, type LightMyRequestResponse } from 'fastify';
 import Sharp from 'sharp';
 import { container } from 'tsyringe';
 import FastifyWebServer from '../../../../src/webserver/FastifyWebServer.js';
-import { EXISTING_MC_ID, EXISTING_MC_ID_WITH_HYPHENS, EXISTING_MC_NAME } from '../../test-constants.js';
+import { EXISTING_MC_ID, EXISTING_MC_ID_WITH_HYPHENS, EXISTING_MC_NAME } from '../../../test-constants.js';
 
 const LEGACY_SKIN_URL = 'https://textures.minecraft.net/texture/292009a4925b58f02c77dadc3ecef07ea4c7472f64e0fdc32ce5522489362680';
 

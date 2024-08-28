@@ -2,7 +2,7 @@ import '../../../../src/container-init.js';
 import { FastifyInstance } from 'fastify';
 import { container } from 'tsyringe';
 import FastifyWebServer from '../../../../src/webserver/FastifyWebServer.js';
-import { EXISTING_MC_ID, EXISTING_MC_NAME } from '../../test-constants.js';
+import { EXISTING_MC_ID, EXISTING_MC_NAME } from '../../../test-constants.js';
 
 describe('/mc/v1/history/*', () => {
   test.each([

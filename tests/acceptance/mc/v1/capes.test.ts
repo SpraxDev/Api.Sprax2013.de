@@ -3,7 +3,7 @@ import { FastifyInstance, type LightMyRequestResponse } from 'fastify';
 import Sharp from 'sharp';
 import { container } from 'tsyringe';
 import FastifyWebServer from '../../../../src/webserver/FastifyWebServer.js';
-import { EXISTING_MC_ID, EXISTING_MC_ID_WITH_HYPHENS, EXISTING_MC_NAME } from '../../test-constants.js';
+import { EXISTING_MC_ID, EXISTING_MC_ID_WITH_HYPHENS, EXISTING_MC_NAME } from '../../../test-constants.js';
 
 describe('/mc/v1/capes/all', () => {
   test.each([

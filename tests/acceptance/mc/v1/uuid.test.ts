@@ -2,7 +2,7 @@ import '../../../../src/container-init.js';
 import { FastifyInstance, type LightMyRequestResponse } from 'fastify';
 import { container } from 'tsyringe';
 import FastifyWebServer from '../../../../src/webserver/FastifyWebServer.js';
-import { EXISTING_MC_ID, EXISTING_MC_ID_WITH_HYPHENS, EXISTING_MC_NAME } from '../../test-constants.js';
+import { EXISTING_MC_ID, EXISTING_MC_ID_WITH_HYPHENS, EXISTING_MC_NAME } from '../../../test-constants.js';
 
 describe('/mc/v1/uuid/*', () => {
   test('Expect 400 for empty username', async () => {
