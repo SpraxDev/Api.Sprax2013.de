@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
 import Gl from 'gl';
+import { readFileSync } from 'node:fs';
 
 const gl = Gl(64, 64, {preserveDrawingBuffer: true});
 
@@ -312,12 +312,14 @@ export class Camera {
       0, 0, 1, 0,
       this.postPosition.x, this.postPosition.y, 0, 1
     ];
-    const mvpMatrix = multiplyMatrices(scale,
-      multiplyMatrices(postTranslate,
-        multiplyMatrices(projection,
-          multiplyMatrices(rotateZ,
-            multiplyMatrices(rotateX,
-              multiplyMatrices(rotateY, translate))))));
+    const flipX = [
+      -1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1
+    ];
+
+    const mvpMatrix = [scale, postTranslate, projection, rotateZ, rotateX, rotateY, translate, flipX].reduce((acc, cur) => multiplyMatrices(acc, cur));
     return new Float32Array(mvpMatrix);
   }
 
