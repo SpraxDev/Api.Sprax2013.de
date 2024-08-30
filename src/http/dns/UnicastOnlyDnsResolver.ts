@@ -1,13 +1,12 @@
 import IpAddrJs from 'ipaddr.js';
 import Dns from 'node:dns';
-import dns from 'node:dns';
 import ResolvedToNonUnicastIpError from './errors/ResolvedToNonUnicastIpError.js';
 
 export default class UnicastOnlyDnsResolver {
   lookup(
     hostname: string,
-    options: dns.LookupOptions,
-    callback: (err: NodeJS.ErrnoException | null, address: string | dns.LookupAddress[], family?: number) => void
+    options: Dns.LookupOptions,
+    callback: (err: NodeJS.ErrnoException | null, address: string | Dns.LookupAddress[], family?: number) => void
   ): void {
     Dns.lookup(hostname, options, (err, address, family): void => {
       if (err) {
