@@ -23,7 +23,7 @@ export function getAppInfo(): Readonly<AppInfo> {
     const packageJsonPath = Path.join(APP_ROOT_DIR, 'package.json');
     if (Fs.existsSync(packageJsonPath)) {
       const packageJson = Fs.readFileSync(packageJsonPath, { encoding: 'utf-8' });
-      let parsedPackageJson = JSON.parse(packageJson);
+      const parsedPackageJson = JSON.parse(packageJson);
 
       const parsedName = parsedPackageJson.name;
       if (typeof parsedName == 'string') {
