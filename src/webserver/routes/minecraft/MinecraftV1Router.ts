@@ -165,7 +165,7 @@ export default class MinecraftV1Router implements Router {
 
           let fetchedSkinImage;
           try {
-            fetchedSkinImage = await this.httpClient.get(skinUrl);
+            fetchedSkinImage = await this.httpClient.get(parsedSkinUrl.href);
           } catch (err: any) {
             if (err instanceof ResolvedToNonUnicastIpError) {
               throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to point to a public IP address');
@@ -222,7 +222,7 @@ export default class MinecraftV1Router implements Router {
 
           let fetchedSkinImage;
           try {
-            fetchedSkinImage = await this.httpClient.get(skinUrl);
+            fetchedSkinImage = await this.httpClient.get(parsedSkinUrl.href);
           } catch (err: any) {
             if (err instanceof ResolvedToNonUnicastIpError) {
               throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to point to a public IP address');
