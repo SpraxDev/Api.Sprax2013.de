@@ -226,7 +226,7 @@ export default class MinecraftV2Router implements Router {
             throw new BadRequestError('Missing or invalid query parameter "host"');
           }
           const inputPort = (request.query as any).port;
-          if (inputPort != null && (typeof inputPort !== 'string' || !inputPort.match(/^\d+$/))) {
+          if (inputPort != null && (typeof inputPort !== 'string' || /^\d+$/.exec(inputPort) == null)) {
             throw new BadRequestError('Missing or invalid query parameter "port"');
           }
 
