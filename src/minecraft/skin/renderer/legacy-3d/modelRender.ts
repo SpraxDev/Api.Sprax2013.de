@@ -1,10 +1,9 @@
 import Gl from 'gl';
 import { readFileSync } from 'node:fs';
 
-const gl = Gl(64, 64, {preserveDrawingBuffer: true});
+const gl = Gl(64, 64, { preserveDrawingBuffer: true });
 
-const vertexShaderSource: string =
-  `
+const vertexShaderSource = `
 attribute vec4 a_position;
 attribute vec2 a_texcoord;
 
@@ -12,23 +11,23 @@ varying vec2 v_texcoord;
 
 uniform mat4 u_mvp;
 
-void main(){
+void main() {
     gl_Position = u_mvp * a_position;
     v_texcoord = a_texcoord;
 }
 `;
 
-const fragmentShaderSource: string =
-  `
+const fragmentShaderSource = `
 precision mediump float;
 varying vec2 v_texcoord;
 
 uniform sampler2D u_texture;
 
-void main(){
+void main() {
     gl_FragColor = texture2D(u_texture, vec2(v_texcoord.x, 1.0-v_texcoord.y));
-    if(gl_FragColor.w != 1.0)
+    if (gl_FragColor.w != 1.0) {
         discard;
+    }
 }
 `;
 
@@ -79,44 +78,59 @@ export class Model {
 
 function multiplyMatrixAndPoint(matrix: number[], point: number[]): number[] {
   // Give a simple variable name to each part of the matrix, a column and row number
-  let c0r0 = matrix[0], c1r0 = matrix[1], c2r0 = matrix[2], c3r0 = matrix[3];
-  let c0r1 = matrix[4], c1r1 = matrix[5], c2r1 = matrix[6], c3r1 = matrix[7];
-  let c0r2 = matrix[8], c1r2 = matrix[9], c2r2 = matrix[10], c3r2 = matrix[11];
-  let c0r3 = matrix[12], c1r3 = matrix[13], c2r3 = matrix[14], c3r3 = matrix[15];
+  const c0r0 = matrix[0];
+  const c1r0 = matrix[1];
+  const c2r0 = matrix[2];
+  const c3r0 = matrix[3];
+
+  const c0r1 = matrix[4];
+  const c1r1 = matrix[5];
+  const c2r1 = matrix[6];
+  const c3r1 = matrix[7];
+
+  const c0r2 = matrix[8];
+  const c1r2 = matrix[9];
+  const c2r2 = matrix[10];
+  const c3r2 = matrix[11];
+
+  const c0r3 = matrix[12];
+  const c1r3 = matrix[13];
+  const c2r3 = matrix[14];
+  const c3r3 = matrix[15];
 
   // Now set some simple names for the point
-  let x = point[0];
-  let y = point[1];
-  let z = point[2];
-  let w = point[3];
+  const x = point[0];
+  const y = point[1];
+  const z = point[2];
+  const w = point[3];
 
   // Multiply the point against each part of the 1st column, then add together
-  let resultX = (x * c0r0) + (y * c0r1) + (z * c0r2) + (w * c0r3);
+  const resultX = (x * c0r0) + (y * c0r1) + (z * c0r2) + (w * c0r3);
 
   // Multiply the point against each part of the 2nd column, then add together
-  let resultY = (x * c1r0) + (y * c1r1) + (z * c1r2) + (w * c1r3);
+  const resultY = (x * c1r0) + (y * c1r1) + (z * c1r2) + (w * c1r3);
 
   // Multiply the point against each part of the 3rd column, then add together
-  let resultZ = (x * c2r0) + (y * c2r1) + (z * c2r2) + (w * c2r3);
+  const resultZ = (x * c2r0) + (y * c2r1) + (z * c2r2) + (w * c2r3);
 
   // Multiply the point against each part of the 4th column, then add together
-  let resultW = (x * c3r0) + (y * c3r1) + (z * c3r2) + (w * c3r3);
+  const resultW = (x * c3r0) + (y * c3r1) + (z * c3r2) + (w * c3r3);
 
   return [resultX, resultY, resultZ, resultW];
 }
 
 function multiplyMatrices(matrixA: number[], matrixB: number[]): number[] {
   // Slice the second matrix up into rows
-  let row0 = [matrixB[0], matrixB[1], matrixB[2], matrixB[3]];
-  let row1 = [matrixB[4], matrixB[5], matrixB[6], matrixB[7]];
-  let row2 = [matrixB[8], matrixB[9], matrixB[10], matrixB[11]];
-  let row3 = [matrixB[12], matrixB[13], matrixB[14], matrixB[15]];
+  const row0 = [matrixB[0], matrixB[1], matrixB[2], matrixB[3]];
+  const row1 = [matrixB[4], matrixB[5], matrixB[6], matrixB[7]];
+  const row2 = [matrixB[8], matrixB[9], matrixB[10], matrixB[11]];
+  const row3 = [matrixB[12], matrixB[13], matrixB[14], matrixB[15]];
 
   // Multiply each row by matrixA
-  let result0 = multiplyMatrixAndPoint(matrixA, row0);
-  let result1 = multiplyMatrixAndPoint(matrixA, row1);
-  let result2 = multiplyMatrixAndPoint(matrixA, row2);
-  let result3 = multiplyMatrixAndPoint(matrixA, row3);
+  const result0 = multiplyMatrixAndPoint(matrixA, row0);
+  const result1 = multiplyMatrixAndPoint(matrixA, row1);
+  const result2 = multiplyMatrixAndPoint(matrixA, row2);
+  const result3 = multiplyMatrixAndPoint(matrixA, row3);
 
   // Turn the result rows back into a single matrix
   return [
@@ -164,10 +178,10 @@ export class Camera {
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.depthRenderBuffer);
 
     this.shader = gl.createProgram();
-    this.position = {x: 0, y: 0, z: 0};
-    this.rotation = {x: 0, y: 0, z: 0};
-    this.scale = {x: 1, y: 1};
-    this.postPosition = {x: 0, y: 0};
+    this.position = { x: 0, y: 0, z: 0 };
+    this.rotation = { x: 0, y: 0, z: 0 };
+    this.scale = { x: 1, y: 1 };
+    this.postPosition = { x: 0, y: 0 };
     this.mvp = this.calcMvp();
 
     const vertexShader = Camera.createShader(vertexShaderSource, gl.VERTEX_SHADER);
@@ -197,7 +211,7 @@ export class Camera {
     gl.clearDepth(1.0);
   }
 
-  private static createShader(sourceCode: string, type: any) {
+  private static createShader(sourceCode: string, type: number): WebGLShader {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, sourceCode);
     gl.compileShader(shader);
@@ -220,6 +234,7 @@ export class Camera {
     gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 24, 16);
     gl.useProgram(this.shader);
 
+    //noinspection PointlessArithmeticExpressionJS
     gl.activeTexture(gl.TEXTURE0 + 0);
     gl.bindTexture(gl.TEXTURE_2D, model.texture);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, model.textureWidth, model.textureHeight, gl.RGBA, gl.UNSIGNED_BYTE, texture);
@@ -323,22 +338,22 @@ export class Camera {
     return new Float32Array(mvpMatrix);
   }
 
-  setPosition(position: vec3) {
+  setPosition(position: vec3): void {
     this.position = position;
     this.mvp = this.calcMvp();
   }
 
-  setRotation(rotation: vec3) {
+  setRotation(rotation: vec3): void {
     this.rotation = rotation;
     this.mvp = this.calcMvp();
   }
 
-  setScale(scale: vec2) {
+  setScale(scale: vec2): void {
     this.scale = scale;
     this.mvp = this.calcMvp();
   }
 
-  setPostPosition(pos: vec2) {
+  setPostPosition(pos: vec2): void {
     this.postPosition = pos;
     this.mvp = this.calcMvp();
   }
@@ -346,40 +361,37 @@ export class Camera {
 
 /* CONTEXT */
 
-interface vec4 {
+type vec4 = {
   x: number,
   y: number,
   z: number,
   w: number
 }
-
-interface vec3 {
+type vec3 = {
   x: number,
   y: number,
   z: number
 }
-
-interface vec2 {
+type vec2 = {
   x: number,
   y: number
 }
 
-interface Vertex {
+type Vertex = {
   position: vec4,
   texCoord: vec2
 }
 
-function getOfArray(array: any[], index: number) {
+function getOfArray<T>(array: T[], index: number): T {
   return array[(index < 0) ? array.length + index : index - 1];
 }
 
 function modelFileToBufferData(filename: string): { indexBuffer: number[], vertexBuffer: number[] } {
-  const file: string = readFileSync(filename, 'utf-8');
-  const lines: string[] = file.split(/\r?\n/g);
+  const file = readFileSync(filename, 'utf-8');
+  const lines = file.split(/\r?\n/g);
 
   const positions: vec4[] = [];
   const texCoords: vec2[] = [];
-  // const normals: vec3[] = [];
 
   const vertexBuffer: Vertex[] = [];
   const indexBuffer: number[] = [];
@@ -387,24 +399,15 @@ function modelFileToBufferData(filename: string): { indexBuffer: number[], verte
   for (const line of lines) {
     if (line.startsWith('v ')) {
       const position: string[] = line.substring(2).trim().split(' ');
-      let pos: vec4 = {x: 0, y: 0, z: 0, w: 1};
+      const pos: vec4 = { x: 0, y: 0, z: 0, w: 1 };
       pos.x = (position[0] != null && position[0].length) ? parseFloat(position[0]) : 0;
       pos.y = (position[1] != null && position[1].length) ? parseFloat(position[1]) : 0;
       pos.z = (position[2] != null && position[2].length) ? parseFloat(position[2]) : 0;
       pos.w = (position[3] != null && position[3].length) ? parseFloat(position[3]) : 1;
       positions.push(pos);
-    }
-      // else if (line.startsWith('vn ')) {
-      // const normal: string[] = line.substring(3).trim().split(' ');
-      // let norm: vec3 = { x: 0, y: 0, z: 0 };
-      // norm.x = (normal[0] != null && normal[0].length) ? parseFloat(normal[0]) : 0;
-      // norm.y = (normal[1] != null && normal[1].length) ? parseFloat(normal[1]) : 0;
-      // norm.z = (normal[2] != null && normal[2].length) ? parseFloat(normal[2]) : 0;
-      // normals.push(norm);
-    //}
-    else if (line.startsWith('vt ')) {
+    } else if (line.startsWith('vt ')) {
       const texCoord: string[] = line.substring(3).trim().split(' ');
-      let tex: vec2 = {x: 0, y: 0};
+      const tex: vec2 = { x: 0, y: 0 };
       tex.x = (texCoord[0] != null && texCoord[0].length) ? parseFloat(texCoord[0]) : 0;
       tex.y = (texCoord[1] != null && texCoord[1].length) ? parseFloat(texCoord[1]) : 0;
       texCoords.push(tex);
@@ -414,22 +417,25 @@ function modelFileToBufferData(filename: string): { indexBuffer: number[], verte
       const vertices: Vertex[] = [];
       for (const vertex of face) {
         const vertexElements = vertex.split('/');
-        let vertexObj: Vertex = {position: {x: 0, y: 0, z: 0, w: 1}, texCoord: {x: 0, y: 0}};
+        const vertexObj: Vertex = { position: { x: 0, y: 0, z: 0, w: 1 }, texCoord: { x: 0, y: 0 } };
         vertexObj.position = getOfArray(positions, parseInt(vertexElements[0]));
         if (vertexElements[1] != null && vertexElements[1].length > 0) {
           vertexObj.texCoord = getOfArray(texCoords, parseInt(vertexElements[1]));
         }
         vertices.push(vertexObj);
       }
-      let vertex0: Vertex | undefined,
-        lastVertex: Vertex | undefined;
+      let vertex0: Vertex | undefined;
+      let lastVertex: Vertex | undefined;
       for (const vertex of vertices) {
         if (point == 0) {
           vertex0 = vertex;
         } else if (point == 1) {
           lastVertex = vertex;
         } else if (point >= 2) {
-          if (!vertex0 || !lastVertex) throw new Error(); // TODO: cleanup - They can't be undefined but TypeScript doesn't recognize this o.0
+          // TODO: cleanup - They can't be undefined but TypeScript doesn't recognize this
+          if (!vertex0 || !lastVertex) {
+            throw new Error();
+          }
 
           vertexBuffer.push(vertex0);
           vertexBuffer.push(lastVertex);
@@ -443,9 +449,9 @@ function modelFileToBufferData(filename: string): { indexBuffer: number[], verte
   }
   const resultVertexBuffer: number[] = [];
   const vertexSearchList: Vertex[] = [];
-  for (let i = 0; i < vertexBuffer.length; i++) {
+  for (let i = 0; i < vertexBuffer.length; ++i) {
     let indexOfVertex = vertexSearchList.length;
-    for (let index = 0; index < vertexSearchList.length; index++) {
+    for (let index = 0; index < vertexSearchList.length; ++index) {
       if (JSON.stringify(vertexBuffer[i]) == JSON.stringify(vertexSearchList[index])) {
         indexOfVertex = index;
         break;
@@ -464,7 +470,7 @@ function modelFileToBufferData(filename: string): { indexBuffer: number[], verte
   }
   let max = 0;
   indexBuffer.forEach(n => max = Math.max(max, n));
-  return {indexBuffer, vertexBuffer: resultVertexBuffer};
+  return { indexBuffer, vertexBuffer: resultVertexBuffer };
 }
 
 export function createModel(filename: string, textureWidth: number, textureHeight: number): Model {
