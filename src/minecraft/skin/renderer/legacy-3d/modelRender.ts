@@ -418,9 +418,9 @@ function modelFileToBufferData(filename: string): { indexBuffer: number[], verte
       for (const vertex of face) {
         const vertexElements = vertex.split('/');
         const vertexObj: Vertex = { position: { x: 0, y: 0, z: 0, w: 1 }, texCoord: { x: 0, y: 0 } };
-        vertexObj.position = getOfArray(positions, parseInt(vertexElements[0]));
+        vertexObj.position = getOfArray(positions, parseInt(vertexElements[0], 10));
         if (vertexElements[1] != null && vertexElements[1].length > 0) {
-          vertexObj.texCoord = getOfArray(texCoords, parseInt(vertexElements[1]));
+          vertexObj.texCoord = getOfArray(texCoords, parseInt(vertexElements[1], 10));
         }
         vertices.push(vertexObj);
       }
@@ -449,22 +449,22 @@ function modelFileToBufferData(filename: string): { indexBuffer: number[], verte
   }
   const resultVertexBuffer: number[] = [];
   const vertexSearchList: Vertex[] = [];
-  for (let i = 0; i < vertexBuffer.length; ++i) {
+  for (const vertex of vertexBuffer) {
     let indexOfVertex = vertexSearchList.length;
-    for (let index = 0; index < vertexSearchList.length; ++index) {
-      if (JSON.stringify(vertexBuffer[i]) == JSON.stringify(vertexSearchList[index])) {
-        indexOfVertex = index;
+    for (let i = 0; i < vertexSearchList.length; ++i) {
+      if (JSON.stringify(vertex) == JSON.stringify(vertexSearchList[i])) {
+        indexOfVertex = i;
         break;
       }
     }
     if (indexOfVertex == vertexSearchList.length) {
-      vertexSearchList.push(vertexBuffer[i]);
-      resultVertexBuffer.push(vertexBuffer[i].position.x);
-      resultVertexBuffer.push(vertexBuffer[i].position.y);
-      resultVertexBuffer.push(vertexBuffer[i].position.z);
-      resultVertexBuffer.push(vertexBuffer[i].position.w);
-      resultVertexBuffer.push(vertexBuffer[i].texCoord.x);
-      resultVertexBuffer.push(vertexBuffer[i].texCoord.y);
+      vertexSearchList.push(vertex);
+      resultVertexBuffer.push(vertex.position.x);
+      resultVertexBuffer.push(vertex.position.y);
+      resultVertexBuffer.push(vertex.position.z);
+      resultVertexBuffer.push(vertex.position.w);
+      resultVertexBuffer.push(vertex.texCoord.x);
+      resultVertexBuffer.push(vertex.texCoord.y);
     }
     indexBuffer.push(indexOfVertex);
   }
