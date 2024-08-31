@@ -18,8 +18,8 @@ import { getAppInfo, IS_PRODUCTION } from './constants.js';
     environment: IS_PRODUCTION ? 'production' : 'development',
     release: `${appInfo.name}@${appInfo.version}`,
 
-    tracesSampleRate: 1.0,
-    profilesSampleRate: 1.0,
+    tracesSampleRate: 0.0,
+    profilesSampleRate: 0.0,
 
     maxBreadcrumbs: 50,
     initialScope: {
