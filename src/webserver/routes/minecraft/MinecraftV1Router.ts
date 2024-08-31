@@ -3,8 +3,8 @@ import assert from 'node:assert';
 import https from 'node:http';
 import Sharp from 'sharp';
 import { autoInjectable } from 'tsyringe';
+import ProxyEnforcedHttpClient from '../../../http/clients/ProxyEnforcedHttpClient.js';
 import ResolvedToNonUnicastIpError from '../../../http/dns/errors/ResolvedToNonUnicastIpError.js';
-import HttpClient from '../../../http/HttpClient.js';
 import { CAPE_TYPE_STRINGS, CapeType } from '../../../minecraft/cape/CapeType.js';
 import Cape2dRenderer from '../../../minecraft/cape/renderer/Cape2dRenderer.js';
 import UserCapeProvider from '../../../minecraft/cape/UserCapeProvider.js';
@@ -35,7 +35,7 @@ export default class MinecraftV1Router implements Router {
     private readonly userCapeProvider: UserCapeProvider,
     private readonly cape2dRenderer: Cape2dRenderer,
     private readonly serverBlocklistService: ServerBlocklistService,
-    private readonly httpClient: HttpClient,
+    private readonly proxiedHttpClient: ProxyEnforcedHttpClient,
     private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
     private readonly minecraftSkinTypeDetector: MinecraftSkinTypeDetector,
     private readonly legacyMinecraft3DRenderer: LegacyMinecraft3DRenderer
@@ -165,7 +165,7 @@ export default class MinecraftV1Router implements Router {
 
           let fetchedSkinImage;
           try {
-            fetchedSkinImage = await this.httpClient.get(parsedSkinUrl.href);
+            fetchedSkinImage = await this.proxiedHttpClient.get(parsedSkinUrl.href);
           } catch (err: any) {
             if (err instanceof ResolvedToNonUnicastIpError) {
               throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to point to a public IP address');
@@ -222,7 +222,7 @@ export default class MinecraftV1Router implements Router {
 
           let fetchedSkinImage;
           try {
-            fetchedSkinImage = await this.httpClient.get(parsedSkinUrl.href);
+            fetchedSkinImage = await this.proxiedHttpClient.get(parsedSkinUrl.href);
           } catch (err: any) {
             if (err instanceof ResolvedToNonUnicastIpError) {
               throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to point to a public IP address');

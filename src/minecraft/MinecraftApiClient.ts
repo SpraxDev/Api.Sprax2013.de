@@ -1,5 +1,5 @@
 import { singleton } from 'tsyringe';
-import HttpClient from '../http/HttpClient.js';
+import TrustedProxiedHttpClient from '../http/clients/TrustedProxiedHttpClient.js';
 
 export type UsernameToUuidResponse = {
   id: string;
@@ -20,12 +20,12 @@ export type UuidToProfileResponse = {
 @singleton()
 export default class MinecraftApiClient {
   constructor(
-    private readonly httpApiClient: HttpClient
+    private readonly httpClient: TrustedProxiedHttpClient
   ) {
   }
 
   async fetchUuidForUsername(username: string): Promise<UsernameToUuidResponse | null> {
-    const response = await this.httpApiClient.get(`https://api.minecraftservices.com/minecraft/profile/lookup/name/${username}`);
+    const response = await this.httpClient.get(`https://api.minecraftservices.com/minecraft/profile/lookup/name/${username}`);
     if (response.statusCode === 204 || response.statusCode === 404) {
       return null;
     }
@@ -37,7 +37,7 @@ export default class MinecraftApiClient {
   }
 
   async fetchProfileForUuid(uuid: string): Promise<UuidToProfileResponse | null> {
-    const response = await this.httpApiClient.get(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?unsigned=false`);
+    const response = await this.httpClient.get(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?unsigned=false`);
     if (response.statusCode === 204 || response.statusCode === 404) {
       return null;
     }
@@ -49,7 +49,7 @@ export default class MinecraftApiClient {
   }
 
   async fetchListOfBlockedServers(): Promise<string[]> {
-    const response = await this.httpApiClient.get('https://sessionserver.mojang.com/blockedservers', { headers: { 'Accept': 'text/plain' } });
+    const response = await this.httpClient.get('https://sessionserver.mojang.com/blockedservers', { headers: { 'Accept': 'text/plain' } });
     if (!response.ok) {
       throw new Error(`Failed to get list of blocked servers: {status=${response.statusCode}, body=${response.parseBodyAsText()}}`);
     }

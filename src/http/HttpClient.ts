@@ -1,6 +1,5 @@
 import IpAddrJs from 'ipaddr.js';
 import Net from 'node:net';
-import { injectable } from 'tsyringe';
 import * as Undici from 'undici';
 import { IS_PRODUCTION } from '../constants.js';
 import ResolvedToNonUnicastIpError from './dns/errors/ResolvedToNonUnicastIpError.js';
@@ -17,24 +16,14 @@ export interface GetRequestOptions extends RequestOptions {
 }
 
 // TODO: Supporting cookies might be a good idea
-@injectable()
-export default class HttpClient {
+export default abstract class HttpClient {
   private static readonly DEBUG_LOGGING = !IS_PRODUCTION;
 
   private readonly userAgent: string;
-  private readonly agent: Undici.Agent;
+  private agent?: Undici.Dispatcher;
 
-  constructor() {
+  protected constructor() {
     this.userAgent = UserAgentGenerator.generateDefault();
-    this.agent = new Undici.Agent({
-      maxRedirections: 5,
-      maxResponseSize: 20 * 1024 * 1024 /* 20 MiB */,
-      bodyTimeout: 15_000,
-      headersTimeout: 15_000,
-      connect: {
-        lookup: new UnicastOnlyDnsResolver().lookup
-      }
-    });
   }
 
   async get(url: string, options?: GetRequestOptions): Promise<HttpResponse> {
@@ -44,7 +33,7 @@ export default class HttpClient {
 
     this.ensureUrlLooksLikePublicServer(url);
     const response = await Undici.request(url, {
-      dispatcher: this.agent,
+      dispatcher: this.selectDispatcher(),
       query: options?.query,
       headers: this.mergeWithDefaultHeaders(options?.headers)
     });
@@ -54,6 +43,25 @@ export default class HttpClient {
       console.debug(`[HttpClient] << Status ${httpResponse.statusCode} with ${httpResponse.body.length} bytes`);
     }
     return httpResponse;
+  }
+
+  protected selectDispatcher(): Undici.Dispatcher {
+    if (this.agent == null) {
+      this.agent = new Undici.Agent(this.getDefaultAgentOptions());
+    }
+    return this.agent;
+  }
+
+  protected getDefaultAgentOptions(): Undici.Agent.Options {
+    return {
+      maxRedirections: 5,
+      maxResponseSize: 20 * 1024 * 1024 /* 20 MiB */,
+      bodyTimeout: 15_000,
+      headersTimeout: 15_000,
+      connect: {
+        lookup: new UnicastOnlyDnsResolver().lookup
+      }
+    };
   }
 
   private ensureUrlLooksLikePublicServer(url: string): void {

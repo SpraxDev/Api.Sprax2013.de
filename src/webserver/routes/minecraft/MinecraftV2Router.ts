@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import Net from 'node:net';
 import { autoInjectable } from 'tsyringe';
-import HttpClient from '../../../http/HttpClient.js';
+import ProxyEnforcedHttpClient from '../../../http/clients/ProxyEnforcedHttpClient.js';
 import type ImageManipulator from '../../../minecraft/image/ImageManipulator.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService, { type Profile } from '../../../minecraft/MinecraftProfileService.js';
@@ -29,7 +29,7 @@ export default class MinecraftV2Router implements Router {
     private readonly skinImage2DRenderer: SkinImage2DRenderer,
     private readonly serverBlocklistService: ServerBlocklistService,
     private readonly minecraftServerStatusService: MinecraftServerStatusService,
-    private readonly httpClient: HttpClient
+    private readonly proxiedHttpClient: ProxyEnforcedHttpClient
   ) {
   }
 
@@ -93,12 +93,10 @@ export default class MinecraftV2Router implements Router {
           if (parsedSkinUrl.protocol !== 'https:') {
             throw new BadRequestError(`Only HTTPS URLs are supported`);
           }
-          // TODO: disallow local, private, etc. IP addresses (also check dns resolution!)
-          // TODO: Have trusted domains that don't need to hide the host's IP address
 
           // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
           // TODO: Properly handle errors when requesting the skin (check content-type?)
-          const fetchedSkinImage = await this.httpClient.get(skinUrl);
+          const fetchedSkinImage = await this.proxiedHttpClient.get(parsedSkinUrl.href);
           if (fetchedSkinImage.statusCode !== 200) {
             throw new BadRequestError(`Failed to fetch skin from URL, got status code ${fetchedSkinImage.statusCode}`);
           }

@@ -14,3 +14,6 @@ container.register('Router', { useClass: MinecraftV1Router }, { lifecycle: Lifec
 container.register('CapeProvider', { useClass: MojangCapeProvider }, { lifecycle: Lifecycle.Singleton });
 container.register('CapeProvider', { useClass: OptifineCapeProvider }, { lifecycle: Lifecycle.Singleton });
 container.register('CapeProvider', { useClass: LabymodCapeProvider }, { lifecycle: Lifecycle.Singleton });
+
+container.register('value.proxies.http', { useFactory: (container): string[] => [] });  // FIXME: Make configurable
+container.register('value.http.allowNonProxyConnections', { useFactory: (container): boolean => false }); // FIXME: Make configurable and fallback to true on dev-env

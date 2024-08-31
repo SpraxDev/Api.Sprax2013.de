@@ -4,7 +4,7 @@ import Path from 'node:path';
 import { singleton } from 'tsyringe';
 import { APP_RESOURCES_DIR } from '../../constants.js';
 import DatabaseClient from '../../database/DatabaseClient.js';
-import HttpClient from '../../http/HttpClient.js';
+import TrustedProxiedHttpClient from '../../http/clients/TrustedProxiedHttpClient.js';
 import { UuidToProfileResponse } from '../MinecraftApiClient.js';
 import MinecraftProfile, { DefaultSkin } from '../value-objects/MinecraftProfile.js';
 import MinecraftSkinNormalizer from './manipulator/MinecraftSkinNormalizer.js';
@@ -16,7 +16,7 @@ export default class MinecraftSkinService {
   private static readonly alex = Fs.promises.readFile(Path.join(APP_RESOURCES_DIR, 'alex.png'));
 
   constructor(
-    private readonly httpClient: HttpClient,
+    private readonly httpClient: TrustedProxiedHttpClient,
     private readonly databaseClient: DatabaseClient,
     private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer
   ) {
