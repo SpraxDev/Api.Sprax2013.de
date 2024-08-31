@@ -65,19 +65,28 @@ export default class MinecraftSkinService {
     textureProperty?: UuidToProfileResponse['properties'][0]
   ): Promise<void> {
     const originalImageSha256 = this.computeSha256(skin);
+    const normalizedImageSha256 = this.computeSha256(normalizedSkin);
 
     await this.databaseClient.$transaction(async (transaction) => {
       let existingSkinImage = await transaction.skinImage.findUnique({
-        select: { originalImageSha256: true },
-        where: { originalImageSha256 }
+        select: { imageSha256: true },
+        where: { imageSha256: originalImageSha256 }
       });
 
       if (existingSkinImage == null) {
         existingSkinImage = await transaction.skinImage.create({
           data: {
-            originalImageSha256,
-            originalImage: skin,
-            normalizedImage: normalizedSkin,
+            imageSha256: originalImageSha256,
+            imageBytes: skin,
+            normalizedImage: {
+              connectOrCreate: {
+                where: { imageSha256: normalizedImageSha256 },
+                create: {
+                  imageSha256: normalizedImageSha256,
+                  imageBytes: normalizedSkin
+                }
+              }
+            },
 
             skinUrls: {
               create: {
@@ -88,7 +97,7 @@ export default class MinecraftSkinService {
             },
             skins: { create: {} }
           },
-          select: { originalImageSha256: true }
+          select: { imageSha256: true }
         });
       }
 
@@ -101,7 +110,7 @@ export default class MinecraftSkinService {
             url: skinUrl,
             textureValue: textureProperty?.value,
             textureSignature: textureProperty?.signature,
-            originalImageSha256: existingSkinImage.originalImageSha256
+            imageSha256: existingSkinImage.imageSha256
           }
         });
       }
@@ -111,10 +120,10 @@ export default class MinecraftSkinService {
   private async findSkinByUrl(skinUrl: string): Promise<SkinImageManipulator | null> {
     const skinInDatabase = await this.databaseClient.skinUrl.findUnique({
       where: { url: skinUrl },
-      select: { image: { select: { originalImage: true } } }
+      select: { image: { select: { imageBytes: true } } }
     });
-    if (skinInDatabase?.image.originalImage != null) {
-      return SkinImageManipulator.createByImage(skinInDatabase.image.originalImage);
+    if (skinInDatabase?.image.imageBytes != null) {
+      return SkinImageManipulator.createByImage(skinInDatabase.image.imageBytes);
     }
     return null;
   }

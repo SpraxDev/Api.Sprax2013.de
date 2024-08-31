@@ -29,31 +29,34 @@ view ProfileCache {
 }
 
 model Skin {
-  id                  BigInt @id @default(dbgenerated("generate_snowflake('skin_urls_id_seq'::text)"))
-  originalImageSha256 Bytes  @map("original_image_sha256")
+  id          BigInt @id @default(dbgenerated("generate_snowflake('skin_urls_id_seq'::text)"))
+  imageSha256 Bytes  @map("image_sha256")
 
-  image SkinImage @relation(fields: [originalImageSha256], references: [originalImageSha256])
+  image SkinImage @relation(fields: [imageSha256], references: [imageSha256])
 
   @@map("skins")
 }
 
 model SkinUrl {
-  url                 String   @id
-  originalImageSha256 Bytes    @map("original_image_sha256")
-  textureValue        String?  @map("texture_value")
-  textureSignature    String?  @map("texture_signature")
-  createdAt           DateTime @default(now()) @map("created_at")
+  url              String   @id
+  imageSha256      Bytes    @map("image_sha256")
+  textureValue     String?  @map("texture_value")
+  textureSignature String?  @map("texture_signature")
+  createdAt        DateTime @default(now()) @map("created_at")
 
-  image SkinImage @relation(fields: [originalImageSha256], references: [originalImageSha256])
+  image SkinImage @relation(fields: [imageSha256], references: [imageSha256])
 
   @@map("skin_urls")
 }
 
 model SkinImage {
-  originalImageSha256 Bytes    @id @map("original_image_sha256")
-  originalImage       Bytes    @map("original_image")
-  normalizedImage     Bytes    @map("normalized_image")
-  createdAt           DateTime @default(now()) @map("created_at")
+  imageSha256           Bytes    @id @map("image_sha256")
+  imageBytes            Bytes    @map("image_bytes")
+  normalizedImageSha256 Bytes?   @map("normalized_image_sha256")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  normalizedImage         SkinImage?  @relation("NormalizedSkin", fields: [normalizedImageSha256], references: [imageSha256])
+  knownNonNormalizedSkins SkinImage[] @relation("NormalizedSkin")
 
   skins    Skin[]
   skinUrls SkinUrl[]
