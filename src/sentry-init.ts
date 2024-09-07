@@ -8,7 +8,7 @@ import { getAppInfo, IS_PRODUCTION } from './constants.js';
   delete process.env.SENTRY_DSN;
 
   if (dsn === '') {
-    console.warn('Sentry DSN is not set up, skipping Sentry initialization');
+    console.warn('Sentry DSN is not configured – skipping Sentry initialization');
     return;
   }
 
