@@ -1,5 +1,5 @@
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
-import HttpClient from '../../../../../src/http/HttpClient.js';
+import AutoProxiedHttpClient from '../../../../../src/http/clients/AutoProxiedHttpClient.js';
 import HttpResponse from '../../../../../src/http/HttpResponse.js';
 import LabymodCapeProvider from '../../../../../src/minecraft/cape/provider/LabymodCapeProvider.js';
 import {
@@ -8,11 +8,11 @@ import {
 } from '../../../../test-constants.js';
 
 describe('LabymodCapeProvider', () => {
-  let httpClient: DeepMockProxy<HttpClient>;
+  let httpClient: DeepMockProxy<AutoProxiedHttpClient>;
   let capeProvider: LabymodCapeProvider;
 
   beforeEach(() => {
-    httpClient = mockDeep<HttpClient>();
+    httpClient = mockDeep<AutoProxiedHttpClient>();
     capeProvider = new LabymodCapeProvider(httpClient);
   });
 

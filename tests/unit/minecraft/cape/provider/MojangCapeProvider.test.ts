@@ -1,5 +1,5 @@
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
-import HttpClient from '../../../../../src/http/HttpClient.js';
+import AutoProxiedHttpClient from '../../../../../src/http/clients/AutoProxiedHttpClient.js';
 import HttpResponse from '../../../../../src/http/HttpResponse.js';
 import MojangCapeProvider from '../../../../../src/minecraft/cape/provider/MojangCapeProvider.js';
 import MinecraftProfile from '../../../../../src/minecraft/value-objects/MinecraftProfile.js';
@@ -26,11 +26,11 @@ const profileWithCape = new MinecraftProfile({
 });
 
 describe('MojangCapeProvider', () => {
-  let httpClient: DeepMockProxy<HttpClient>;
+  let httpClient: DeepMockProxy<AutoProxiedHttpClient>;
   let capeProvider: MojangCapeProvider;
 
   beforeEach(() => {
-    httpClient = mockDeep<HttpClient>();
+    httpClient = mockDeep<AutoProxiedHttpClient>();
     capeProvider = new MojangCapeProvider(httpClient);
   });
 

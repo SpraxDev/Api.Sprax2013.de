@@ -1,19 +1,19 @@
 import { jest } from '@jest/globals';
 import * as Undici from 'undici';
 import ResolvedToNonUnicastIpError from '../../../src/http/dns/errors/ResolvedToNonUnicastIpError.js';
-import HttpClient from '../../../src/http/HttpClient.js';
+import SimpleHttpClient from '../../../src/http/clients/SimpleHttpClient.js';
 
 let originalAgent: Undici.Agent;
 let mockAgent: Undici.MockAgent;
-let httpClient: HttpClient;
+let httpClient: SimpleHttpClient;
 
 beforeEach(() => {
-  (HttpClient as any).DEBUG_LOGGING = false;
+  (SimpleHttpClient as any).DEBUG_LOGGING = false;
 
   mockAgent = new Undici.MockAgent();
   mockAgent.disableNetConnect();
 
-  httpClient = new HttpClient();
+  httpClient = new SimpleHttpClient();
   originalAgent = (httpClient as any).agent;
   (httpClient as any).agent = mockAgent;
 
@@ -51,7 +51,7 @@ beforeEach(() => {
     .reply(200, 'OK');
 });
 
-describe('HttpClient GET requests', () => {
+describe('SimpleHttpClient GET requests', () => {
   test('Returned text response is correct', async () => {
     const response = await httpClient.get('https://test-hostname/');
     expect(response.statusCode).toBe(200);
@@ -128,7 +128,7 @@ describe('HttpClient GET requests', () => {
   });
 
   test('Debug messages are logged', async () => {
-    (HttpClient as any).DEBUG_LOGGING = true;
+    (SimpleHttpClient as any).DEBUG_LOGGING = true;
     jest.spyOn(console, 'debug').mockReturnValue(undefined);
 
     await httpClient.get('https://test-hostname');
