@@ -1,5 +1,5 @@
 import { autoInjectable } from 'tsyringe';
-import TrustedProxiedHttpClient from '../../../http/clients/TrustedProxiedHttpClient.js';
+import AutoProxiedHttpClient from '../../../http/clients/AutoProxiedHttpClient.js';
 import MinecraftProfile from '../../value-objects/MinecraftProfile.js';
 import { CapeType } from '../CapeType.js';
 import CapeProvider, { CapeResponse } from './CapeProvider.js';
@@ -7,7 +7,7 @@ import CapeProvider, { CapeResponse } from './CapeProvider.js';
 @autoInjectable()
 export default class OptifineCapeProvider implements CapeProvider {
   constructor(
-    private readonly httpClient: TrustedProxiedHttpClient
+    private readonly httpClient: AutoProxiedHttpClient
   ) {
   }
 

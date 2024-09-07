@@ -54,6 +54,7 @@
     "ipaddr.js": "^2.2.0",
     "reflect-metadata": "^0.2.2",
     "sharp": "^0.33.5",
+    "socks": "^2.8.3",
     "tsyringe": "^4.8.0",
     "undici": "^6.19.8"
   },

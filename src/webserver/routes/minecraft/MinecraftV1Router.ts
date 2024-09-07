@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import https from 'node:http';
 import Sharp from 'sharp';
 import { autoInjectable } from 'tsyringe';
-import ProxyEnforcedHttpClient from '../../../http/clients/ProxyEnforcedHttpClient.js';
+import AutoProxiedHttpClient from '../../../http/clients/AutoProxiedHttpClient.js';
 import ResolvedToNonUnicastIpError from '../../../http/dns/errors/ResolvedToNonUnicastIpError.js';
 import { CAPE_TYPE_STRINGS, CapeType } from '../../../minecraft/cape/CapeType.js';
 import Cape2dRenderer from '../../../minecraft/cape/renderer/Cape2dRenderer.js';
@@ -35,7 +35,7 @@ export default class MinecraftV1Router implements Router {
     private readonly userCapeProvider: UserCapeProvider,
     private readonly cape2dRenderer: Cape2dRenderer,
     private readonly serverBlocklistService: ServerBlocklistService,
-    private readonly proxiedHttpClient: ProxyEnforcedHttpClient,
+    private readonly httpClient: AutoProxiedHttpClient,
     private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
     private readonly minecraftSkinTypeDetector: MinecraftSkinTypeDetector,
     private readonly legacyMinecraft3DRenderer: LegacyMinecraft3DRenderer
@@ -159,13 +159,12 @@ export default class MinecraftV1Router implements Router {
             throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to be an https URL');
           }
 
-          // TODO: Always connect through a proxy (Have trusted domains that don't need to hide the host's IP address)
           // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
           // TODO: Properly handle errors when requesting the skin (check content-type?)
 
           let fetchedSkinImage;
           try {
-            fetchedSkinImage = await this.proxiedHttpClient.get(parsedSkinUrl.href);
+            fetchedSkinImage = await this.httpClient.get(parsedSkinUrl.href);
           } catch (err: any) {
             if (err instanceof ResolvedToNonUnicastIpError) {
               throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to point to a public IP address');
@@ -216,13 +215,12 @@ export default class MinecraftV1Router implements Router {
             throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to be an https URL');
           }
 
-          // TODO: Always connect through a proxy (Have trusted domains that don't need to hide the host's IP address)
           // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
           // TODO: Properly handle errors when requesting the skin (check content-type?)
 
           let fetchedSkinImage;
           try {
-            fetchedSkinImage = await this.proxiedHttpClient.get(parsedSkinUrl.href);
+            fetchedSkinImage = await this.httpClient.get(parsedSkinUrl.href);
           } catch (err: any) {
             if (err instanceof ResolvedToNonUnicastIpError) {
               throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to point to a public IP address');

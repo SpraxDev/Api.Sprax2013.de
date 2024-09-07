@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { container, Lifecycle } from 'tsyringe';
+import AppConfiguration from './config/AppConfiguration.js';
 import LabymodCapeProvider from './minecraft/cape/provider/LabymodCapeProvider.js';
 import MojangCapeProvider from './minecraft/cape/provider/MojangCapeProvider.js';
 import OptifineCapeProvider from './minecraft/cape/provider/OptifineCapeProvider.js';
@@ -15,5 +16,14 @@ container.register('CapeProvider', { useClass: MojangCapeProvider }, { lifecycle
 container.register('CapeProvider', { useClass: OptifineCapeProvider }, { lifecycle: Lifecycle.Singleton });
 container.register('CapeProvider', { useClass: LabymodCapeProvider }, { lifecycle: Lifecycle.Singleton });
 
-container.register('value.proxies.http', { useFactory: (container): string[] => [] });  // FIXME: Make configurable
-container.register('value.http.allowNonProxyConnections', { useFactory: (container): boolean => false }); // FIXME: Make configurable and fallback to true on dev-env
+container.register('value.proxy_server_uris', {
+  useFactory: (container): string[] => {
+    return container
+      .resolve(AppConfiguration)
+      .config
+      .proxyServerUris
+      .split(',')
+      .map(uri => uri.trim())
+      .filter(uri => uri !== '');
+  }
+});

@@ -1,5 +1,5 @@
 import { singleton } from 'tsyringe';
-import TrustedProxiedHttpClient from '../http/clients/TrustedProxiedHttpClient.js';
+import AutoProxiedHttpClient from '../http/clients/AutoProxiedHttpClient.js';
 
 export type UsernameToUuidResponse = {
   id: string;
@@ -20,7 +20,7 @@ export type UuidToProfileResponse = {
 @singleton()
 export default class MinecraftApiClient {
   constructor(
-    private readonly httpClient: TrustedProxiedHttpClient
+    private readonly httpClient: AutoProxiedHttpClient
   ) {
   }
 
