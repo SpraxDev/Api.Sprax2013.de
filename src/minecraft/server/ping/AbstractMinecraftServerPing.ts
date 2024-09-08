@@ -1,4 +1,10 @@
 import Net from 'node:net';
+import { container } from 'tsyringe';
+import ProxyServerConfigurationProvider, {
+  SocksProxyServer
+} from '../../../net/proxy/ProxyServerConfigurationProvider.js';
+import RoundRobinProxyPool from '../../../net/proxy/RoundRobinProxyPool.js';
+import SocksProxyServerConnector from '../../../net/proxy/SocksProxyServerConnector.js';
 import ConnectionTimedOutError from './error/ConnectionTimedOutError.js';
 import SocketClosedError from './error/SocketClosedError.js';
 
@@ -30,6 +36,9 @@ export type PotentialServerStatus = {
 }
 
 export default abstract class AbstractMinecraftServerPing {
+  private static readonly socksProxyConnector = new SocksProxyServerConnector();
+  private static socksProxyPool: RoundRobinProxyPool<SocksProxyServer> | undefined;
+
   protected readonly host: string;
   protected readonly port: number;
   protected readonly resolvedIp: string;
@@ -53,16 +62,7 @@ export default abstract class AbstractMinecraftServerPing {
       throw new Error('Cannot ping multiple times using the same class instance');
     }
 
-    this.socket = Net.createConnection({
-      host: this.resolvedIp,
-      port: this.resolvedPort,
-      timeout: 2000,
-      noDelay: true,
-
-      lookup: (host, options, callback) => {
-        callback(new Error('DNS lookups are not supported'), '');
-      }
-    });
+    this.socket = await AbstractMinecraftServerPing.createSocket(this.resolvedIp, this.resolvedPort);
     return this.promisifySocket(this.socket);
   }
 
@@ -72,7 +72,11 @@ export default abstract class AbstractMinecraftServerPing {
       socket.on('close', () => reject(new SocketClosedError()));
       socket.on('timeout', () => socket.destroy(new ConnectionTimedOutError()));
 
-      socket.on('connect', () => this.onSocketConnected(socket));
+      if (socket.readyState === 'open') {
+        this.onSocketConnected(socket);
+      } else {
+        socket.on('connect', () => this.onSocketConnected(socket));
+      }
       socket.on('data', (data) => {
         try {
           this.onSocketData(socket, data, resolve);
@@ -83,6 +87,30 @@ export default abstract class AbstractMinecraftServerPing {
           socket.destroy(err);
         }
       });
+    });
+  }
+
+  private static async createSocket(ip: string, port: number): Promise<Net.Socket> {
+    if (this.socksProxyPool == null) {
+      const proxyServerConfigurationProvider = container.resolve(ProxyServerConfigurationProvider);
+      this.socksProxyPool = new RoundRobinProxyPool(proxyServerConfigurationProvider.getSocksProxyServers());
+    }
+
+    if (this.socksProxyPool.proxyCount > 0) {
+      const proxy = this.socksProxyPool.selectNextProxy();
+      const socket = await this.socksProxyConnector.createConnection(proxy, ip, port);
+      return socket.setNoDelay();
+    }
+
+    return Net.createConnection({
+      host: ip,
+      port: port,
+      timeout: 2000,
+      noDelay: true,
+
+      lookup: (host, options, callback) => {
+        callback(new Error('DNS lookups are not supported'), '');
+      }
     });
   }
 }
