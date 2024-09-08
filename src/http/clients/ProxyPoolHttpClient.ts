@@ -4,6 +4,7 @@ import ProxyServerConfigurationProvider, {
   ProxyServer,
   SocksProxyServer
 } from '../../net/proxy/ProxyServerConfigurationProvider.js';
+import RoundRobinProxyPool from '../../net/proxy/RoundRobinProxyPool.js';
 import SentrySdk from '../../SentrySdk.js';
 import ResolvedToNonUnicastIpError from '../dns/errors/ResolvedToNonUnicastIpError.js';
 import HttpResponse from '../HttpResponse.js';
@@ -11,16 +12,13 @@ import { FullRequestOptions } from './HttpClient.js';
 import SimpleHttpClient from './SimpleHttpClient.js';
 import SocksProxyAgentFactory from './SocksProxyAgentFactory.js';
 
-type ProxiedDispatcher = {
-  simplifiedUri: string,
-  displayName: string,
-  dispatcher: Undici.Dispatcher
+type UndiciProxyServer = ProxyServer & {
+  undiciDispatcher: Undici.Dispatcher
 }
 
 @singleton()
 export default class ProxyPoolHttpClient extends SimpleHttpClient {
-  private readonly proxies: ProxiedDispatcher[] = [];
-  private nextProxyIndex = 0;
+  private readonly proxyPool: RoundRobinProxyPool<UndiciProxyServer>;
 
   constructor(
     proxyServerConfigurationProvider: ProxyServerConfigurationProvider,
@@ -28,18 +26,20 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
   ) {
     super();
 
-    this.proxies = this.parseProxies(proxyServerConfigurationProvider.getProxyServers(), socksProxyAgentFactory);
-    this.logWarningForDuplicateProxies();
+    const proxies = this.parseProxies(proxyServerConfigurationProvider.getProxyServers(), socksProxyAgentFactory);
+    this.logWarningForDuplicateProxies(proxies);
+
+    this.proxyPool = new RoundRobinProxyPool(proxies);
   }
 
   get proxyCount(): number {
-    return this.proxies.length;
+    return this.proxyPool.proxyCount;
   }
 
   protected async request(url: string, options: FullRequestOptions, triesLeft = 2): Promise<HttpResponse> {
     this.ensureUrlLooksLikePublicServer(url);
 
-    const proxy = this.selectNextProxy();
+    const proxy = this.proxyPool.selectNextProxy();
     let response: Undici.Dispatcher.ResponseData;
 
     if (SimpleHttpClient.DEBUG_LOGGING) {
@@ -47,7 +47,7 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
     }
     try {
       response = await Undici.request(url, {
-        dispatcher: proxy.dispatcher,
+        dispatcher: proxy.undiciDispatcher,
 
         method: options.method,
         query: options?.query,
@@ -74,30 +74,19 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
   }
 
   protected selectDispatcher(): Undici.Dispatcher {
-    const proxy = this.selectNextProxy();
-    return proxy.dispatcher;
+    const proxy = this.proxyPool.selectNextProxy();
+    return proxy.undiciDispatcher;
   }
 
-  private selectNextProxy(): ProxiedDispatcher {
-    if (this.proxies.length === 0) {
-      throw new Error('No proxies available');
-    }
-
-    const proxy = this.proxies[this.nextProxyIndex];
-    this.nextProxyIndex = (this.nextProxyIndex + 1) % this.proxies.length;
-    return proxy;
-  }
-
-  private createHttpProxy(proxy: ProxyServer): ProxiedDispatcher {
+  private createHttpProxy(proxy: ProxyServer): UndiciProxyServer {
     let authorizationHeaderValue: string | undefined = undefined;
     if (proxy.username.length > 0 && proxy.password.length > 0) {
       authorizationHeaderValue = 'Basic ' + Buffer.from(`${decodeURIComponent(proxy.username)}:${decodeURIComponent(proxy.password)}`).toString('base64');
     }
 
     return {
-      simplifiedUri: proxy.simplifiedUri,
-      displayName: proxy.displayName,
-      dispatcher: new Undici.ProxyAgent({
+      ...proxy,
+      undiciDispatcher: new Undici.ProxyAgent({
         ...this.getDefaultAgentOptions(),
         uri: proxy.simplifiedUri,
         token: authorizationHeaderValue,
@@ -108,28 +97,27 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
     };
   }
 
-  private createSocksProxy(proxy: SocksProxyServer, socksProxyAgentFactory: SocksProxyAgentFactory): ProxiedDispatcher {
+  private createSocksProxy(proxy: SocksProxyServer, socksProxyAgentFactory: SocksProxyAgentFactory): UndiciProxyServer {
     return {
-      simplifiedUri: proxy.simplifiedUri,
-      displayName: proxy.displayName,
-      dispatcher: socksProxyAgentFactory.create(proxy)
+      ...proxy,
+      undiciDispatcher: socksProxyAgentFactory.create(proxy)
     };
   }
 
-  private parseProxies(proxies: ProxyServer[], socksProxyAgentFactory: SocksProxyAgentFactory): ProxiedDispatcher[] {
-    const proxiedDispatchers: ProxiedDispatcher[] = [];
+  private parseProxies(proxies: ProxyServer[], socksProxyAgentFactory: SocksProxyAgentFactory): UndiciProxyServer[] {
+    const parsedProxies: UndiciProxyServer[] = [];
 
     for (const proxyServer of proxies) {
       const proxyProtocol = new URL(proxyServer.simplifiedUri).protocol;
       switch (proxyProtocol) {
         case 'http:':
         case 'https:':
-          proxiedDispatchers.push(this.createHttpProxy(proxyServer));
+          parsedProxies.push(this.createHttpProxy(proxyServer));
           break;
 
         case 'socks5:':
         case 'socks4:':
-          proxiedDispatchers.push(this.createSocksProxy(proxyServer as SocksProxyServer, socksProxyAgentFactory));
+          parsedProxies.push(this.createSocksProxy(proxyServer as SocksProxyServer, socksProxyAgentFactory));
           break;
 
         default:
@@ -137,14 +125,14 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
       }
     }
 
-    return proxiedDispatchers;
+    return parsedProxies;
   }
 
-  private logWarningForDuplicateProxies(): void {
+  private logWarningForDuplicateProxies(proxies: UndiciProxyServer[]): void {
     const encounteredSimplifiedUris = new Set<string>();
     const encounteredDisplayNames = new Set<string>();
 
-    for (const proxy of this.proxies) {
+    for (const proxy of proxies) {
       if (encounteredSimplifiedUris.has(proxy.simplifiedUri)) {
         SentrySdk.logAndCaptureWarning(`Proxy server '${proxy.simplifiedUri}' is configured multiple times`);
         continue;
