@@ -1,31 +1,34 @@
-import { inject, singleton } from 'tsyringe';
+import { singleton } from 'tsyringe';
 import * as Undici from 'undici';
+import ProxyServerConfigurationProvider, {
+  ProxyServer,
+  SocksProxyServer
+} from '../../net/proxy/ProxyServerConfigurationProvider.js';
 import SentrySdk from '../../SentrySdk.js';
 import ResolvedToNonUnicastIpError from '../dns/errors/ResolvedToNonUnicastIpError.js';
-import UnicastOnlyDnsResolver from '../dns/UnicastOnlyDnsResolver.js';
 import HttpResponse from '../HttpResponse.js';
 import { FullRequestOptions } from './HttpClient.js';
 import SimpleHttpClient from './SimpleHttpClient.js';
-import SocksProxyAgent from './SocksProxyAgent.js';
+import SocksProxyAgentFactory from './SocksProxyAgentFactory.js';
 
-type ProxyServer = {
+type ProxiedDispatcher = {
   simplifiedUri: string,
   displayName: string,
   dispatcher: Undici.Dispatcher
-};
+}
 
 @singleton()
 export default class ProxyPoolHttpClient extends SimpleHttpClient {
-  private readonly proxies: ProxyServer[] = [];
+  private readonly proxies: ProxiedDispatcher[] = [];
   private nextProxyIndex = 0;
 
   constructor(
-    @inject('value.proxy_server_uris') proxyUris: string[],
-    unicastOnlyDnsResolver: UnicastOnlyDnsResolver
+    proxyServerConfigurationProvider: ProxyServerConfigurationProvider,
+    socksProxyAgentFactory: SocksProxyAgentFactory
   ) {
     super();
 
-    this.proxies = this.parseProxies(proxyUris, unicastOnlyDnsResolver);
+    this.proxies = this.parseProxies(proxyServerConfigurationProvider.getProxyServers(), socksProxyAgentFactory);
     this.logWarningForDuplicateProxies();
   }
 
@@ -75,7 +78,7 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
     return proxy.dispatcher;
   }
 
-  private selectNextProxy(): ProxyServer {
+  private selectNextProxy(): ProxiedDispatcher {
     if (this.proxies.length === 0) {
       throw new Error('No proxies available');
     }
@@ -85,23 +88,18 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
     return proxy;
   }
 
-  private createHttpProxy(url: URL): ProxyServer {
-    if (url.pathname !== '/') {
-      throw new Error(`Proxy URL must not contain a path: ${url.toString()}`);
-    }
-
+  private createHttpProxy(proxy: ProxyServer): ProxiedDispatcher {
     let authorizationHeaderValue: string | undefined = undefined;
-    if (url.username.length > 0 && url.password.length > 0) {
-      authorizationHeaderValue = 'Basic ' + Buffer.from(`${decodeURIComponent(url.username)}:${decodeURIComponent(url.password)}`).toString('base64');
+    if (proxy.username.length > 0 && proxy.password.length > 0) {
+      authorizationHeaderValue = 'Basic ' + Buffer.from(`${decodeURIComponent(proxy.username)}:${decodeURIComponent(proxy.password)}`).toString('base64');
     }
 
-    const uri = `${url.protocol}//${url.host}/`;
     return {
-      simplifiedUri: uri,
-      displayName: url.searchParams.get('name')?.trim() || uri,
+      simplifiedUri: proxy.simplifiedUri,
+      displayName: proxy.displayName,
       dispatcher: new Undici.ProxyAgent({
         ...this.getDefaultAgentOptions(),
-        uri,
+        uri: proxy.simplifiedUri,
         token: authorizationHeaderValue,
         proxyTls: {
           timeout: 3000
@@ -110,60 +108,36 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
     };
   }
 
-  private createSocksProxy(url: URL, unicastOnlyDnsResolver: UnicastOnlyDnsResolver): ProxyServer {
-    const uri = `${url.protocol}//${url.host}/`;
-    let proxyHost = url.hostname;
-    if (proxyHost.startsWith('[') && proxyHost.endsWith(']')) {
-      proxyHost = proxyHost.slice(1, -1);
-    }
-
+  private createSocksProxy(proxy: SocksProxyServer, socksProxyAgentFactory: SocksProxyAgentFactory): ProxiedDispatcher {
     return {
-      simplifiedUri: uri,
-      displayName: url.searchParams.get('name')?.trim() || uri,
-      dispatcher: new SocksProxyAgent(
-        {
-          proxyOptions: {
-            version: url.protocol === 'socks5:' ? 5 : 4,
-            host: proxyHost,
-            port: parseInt(url.port, 10),
-
-            username: decodeURIComponent(url.username),
-            password: decodeURIComponent(url.password),
-
-            timeout: 3000
-          }
-        },
-        unicastOnlyDnsResolver
-      )
+      simplifiedUri: proxy.simplifiedUri,
+      displayName: proxy.displayName,
+      dispatcher: socksProxyAgentFactory.create(proxy)
     };
   }
 
-  private parseProxies(proxyUris: string[], unicastOnlyDnsResolver: UnicastOnlyDnsResolver): ProxyServer[] {
-    const proxies: ProxyServer[] = [];
+  private parseProxies(proxies: ProxyServer[], socksProxyAgentFactory: SocksProxyAgentFactory): ProxiedDispatcher[] {
+    const proxiedDispatchers: ProxiedDispatcher[] = [];
 
-    for (const proxyUri of proxyUris.toSorted(() => Math.random() - 0.5)) {
-      const parsedUri = new URL(proxyUri);
-
-      let proxy: ProxyServer;
-      switch (parsedUri.protocol) {
+    for (const proxyServer of proxies) {
+      const proxyProtocol = new URL(proxyServer.simplifiedUri).protocol;
+      switch (proxyProtocol) {
         case 'http:':
         case 'https:':
-          proxy = this.createHttpProxy(parsedUri);
+          proxiedDispatchers.push(this.createHttpProxy(proxyServer));
           break;
 
         case 'socks5:':
         case 'socks4:':
-          proxy = this.createSocksProxy(parsedUri, unicastOnlyDnsResolver);
+          proxiedDispatchers.push(this.createSocksProxy(proxyServer as SocksProxyServer, socksProxyAgentFactory));
           break;
 
         default:
-          throw new Error(`Proxy server URI uses an unsupported protocol: ${parsedUri.protocol}`);
+          throw new Error(`Proxy server URI uses an unsupported protocol: ${proxyProtocol}`);
       }
-
-      proxies.push(proxy);
     }
 
-    return proxies;
+    return proxiedDispatchers;
   }
 
   private logWarningForDuplicateProxies(): void {
