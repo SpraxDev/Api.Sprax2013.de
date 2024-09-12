@@ -20,7 +20,7 @@ export default class SetWithTtl<T> {
 
   getAgeInSeconds(key: T): number {
     const expiration = this.values.get(key);
-    if (expiration == null) {
+    if (expiration == null || this.isExpired(expiration)) {
       return 0;
     }
 
