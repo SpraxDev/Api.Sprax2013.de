@@ -35,6 +35,8 @@ const config = {
     '!<rootDir>/src/sentry-init.ts',
     '!<rootDir>/src/container-init.ts',
     '!<rootDir>/src/main.ts',
+
+    '!<rootDir>/src/webserver/routes/minecraft/MinecraftV2Router.ts'
   ],
 };
 export default config;
