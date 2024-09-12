@@ -23,7 +23,9 @@ export default class SetWithTtl<T> {
     if (expiration == null) {
       return 0;
     }
-    return Math.floor((expiration - Date.now()) / 1000);
+
+    const creationTime = expiration - this.ttlInMilliseconds;
+    return Math.floor((Date.now() - creationTime) / 1000);
   }
 
   clear(): void {
