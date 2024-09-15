@@ -32,10 +32,11 @@ const config = {
 
   collectCoverageFrom: [
     '<rootDir>/src/**/*.ts',
-    '!<rootDir>/src/sentry-init.ts',
     '!<rootDir>/src/container-init.ts',
+    '!<rootDir>/src/sentry-init.ts',
     '!<rootDir>/src/main.ts',
 
+    '!<rootDir>/src/database/DatabaseClient.ts',
     '!<rootDir>/src/webserver/routes/minecraft/MinecraftV2Router.ts'
   ],
 };
