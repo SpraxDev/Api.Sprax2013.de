@@ -125,6 +125,9 @@ export default class MinecraftProfileService {
       },
       where: {
         nameLowercase: username.toLowerCase()
+      },
+      orderBy: {
+        ageInSeconds: 'asc'
       }
     });
     if (profile == null) {
