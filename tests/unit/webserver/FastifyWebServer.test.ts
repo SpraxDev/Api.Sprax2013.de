@@ -53,7 +53,7 @@ describe('FastifyWebServer', () => {
   });
 
   test('#listen should call the Fastify server', async () => {
-    const listenSpy = jest.spyOn(fastify, 'listen').mockResolvedValue('');
+    const listenSpy = jest.spyOn(fastify, 'listen').mockResolvedValue('' as never);
     await fastifyWebServer.listen('127.0.0.1', 8080);
 
     expect(listenSpy).toHaveBeenCalledTimes(1);
