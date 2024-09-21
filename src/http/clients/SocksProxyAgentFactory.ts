@@ -1,8 +1,8 @@
 import Net from 'node:net';
 import { singleton } from 'tsyringe';
 import * as Undici from 'undici';
-import SocksProxyServerConnector from '../../net/proxy/SocksProxyServerConnector.js';
 import { SocksProxyServer } from '../../net/proxy/ProxyServerConfigurationProvider.js';
+import SocksProxyServerConnector from '../../net/proxy/SocksProxyServerConnector.js';
 import ResolvedToNonUnicastIpError from '../dns/errors/ResolvedToNonUnicastIpError.js';
 import UnicastOnlyDnsResolver from '../dns/UnicastOnlyDnsResolver.js';
 
@@ -14,9 +14,9 @@ export default class SocksProxyAgentFactory {
   ) {
   }
 
-  create(proxy: SocksProxyServer): Undici.Agent {
+  create(proxy: SocksProxyServer, agentOptions: Omit<Undici.Agent.Options, 'connect'>): Undici.Agent {
     return new Undici.Agent({
-      ...proxy.socksProxyOptions,
+      ...agentOptions,
       connect: this.createConnector(proxy)
     });
   }

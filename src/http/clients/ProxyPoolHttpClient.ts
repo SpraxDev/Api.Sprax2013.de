@@ -100,7 +100,7 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
   private createSocksProxy(proxy: SocksProxyServer, socksProxyAgentFactory: SocksProxyAgentFactory): UndiciProxyServer {
     return {
       ...proxy,
-      undiciDispatcher: socksProxyAgentFactory.create(proxy)
+      undiciDispatcher: socksProxyAgentFactory.create(proxy, this.getDefaultAgentOptions())
     };
   }
 
