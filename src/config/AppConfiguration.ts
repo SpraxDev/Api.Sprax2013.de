@@ -16,12 +16,6 @@ export default class AppConfiguration {
     } satisfies AppConfig);
   }
 
-  private getAndRemoveEnvVar(name: string): string | undefined {
-    const value = process.env[name];
-    delete process.env[name];
-    return value;
-  }
-
   private deepFreeze(obj: any): any {
     for (const key of Object.keys(obj)) {
       if (typeof obj[key] === 'object') {
