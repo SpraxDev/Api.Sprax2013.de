@@ -44,7 +44,7 @@ export default class MinecraftV2Router implements Router {
 
           const profile = await this.minecraftProfileService.provideProfileByUsername(inputUsername);
           if (profile == null) {
-            await reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
             throw new NotFoundError('No UUID found for username');
           }
 
@@ -64,7 +64,7 @@ export default class MinecraftV2Router implements Router {
         get: async (): Promise<FastifyReply> => {
           const profile = await this.resolveUserToProfile((request.params as any).user);
           if (profile == null) {
-            await reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
             throw new NotFoundError(`Unable to find a profile for the given UUID or username`);
           }
           return reply
@@ -125,7 +125,7 @@ export default class MinecraftV2Router implements Router {
         get: async (): Promise<FastifyReply> => {
           const profile = await this.resolveUserToProfile((request.params as any).user);
           if (profile == null) {
-            await reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
             throw new NotFoundError(`Unable to find a profile for the given UUID or username`);
           }
           const minecraftProfile = new MinecraftProfile(profile.profile);
