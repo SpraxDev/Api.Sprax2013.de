@@ -105,7 +105,9 @@ describe('/mc/v1/capes/:capeType/:user?', () => {
     expect(response.statusCode).toBe(404);
   });
 
-  test('Expect 404 for existing user without cape for LabyMod', async () => {
+  // FIXME: Right now, LabyMod returns a generic cape image (Content-Type: image/png) for users without a cape
+  //       That's why we skip this test for now – We'll have to decide how to handle this (or if we just accept that new behaviour)
+  test.skip('Expect 404 for existing user without cape for LabyMod', async () => {
     const response = await executeCapeRequest('labymod', '61699b2ed3274a019f1e0ea8c3f06bc6');
 
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
