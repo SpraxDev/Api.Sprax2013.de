@@ -12,6 +12,10 @@ export default class RoundRobinProxyPool<T extends ProxyServer> {
     return this.proxies.length;
   }
 
+  getAllProxies(): Readonly<T[]> {
+    return this.proxies;
+  }
+
   selectNextProxy(): T {
     if (this.proxies.length === 0) {
       throw new Error('No proxies available');

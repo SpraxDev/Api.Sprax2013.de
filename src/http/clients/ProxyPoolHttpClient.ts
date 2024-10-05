@@ -1,4 +1,5 @@
-import { singleton } from 'tsyringe';
+import { SocksClientError } from 'socks';
+import { container, singleton } from 'tsyringe';
 import * as Undici from 'undici';
 import ProxyServerConfigurationProvider, {
   ProxyServer,
@@ -6,19 +7,27 @@ import ProxyServerConfigurationProvider, {
 } from '../../net/proxy/ProxyServerConfigurationProvider.js';
 import RoundRobinProxyPool from '../../net/proxy/RoundRobinProxyPool.js';
 import SentrySdk from '../../SentrySdk.js';
+import ProxyPoolHttpClientHealthcheckTask from '../../task_queue/tasks/ProxyPoolHttpClientHealthcheckTask.js';
 import ResolvedToNonUnicastIpError from '../dns/errors/ResolvedToNonUnicastIpError.js';
 import HttpResponse from '../HttpResponse.js';
 import { FullRequestOptions } from './HttpClient.js';
 import SimpleHttpClient from './SimpleHttpClient.js';
 import SocksProxyAgentFactory from './SocksProxyAgentFactory.js';
 
-type UndiciProxyServer = ProxyServer & {
-  undiciDispatcher: Undici.Dispatcher
+export type UndiciProxyServer = ProxyServer & {
+  readonly undiciDispatcher: Undici.Dispatcher,
+  health: {
+    readonly unhealthy: boolean,
+    readonly unhealthySince?: Date,
+    readonly lastChecked?: Date,
+    readonly lastReferenceRttMs?: number
+  }
 }
 
 @singleton()
 export default class ProxyPoolHttpClient extends SimpleHttpClient {
-  private readonly proxyPool: RoundRobinProxyPool<UndiciProxyServer>;
+  public readonly proxyPool: RoundRobinProxyPool<UndiciProxyServer>;
+  private readonly retriesOnProxyError = 0;
 
   constructor(
     proxyServerConfigurationProvider: ProxyServerConfigurationProvider,
@@ -30,16 +39,18 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
     this.logWarningForDuplicateProxies(proxies);
 
     this.proxyPool = new RoundRobinProxyPool(proxies);
+
+    container.resolve(ProxyPoolHttpClientHealthcheckTask).registerHttpClient(this);
   }
 
   get proxyCount(): number {
     return this.proxyPool.proxyCount;
   }
 
-  protected async request(url: string, options: FullRequestOptions, triesLeft = 2): Promise<HttpResponse> {
+  protected async request(url: string, options: FullRequestOptions, triesLeft = this.retriesOnProxyError): Promise<HttpResponse> {
     this.ensureUrlLooksLikePublicServer(url);
 
-    const proxy = this.proxyPool.selectNextProxy();
+    const proxy = this.selectNextProxy();
     let response: Undici.Dispatcher.ResponseData;
 
     if (SimpleHttpClient.DEBUG_LOGGING) {
@@ -56,6 +67,15 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
     } catch (err: any) {
       if (err instanceof ResolvedToNonUnicastIpError) {
         throw err;
+      }
+
+      if (this.isSocketError(err)) {
+        proxy.health = {
+          ...proxy.health,
+          unhealthy: true,
+          unhealthySince: proxy.health.unhealthySince ?? new Date(),
+          lastChecked: new Date()
+        };
       }
 
       SentrySdk.logAndCaptureWarning(`Failed to request '${url}' with proxy '${proxy.displayName}': ${err.message}`, { err });
@@ -78,6 +98,25 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
     return proxy.undiciDispatcher;
   }
 
+  private selectNextProxy(): UndiciProxyServer {
+    const firstProxySelected = this.proxyPool.selectNextProxy();
+    let proxy = firstProxySelected;
+    while (proxy.health.unhealthy) {
+      proxy = this.proxyPool.selectNextProxy();
+      if (proxy === firstProxySelected) {
+        throw new Error('All configured proxies are unhealthy');
+      }
+    }
+    return proxy;
+  }
+
+  private isSocketError(err: unknown): boolean {
+    if (err instanceof SocksClientError) {
+      return err.message.includes('ECONNREFUSED');
+    }
+    return false;
+  }
+
   private createHttpProxy(proxy: ProxyServer): UndiciProxyServer {
     let authorizationHeaderValue: string | undefined = undefined;
     if (proxy.username.length > 0 && proxy.password.length > 0) {
@@ -93,14 +132,16 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
         proxyTls: {
           timeout: 3000
         }
-      })
+      }),
+      health: { unhealthy: false }
     };
   }
 
   private createSocksProxy(proxy: SocksProxyServer, socksProxyAgentFactory: SocksProxyAgentFactory): UndiciProxyServer {
     return {
       ...proxy,
-      undiciDispatcher: socksProxyAgentFactory.create(proxy, this.getDefaultAgentOptions())
+      undiciDispatcher: socksProxyAgentFactory.create(proxy, this.getDefaultAgentOptions()),
+      health: { unhealthy: false }
     };
   }
 

@@ -1,5 +1,7 @@
 import { singleton } from 'tsyringe';
 import { Dispatcher } from 'undici';
+import SentrySdk from '../../SentrySdk.js';
+import ResolvedToNonUnicastIpError from '../dns/errors/ResolvedToNonUnicastIpError.js';
 import HttpResponse from '../HttpResponse.js';
 import HttpClient, { FullRequestOptions, GetRequestOptions } from './HttpClient.js';
 import ProxyPoolHttpClient from './ProxyPoolHttpClient.js';
@@ -25,14 +27,29 @@ export default class AutoProxiedHttpClient extends HttpClient {
     super();
   }
 
-  get(url: string, options?: GetRequestOptions): Promise<HttpResponse> {
-    if (this.shouldRequestThroughProxy(url)) {
-      --this.nextNonProxyRequest;
-      return this.proxyPoolHttpClient.get(url, options);
-    }
+  async get(url: string, options?: GetRequestOptions, triesLeft = 2): Promise<HttpResponse> {
+    let httpClient = 'SimpleHttpClient';
+    try {
+      if (this.shouldRequestThroughProxy(url)) {
+        httpClient = 'ProxyPoolHttpClient';
+        --this.nextNonProxyRequest;
+        return await this.proxyPoolHttpClient.get(url, options);
+      }
 
-    this.nextNonProxyRequest = this.proxyPoolHttpClient.proxyCount;
-    return this.simpleHttpClient.get(url, options);
+      this.nextNonProxyRequest = this.proxyPoolHttpClient.proxyCount;
+      return await this.simpleHttpClient.get(url, options);
+    } catch (err: any) {
+      if (err instanceof ResolvedToNonUnicastIpError) {
+        throw err;
+      }
+
+      SentrySdk.logAndCaptureWarning(`Failed to request '${url}' using ${httpClient}: ${err.message}`, { err });
+      if (triesLeft > 0) {
+        return this.get(url, options, triesLeft - 1);
+      }
+
+      throw new Error(`Failed to request '${url}': ${err.message}`, { cause: err });
+    }
   }
 
   protected async request(_url: string, _options: FullRequestOptions): Promise<HttpResponse> {
