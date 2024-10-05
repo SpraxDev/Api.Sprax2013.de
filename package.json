@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
+    "@questdb/nodejs-client": "^3.0.0",
     "@sentry/node": "^8.33.1",
     "@sentry/profiling-node": "^8.33.1",
     "fastify": "^5.0.0",

@@ -1,4 +1,4 @@
-import AppConfiguration from '../../../src/config/AppConfiguration.js';
+import AppConfiguration, { AppConfig } from '../../../src/config/AppConfiguration.js';
 
 describe('AppConfiguration', () => {
   let backupEnv: NodeJS.ProcessEnv;
@@ -15,8 +15,9 @@ describe('AppConfiguration', () => {
 
     expect(config.config).toEqual({
       serverPort: 8087,
-      proxyServerUris: ''
-    });
+      proxyServerUris: '',
+      questDbMetricsConfig: ''
+    } satisfies AppConfig);
   });
 
   test('Configuration object is frozen', () => {
@@ -24,6 +25,7 @@ describe('AppConfiguration', () => {
     expect(Object.isFrozen(config.config)).toBe(true);
     expect(Object.isFrozen(config.config.serverPort)).toBe(true);
     expect(Object.isFrozen(config.config.proxyServerUris)).toBe(true);
+    expect(Object.isFrozen(config.config.questDbMetricsConfig)).toBe(true);
   });
 
   test.each(['abc', '0'])('Invalid port: %s', (portValue: string) => {
@@ -32,8 +34,9 @@ describe('AppConfiguration', () => {
     const config = new AppConfiguration();
     expect(config.config).toEqual({
       serverPort: 8087,
-      proxyServerUris: ''
-    });
+      proxyServerUris: '',
+      questDbMetricsConfig: ''
+    } satisfies AppConfig);
   });
 
   test.each([
@@ -46,8 +49,23 @@ describe('AppConfiguration', () => {
     const config = new AppConfiguration();
     expect(config.config).toEqual({
       serverPort: 8087,
-      proxyServerUris
-    });
+      proxyServerUris,
+      questDbMetricsConfig: ''
+    } satisfies AppConfig);
+  });
+
+  test.each([
+    '',
+    'http::addr=localhost:9000'
+  ])('Configured QuestDB-Metrics-Config: %s', (questDbMetricsConfig: string) => {
+    process.env.QUESTDB_METRICS_CONFIG = questDbMetricsConfig;
+
+    const config = new AppConfiguration();
+    expect(config.config).toEqual({
+      serverPort: 8087,
+      proxyServerUris: '',
+      questDbMetricsConfig
+    } satisfies AppConfig);
   });
 
   test('configure object frozen recursively', () => {

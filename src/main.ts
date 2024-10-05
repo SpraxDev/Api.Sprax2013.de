@@ -3,6 +3,7 @@ import { container } from 'tsyringe';
 import AppConfiguration from './config/AppConfiguration.js';
 import { IS_PRODUCTION } from './constants.js';
 import DatabaseClient from './database/DatabaseClient.js';
+import QuestDbClient from './database/QuestDbClient.js';
 import SentrySdk from './SentrySdk.js';
 import TaskExecutingQueue from './task_queue/TaskExecutingQueue.js';
 import TaskScheduler from './task_queue/TaskScheduler.js';
@@ -11,6 +12,7 @@ import FastifyWebServer from './webserver/FastifyWebServer.js';
 let taskQueue: TaskExecutingQueue | undefined;
 let taskScheduler: TaskScheduler | undefined;
 let webServer: FastifyWebServer | undefined;
+let questDbClient: QuestDbClient | undefined;
 
 await bootstrap();
 
@@ -20,6 +22,8 @@ async function bootstrap(): Promise<void> {
   if (IS_PRODUCTION) {
     await container.resolve(DatabaseClient).runDatabaseMigrations();
   }
+
+  questDbClient = container.resolve(QuestDbClient);
 
   taskQueue = container.resolve(TaskExecutingQueue);
   taskScheduler = container.resolve(TaskScheduler);
@@ -56,6 +60,9 @@ function registerShutdownHooks(): void {
 
     await webServer?.shutdown();
     webServer = undefined;
+
+    await questDbClient?.shutdown();
+    questDbClient = undefined;
 
     await SentrySdk.shutdown();
 

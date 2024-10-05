@@ -1,5 +1,6 @@
 import { singleton } from 'tsyringe';
 import * as Undici from 'undici';
+import QuestDbClient, { ProxyServerMetric } from '../../database/QuestDbClient.js';
 import ProxyPoolHttpClient, { UndiciProxyServer } from '../../http/clients/ProxyPoolHttpClient.js';
 import UserAgentGenerator from '../../http/UserAgentGenerator.js';
 import SentrySdk from '../../SentrySdk.js';
@@ -12,7 +13,9 @@ export default class ProxyPoolHttpClientHealthcheckTask extends Task {
 
   private readonly clientList: WeakRef<ProxyPoolHttpClient>[] = [];
 
-  constructor() {
+  constructor(
+    private readonly questDbClient: QuestDbClient
+  ) {
     super('ProxyPoolHttpClientHealthcheckTask', TaskPriority.HIGH);
   }
 
@@ -26,9 +29,20 @@ export default class ProxyPoolHttpClientHealthcheckTask extends Task {
         continue;
       }
 
+      const healthcheckStart = new Date();
+      const proxyMetrics: ProxyServerMetric[] = [];
       for (const proxy of httpClient.proxyPool.getAllProxies()) {
         await this.doHealthcheck(proxy);
+
+        proxyMetrics.push({
+          displayName: proxy.displayName,
+          online: !proxy.health.unhealthy,
+          rttMs: proxy.health.lastReferenceRttMs,
+          timestamp: healthcheckStart
+        });
       }
+
+      await this.questDbClient.pushProxyServerMetric(proxyMetrics);
     }
   }
 
