@@ -4,7 +4,7 @@ import { autoInjectable } from 'tsyringe';
 import AutoProxiedHttpClient from '../../../http/clients/AutoProxiedHttpClient.js';
 import type ImageManipulator from '../../../minecraft/image/ImageManipulator.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
-import MinecraftProfileService, { type Profile } from '../../../minecraft/MinecraftProfileService.js';
+import MinecraftProfileService, { type Profile } from '../../../minecraft/profile/MinecraftProfileService.js';
 import ServerBlocklistService, {
   InvalidHostError
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';

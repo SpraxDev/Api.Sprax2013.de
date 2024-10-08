@@ -10,7 +10,7 @@ import Cape2dRenderer from '../../../minecraft/cape/renderer/Cape2dRenderer.js';
 import UserCapeProvider from '../../../minecraft/cape/UserCapeProvider.js';
 import ImageManipulator from '../../../minecraft/image/ImageManipulator.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
-import MinecraftProfileService, { type Profile } from '../../../minecraft/MinecraftProfileService.js';
+import MinecraftProfileService, { Profile } from '../../../minecraft/profile/MinecraftProfileService.js';
 import ServerBlocklistService, {
   InvalidHostError
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
