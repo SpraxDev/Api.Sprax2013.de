@@ -16,7 +16,8 @@ import ServerBlocklistService, {
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
 import MinecraftSkinNormalizer from '../../../minecraft/skin/manipulator/MinecraftSkinNormalizer.js';
 import SkinImageManipulator from '../../../minecraft/skin/manipulator/SkinImageManipulator.js';
-import MinecraftSkinService from '../../../minecraft/skin/MinecraftSkinService.js';
+import { CachedSkin } from '../../../minecraft/skin/MinecraftSkinCache.js';
+import MinecraftSkinService, { SkinRequestFailedException } from '../../../minecraft/skin/MinecraftSkinService.js';
 import MinecraftSkinTypeDetector from '../../../minecraft/skin/MinecraftSkinTypeDetector.js';
 import LegacyMinecraft3DRenderer from '../../../minecraft/skin/renderer/LegacyMinecraft3DRenderer.js';
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
@@ -162,23 +163,21 @@ export default class MinecraftV1Router implements Router {
           // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
           // TODO: Properly handle errors when requesting the skin (check content-type?)
 
-          let fetchedSkinImage;
+          let skin: CachedSkin;
           try {
-            fetchedSkinImage = await this.httpClient.get(parsedSkinUrl.href);
+            skin = await this.minecraftSkinService.fetchAndPersistSkin(parsedSkinUrl.href);
           } catch (err: any) {
             if (err instanceof ResolvedToNonUnicastIpError) {
               throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to point to a public IP address');
             }
+            if (err instanceof SkinRequestFailedException) {
+              throw new ApiV1BadRequestError(`Provided URL returned ${err.httpStatusCode} (${https.STATUS_CODES[err.httpStatusCode]})`);
+            }
             throw err;
           }
 
-          if (fetchedSkinImage.statusCode !== 200) {
-            throw new ApiV1BadRequestError(`Provided URL returned ${fetchedSkinImage.statusCode} (${https.STATUS_CODES[fetchedSkinImage.statusCode]})`);
-          }
-
           const requestedRawSkin = this.parseBoolean((request.query as any).raw) ?? false;
-          const skin = await SkinImageManipulator.createByImage(fetchedSkinImage.body);
-          const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin) === 'alex';
+          const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin.normalized) === 'alex';
 
           const skinResponse = await this.processSkinRequest(request, skin, renderSlim, requestedRawSkin);
 
@@ -218,23 +217,21 @@ export default class MinecraftV1Router implements Router {
           // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
           // TODO: Properly handle errors when requesting the skin (check content-type?)
 
-          let fetchedSkinImage;
+          let skin: CachedSkin;
           try {
-            fetchedSkinImage = await this.httpClient.get(parsedSkinUrl.href);
+            skin = await this.minecraftSkinService.fetchAndPersistSkin(parsedSkinUrl.href);
           } catch (err: any) {
             if (err instanceof ResolvedToNonUnicastIpError) {
               throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to point to a public IP address');
             }
+            if (err instanceof SkinRequestFailedException) {
+              throw new ApiV1BadRequestError(`Provided URL returned ${err.httpStatusCode} (${https.STATUS_CODES[err.httpStatusCode]})`);
+            }
             throw err;
           }
 
-          if (fetchedSkinImage.statusCode !== 200) {
-            throw new ApiV1BadRequestError(`Provided URL returned ${fetchedSkinImage.statusCode} (${https.STATUS_CODES[fetchedSkinImage.statusCode]})`);
-          }
-
           const requestedRawSkin = this.parseBoolean((request.query as any).raw) ?? false;
-          const skin = await this.minecraftSkinNormalizer.normalizeSkin(await SkinImageManipulator.createByImage(fetchedSkinImage.body));
-          const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin) === 'alex';
+          const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin.normalized) === 'alex';
 
           const skinResponse = await this.processSkinRequest(request, skin, renderSlim, requestedRawSkin, true);
 
@@ -532,7 +529,7 @@ export default class MinecraftV1Router implements Router {
 
   private async processSkinRequest(
     request: FastifyRequest,
-    skin: SkinImageManipulator,
+    skin: CachedSkin,
     renderSlim: boolean,
     requestedRawSkin: boolean,
     is3d: boolean = false
@@ -573,12 +570,9 @@ export default class MinecraftV1Router implements Router {
     const renderSize = this.parseSize(userInputSize) ?? 512;
     const forceDownload = this.parseBoolean((request.query as any).download) ?? false;
 
-    let responseSkin: ImageManipulator = skin;
+    let responseSkin: ImageManipulator = requestedRawSkin ? skin.original : skin.normalized;
     let responseSkinIsRendered = false;
 
-    if (!requestedRawSkin) {
-      responseSkin = await this.minecraftSkinNormalizer.normalizeSkin(skin);
-    }
     if (is3d) {
       assert(requestedSkinArea != null);
       assert(responseSkin instanceof SkinImageManipulator);

@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import Net from 'node:net';
 import { autoInjectable } from 'tsyringe';
-import AutoProxiedHttpClient from '../../../http/clients/AutoProxiedHttpClient.js';
 import type ImageManipulator from '../../../minecraft/image/ImageManipulator.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService, { type Profile } from '../../../minecraft/profile/MinecraftProfileService.js';
@@ -9,9 +8,8 @@ import ServerBlocklistService, {
   InvalidHostError
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
 import MinecraftServerStatusService from '../../../minecraft/server/ping/MinecraftServerStatusService.js';
-import MinecraftSkinNormalizer from '../../../minecraft/skin/manipulator/MinecraftSkinNormalizer.js';
-import SkinImageManipulator from '../../../minecraft/skin/manipulator/SkinImageManipulator.js';
-import MinecraftSkinService from '../../../minecraft/skin/MinecraftSkinService.js';
+import { CachedSkin } from '../../../minecraft/skin/MinecraftSkinCache.js';
+import MinecraftSkinService, { SkinRequestFailedException } from '../../../minecraft/skin/MinecraftSkinService.js';
 import MinecraftSkinTypeDetector from '../../../minecraft/skin/MinecraftSkinTypeDetector.js';
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
 import MinecraftProfile from '../../../minecraft/value-objects/MinecraftProfile.js';
@@ -24,12 +22,10 @@ export default class MinecraftV2Router implements Router {
   constructor(
     private readonly minecraftProfileService: MinecraftProfileService,
     private readonly minecraftSkinService: MinecraftSkinService,
-    private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
     private readonly minecraftSkinTypeDetector: MinecraftSkinTypeDetector,
     private readonly skinImage2DRenderer: SkinImage2DRenderer,
     private readonly serverBlocklistService: ServerBlocklistService,
-    private readonly minecraftServerStatusService: MinecraftServerStatusService,
-    private readonly httpClient: AutoProxiedHttpClient
+    private readonly minecraftServerStatusService: MinecraftServerStatusService
   ) {
   }
 
@@ -96,14 +92,18 @@ export default class MinecraftV2Router implements Router {
 
           // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
           // TODO: Properly handle errors when requesting the skin (check content-type?)
-          const fetchedSkinImage = await this.httpClient.get(parsedSkinUrl.href);
-          if (fetchedSkinImage.statusCode !== 200) {
-            throw new BadRequestError(`Failed to fetch skin from URL, got status code ${fetchedSkinImage.statusCode}`);
+
+          let skin: CachedSkin;
+          try {
+            skin = await this.minecraftSkinService.fetchAndPersistSkin(parsedSkinUrl.href);
+          } catch (err: any) {
+            if (err instanceof SkinRequestFailedException) {
+              throw new BadRequestError(`Failed to fetch skin from URL, got status code ${err.httpStatusCode}`);
+            }
+            throw err;
           }
 
-          const skin = await this.minecraftSkinNormalizer.normalizeSkin(await SkinImageManipulator.createByImage(fetchedSkinImage.body));
-          const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin) === 'alex';
-
+          const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin.normalized) === 'alex';
           const skinResponse = await this.processSkinRequest(request, skin, renderSlim);
 
           reply.header('Content-Type', 'image/png');
@@ -268,7 +268,7 @@ export default class MinecraftV2Router implements Router {
     return await this.minecraftProfileService.provideProfileByUuid(inputUser);
   }
 
-  private async processSkinRequest(request: FastifyRequest, skin: SkinImageManipulator, renderSlim: boolean): Promise<{ pngBody: Buffer, skinArea: 'head' | 'body' | null, forceDownload: boolean }> {
+  private async processSkinRequest(request: FastifyRequest, skin: CachedSkin, renderSlim: boolean): Promise<{ pngBody: Buffer, skinArea: 'head' | 'body' | null, forceDownload: boolean }> {
     function parseSkinArea(input: unknown): 'head' | 'body' | null {
       if (input == null) {
         return null;
@@ -322,15 +322,15 @@ export default class MinecraftV2Router implements Router {
       throw new BadRequestError('Size must be between 8 and 1024');
     }
 
-    let responseSkin: ImageManipulator = skin;
+    let responseSkin: ImageManipulator = skin.original;
 
     if (requestedSkinArea === 'head') {
-      responseSkin = await this.skinImage2DRenderer.extractHead(skin, renderOverlay);
+      responseSkin = await this.skinImage2DRenderer.extractHead(skin.original, renderOverlay);
     } else if (requestedSkinArea === 'body') {
-      responseSkin = await this.skinImage2DRenderer.extractBody(skin, renderOverlay, renderSlim);
+      responseSkin = await this.skinImage2DRenderer.extractBody(skin.original, renderOverlay, renderSlim);
     }
 
-    const responseResizeOptions = responseSkin === skin ? undefined : { width: renderSize, height: renderSize };
+    const responseResizeOptions = responseSkin === skin.original ? undefined : { width: renderSize, height: renderSize };
     const responseBody = await responseSkin.toPngBuffer(responseResizeOptions);
 
     return {
