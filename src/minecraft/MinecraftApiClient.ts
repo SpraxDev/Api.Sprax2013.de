@@ -48,6 +48,20 @@ export default class MinecraftApiClient {
     return response.parseBodyAsJson();  // TODO: maybe verify the response contains the expected data
   }
 
+  async fetchBulkUuidForUsername(usernames: string[]): Promise<UsernameToUuidResponse[]> {
+    const response = await this.httpClient.post(
+      'https://api.mojang.com/profiles/minecraft',
+      {
+        body: JSON.stringify(usernames),
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to get UUID for usernames ${JSON.stringify(usernames)}: {status=${response.statusCode}, body=${response.parseBodyAsText()}}`);
+    }
+    return response.parseBodyAsJson(); // TODO: maybe verify the response contains the expected data
+  }
+
   async fetchListOfBlockedServers(): Promise<string[]> {
     const response = await this.httpClient.get('https://sessionserver.mojang.com/blockedservers', { headers: { 'Accept': 'text/plain' } });
     if (!response.ok) {

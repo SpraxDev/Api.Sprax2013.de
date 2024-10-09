@@ -12,12 +12,18 @@ export interface GetRequestOptions extends BaseRequestOptions {
   query?: { [key: string]: string | number | boolean };
 }
 
-export interface FullRequestOptions extends BaseRequestOptions, GetRequestOptions {
-  method: 'GET';
+export interface PostRequestOptions extends BaseRequestOptions {
+  body?: Buffer | string;
+}
+
+export interface FullRequestOptions extends BaseRequestOptions, GetRequestOptions, PostRequestOptions {
+  method: 'GET' | 'POST';
 }
 
 export default abstract class HttpClient {
   public abstract get(url: string, options?: GetRequestOptions): Promise<HttpResponse>;
+
+  public abstract post(url: string, options?: PostRequestOptions): Promise<HttpResponse>;
 
   protected abstract request(url: string, options: FullRequestOptions): Promise<HttpResponse>;
 

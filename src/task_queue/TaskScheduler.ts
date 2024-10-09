@@ -1,4 +1,5 @@
 import { injectable } from 'tsyringe';
+import SentrySdk from '../SentrySdk.js';
 import TaskExecutingQueue from './TaskExecutingQueue.js';
 import ClearExpiredEntriesInSetsWithTtlTask from './tasks/ClearExpiredEntriesInSetsWithTtlTask.js';
 import ProxyPoolHttpClientHealthcheckTask from './tasks/ProxyPoolHttpClientHealthcheckTask.js';
@@ -30,6 +31,16 @@ export default class TaskScheduler {
       clearInterval(timeout);
     }
     this.intervalTimeouts.length = 0;
+  }
+
+  runRepeating(callback: () => Promise<void> | void, intervalMillis: number): void {
+    this.intervalTimeouts.push(setInterval(() => {
+      try {
+        callback();
+      } catch (err: any) {
+        SentrySdk.logAndCaptureError(err);
+      }
+    }, intervalMillis));
   }
 
   private scheduleAndRunDelayed(task: Task, millis: number): void {

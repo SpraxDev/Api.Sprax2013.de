@@ -150,12 +150,11 @@ enum ImportPayloadType {
   USERNAME
   PROFILE_TEXTURE_VALUE
   SKIN_IMAGE
-  SERVER_PING
 }
 
 enum ImportTaskState {
   QUEUED
-  DONE
-  DUPLICATE
+  IMPORTED
+  NO_CHANGES
   ERROR
 }

@@ -5,6 +5,7 @@ import { IS_PRODUCTION } from './constants.js';
 import DatabaseClient from './database/DatabaseClient.js';
 import QuestDbClient from './database/QuestDbClient.js';
 import LazyImportTaskCreator from './import_queue/LazyImportTaskCreator.js';
+import ContinuousQueueWorker from './import_queue/worker/ContinuousQueueWorker.js';
 import SentrySdk from './SentrySdk.js';
 import TaskExecutingQueue from './task_queue/TaskExecutingQueue.js';
 import TaskScheduler from './task_queue/TaskScheduler.js';
@@ -30,11 +31,26 @@ async function bootstrap(): Promise<void> {
 
   taskQueue = container.resolve(TaskExecutingQueue);
   taskScheduler = container.resolve(TaskScheduler);
-  taskScheduler.start();
+
+  // TODO: refactor this hacky queue-worker-bootstrap
+  if (process.argv.includes('--spraxapi-run-as-queue-worker')) {
+    const continuousQueueWorker = container.resolve(ContinuousQueueWorker);
+    //noinspection ES6MissingAwait
+    continuousQueueWorker.start();
+
+    console.log();
+    if (!IS_PRODUCTION) {
+      console.log(`RUNNING QUEUE WORKER IN DEVELOPMENT MODE`);
+    }
+    console.log('Queue worker finished initialization');
+    return;
+  }
 
   const appConfig = container.resolve(AppConfiguration);
 
   webServer = container.resolve(FastifyWebServer);
+
+  taskScheduler.start();
   await webServer.listen('0.0.0.0', appConfig.config.serverPort);
 
   console.log();

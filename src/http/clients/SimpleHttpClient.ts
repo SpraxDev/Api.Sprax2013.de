@@ -3,7 +3,7 @@ import { IS_PRODUCTION } from '../../constants.js';
 import UnicastOnlyDnsResolver from '../dns/UnicastOnlyDnsResolver.js';
 import HttpResponse from '../HttpResponse.js';
 import UserAgentGenerator from '../UserAgentGenerator.js';
-import HttpClient, { FullRequestOptions, GetRequestOptions } from './HttpClient.js';
+import HttpClient, { FullRequestOptions, GetRequestOptions, PostRequestOptions } from './HttpClient.js';
 
 // TODO: Supporting cookies might be a good idea
 export default class SimpleHttpClient extends HttpClient {
@@ -24,6 +24,13 @@ export default class SimpleHttpClient extends HttpClient {
     });
   }
 
+  post(url: string, options?: PostRequestOptions): Promise<HttpResponse> {
+    return this.request(url, {
+      ...options,
+      method: 'POST'
+    });
+  }
+
   protected async request(url: string, options: FullRequestOptions): Promise<HttpResponse> {
     this.ensureUrlLooksLikePublicServer(url);
 
@@ -37,6 +44,7 @@ export default class SimpleHttpClient extends HttpClient {
 
       method: options.method,
       query: options?.query,
+      body: options?.body,
       headers: this.mergeWithDefaultHeaders(options?.headers)
     });
     const httpResponse = await HttpResponse.fromUndiciResponse(response);

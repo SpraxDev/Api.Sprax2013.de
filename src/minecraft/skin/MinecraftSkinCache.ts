@@ -53,6 +53,15 @@ export default class MinecraftSkinCache {
     return existingSkinUrl != null;
   }
 
+  async existsByImageBytes(skin: Buffer): Promise<boolean> {
+    const skinImageSha256 = this.computeSha256(skin);
+    const existingSkinImage = await this.databaseClient.skinImage.findUnique({
+      where: { imageSha256: skinImageSha256 },
+      select: { imageSha256: true }
+    });
+    return existingSkinImage != null;
+  }
+
   async persist(
     skin: Buffer,
     normalizedSkin: Buffer,

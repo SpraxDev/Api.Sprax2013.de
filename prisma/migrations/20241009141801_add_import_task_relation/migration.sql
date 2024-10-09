@@ -1,8 +1,8 @@
 -- CreateEnum
-CREATE TYPE "ImportPayloadType" AS ENUM ('UUID', 'USERNAME', 'PROFILE_TEXTURE_VALUE', 'SKIN_IMAGE', 'SERVER_PING');
+CREATE TYPE "ImportPayloadType" AS ENUM ('UUID', 'USERNAME', 'PROFILE_TEXTURE_VALUE', 'SKIN_IMAGE');
 
 -- CreateEnum
-CREATE TYPE "ImportTaskState" AS ENUM ('QUEUED', 'DONE', 'DUPLICATE', 'ERROR');
+CREATE TYPE "ImportTaskState" AS ENUM ('QUEUED', 'IMPORTED', 'NO_CHANGES', 'ERROR');
 
 -- CreateTable
 CREATE TABLE "import_tasks" (

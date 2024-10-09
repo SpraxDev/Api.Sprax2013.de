@@ -62,6 +62,7 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
 
         method: options.method,
         query: options?.query,
+        body: options?.body,
         headers: super.mergeWithDefaultHeaders(options?.headers)
       });
     } catch (err: any) {

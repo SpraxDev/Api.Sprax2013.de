@@ -15,6 +15,14 @@ export default class LazyImportTaskCreator {
   ) {
   }
 
+  queueUuidUpdate(uuid: string): void {
+    this.trackPromise(this.queueUuid(uuid));
+  }
+
+  queueUsernameUpdate(username: string): void {
+    this.trackPromise(this.queueUsername(username));
+  }
+
   queueProfileUpdate(uuidToProfile: UuidToProfileResponse): void {
     const profile = new MinecraftProfile(uuidToProfile);
 
@@ -32,6 +40,26 @@ export default class LazyImportTaskCreator {
     promise
       .catch(SentrySdk.logAndCaptureError)
       .finally(() => this.danglingPromises.delete(promise));
+  }
+
+  private async queueUuid(uuid: string): Promise<void> {
+    await this.databaseClient.importTask.createMany({
+      data: [{
+        payload: Buffer.from(uuid.replaceAll('-', '')),
+        payloadType: 'UUID'
+      }],
+      skipDuplicates: true
+    });
+  }
+
+  private async queueUsername(username: string): Promise<void> {
+    await this.databaseClient.importTask.createMany({
+      data: [{
+        payload: Buffer.from(username.toLowerCase()),
+        payloadType: 'USERNAME'
+      }],
+      skipDuplicates: true
+    });
   }
 
   private async queueSkinUpdate(profile: MinecraftProfile): Promise<void> {
