@@ -9,11 +9,12 @@ import ServerBlocklistService, {
   InvalidHostError
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
 import MinecraftServerStatusService from '../../../minecraft/server/ping/MinecraftServerStatusService.js';
-import { CachedSkin } from '../../../minecraft/skin/MinecraftSkinCache.js';
+import MinecraftSkinCache, { CachedSkin } from '../../../minecraft/skin/MinecraftSkinCache.js';
 import MinecraftSkinService, { SkinRequestFailedException } from '../../../minecraft/skin/MinecraftSkinService.js';
 import MinecraftSkinTypeDetector from '../../../minecraft/skin/MinecraftSkinTypeDetector.js';
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
 import MinecraftProfile from '../../../minecraft/value-objects/MinecraftProfile.js';
+import MinecraftProfileTextures from '../../../minecraft/value-objects/MinecraftProfileTextures.js';
 import { BadRequestError, NotFoundError } from '../../errors/HttpErrors.js';
 import FastifyWebServer from '../../FastifyWebServer.js';
 import Router from '../Router.js';
@@ -26,7 +27,8 @@ export default class MinecraftV2Router implements Router {
     private readonly minecraftSkinTypeDetector: MinecraftSkinTypeDetector,
     private readonly skinImage2DRenderer: SkinImage2DRenderer,
     private readonly serverBlocklistService: ServerBlocklistService,
-    private readonly minecraftServerStatusService: MinecraftServerStatusService
+    private readonly minecraftServerStatusService: MinecraftServerStatusService,
+    private readonly minecraftSkinCache: MinecraftSkinCache
   ) {
   }
 
@@ -94,17 +96,23 @@ export default class MinecraftV2Router implements Router {
           // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
           // TODO: Properly handle errors when requesting the skin (check content-type?)
 
-          let skin: CachedSkin;
-          try {
-            skin = await this.minecraftSkinService.fetchAndPersistSkin(parsedSkinUrl.href);
-          } catch (err: any) {
-            if (err instanceof ResolvedToNonUnicastIpError) {
-              throw new BadRequestError(`Failed to fetch skin from URL, it does not resolve to a public IP address`);
+          let skin: CachedSkin | null = null;
+          if (MinecraftProfileTextures.isOfficialSkinUrl(parsedSkinUrl.href)) {
+            skin = await this.minecraftSkinCache.findByUrl(parsedSkinUrl.href);
+          }
+
+          if (skin == null) {
+            try {
+              skin = await this.minecraftSkinService.fetchAndPersistSkin(parsedSkinUrl.href);
+            } catch (err: any) {
+              if (err instanceof ResolvedToNonUnicastIpError) {
+                throw new BadRequestError(`Failed to fetch skin from URL, it does not resolve to a public IP address`);
+              }
+              if (err instanceof SkinRequestFailedException) {
+                throw new BadRequestError(`Failed to fetch skin from URL, got status code ${err.httpStatusCode}`);
+              }
+              throw err;
             }
-            if (err instanceof SkinRequestFailedException) {
-              throw new BadRequestError(`Failed to fetch skin from URL, got status code ${err.httpStatusCode}`);
-            }
-            throw err;
           }
 
           const renderSlim = this.parseBoolean((request.query as any).slim) ?? this.minecraftSkinTypeDetector.detect(skin.normalized) === 'alex';

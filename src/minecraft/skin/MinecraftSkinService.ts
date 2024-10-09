@@ -3,9 +3,9 @@ import Path from 'node:path';
 import { singleton } from 'tsyringe';
 import { APP_RESOURCES_DIR } from '../../constants.js';
 import AutoProxiedHttpClient from '../../http/clients/AutoProxiedHttpClient.js';
-import LazyImportTaskCreator from '../../import_queue/LazyImportTaskCreator.js';
 import { UuidToProfileResponse } from '../MinecraftApiClient.js';
 import MinecraftProfile, { DefaultSkin } from '../value-objects/MinecraftProfile.js';
+import MinecraftProfileTextures from '../value-objects/MinecraftProfileTextures.js';
 import MinecraftSkinNormalizer from './manipulator/MinecraftSkinNormalizer.js';
 import SkinImageManipulator from './manipulator/SkinImageManipulator.js';
 import MinecraftSkinCache, { CachedSkin } from './MinecraftSkinCache.js';
@@ -18,8 +18,7 @@ export default class MinecraftSkinService {
   constructor(
     private readonly httpClient: AutoProxiedHttpClient,
     private readonly minecraftSkinCache: MinecraftSkinCache,
-    private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
-    private readonly lazyImportTaskCreator: LazyImportTaskCreator
+    private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer
   ) {
   }
 
@@ -33,15 +32,14 @@ export default class MinecraftSkinService {
       };
     }
 
-    return this.fetchAndPersistSkin(skinUrl, profile.getTexturesProperty() ?? undefined);
-  }
-
-  async fetchAndPersistSkin(skinUrl: string, textureProperty?: UuidToProfileResponse['properties'][0]): Promise<CachedSkin> {
     const cachedSkin = await this.minecraftSkinCache.findByUrl(skinUrl);
     if (cachedSkin != null) {
       return cachedSkin;
     }
+    return this.fetchAndPersistSkin(skinUrl, profile.getTexturesProperty() ?? undefined);
+  }
 
+  async fetchAndPersistSkin(skinUrl: string, textureProperty?: UuidToProfileResponse['properties'][0]): Promise<CachedSkin> {
     const skinImage = await this.httpClient.get(skinUrl);
     if (!skinImage.ok) {
       throw new SkinRequestFailedException(skinUrl, skinImage.statusCode);
@@ -50,7 +48,7 @@ export default class MinecraftSkinService {
     const originalSkin = await SkinImageManipulator.createByImage(skinImage.body);
     const normalizedSkin = await this.minecraftSkinNormalizer.normalizeSkin(originalSkin);
 
-    const isMinecraftSkinUrl = new URL(skinUrl).hostname.endsWith('.minecraft.net');
+    const isMinecraftSkinUrl = MinecraftProfileTextures.isOfficialSkinUrl(skinUrl);
     await this.minecraftSkinCache.persist(
       skinImage.body,
       await normalizedSkin.toPngBuffer(),

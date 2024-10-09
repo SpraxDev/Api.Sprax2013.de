@@ -20,6 +20,10 @@ export default class MinecraftProfileTextures {
     return this.turnIntoSecureUrl(this.capeUrl);
   }
 
+  isOfficialSkinUrl(): boolean {
+    return this.skinUrl != null && MinecraftProfileTextures.isOfficialSkinUrl(this.skinUrl);
+  }
+
   private turnIntoSecureUrl(url: string): string {
     if (url.toLowerCase().startsWith('http:')) {
       return 'https' + url.substring(4);
@@ -35,5 +39,9 @@ export default class MinecraftProfileTextures {
       parsedValue.textures.CAPE?.url ?? null,
       parsedValue.textures.SKIN?.metadata?.model === 'slim'
     );
+  }
+
+  static isOfficialSkinUrl(skinUrl: string): boolean {
+    return skinUrl != null && new URL(skinUrl).hostname.endsWith('.minecraft.net');
   }
 }

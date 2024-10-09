@@ -3,7 +3,6 @@ import assert from 'node:assert';
 import https from 'node:http';
 import Sharp from 'sharp';
 import { autoInjectable } from 'tsyringe';
-import AutoProxiedHttpClient from '../../../http/clients/AutoProxiedHttpClient.js';
 import ResolvedToNonUnicastIpError from '../../../http/dns/errors/ResolvedToNonUnicastIpError.js';
 import { CAPE_TYPE_STRINGS, CapeType } from '../../../minecraft/cape/CapeType.js';
 import Cape2dRenderer from '../../../minecraft/cape/renderer/Cape2dRenderer.js';
@@ -14,14 +13,14 @@ import MinecraftProfileService, { Profile } from '../../../minecraft/profile/Min
 import ServerBlocklistService, {
   InvalidHostError
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
-import MinecraftSkinNormalizer from '../../../minecraft/skin/manipulator/MinecraftSkinNormalizer.js';
 import SkinImageManipulator from '../../../minecraft/skin/manipulator/SkinImageManipulator.js';
-import { CachedSkin } from '../../../minecraft/skin/MinecraftSkinCache.js';
+import MinecraftSkinCache, { CachedSkin } from '../../../minecraft/skin/MinecraftSkinCache.js';
 import MinecraftSkinService, { SkinRequestFailedException } from '../../../minecraft/skin/MinecraftSkinService.js';
 import MinecraftSkinTypeDetector from '../../../minecraft/skin/MinecraftSkinTypeDetector.js';
 import LegacyMinecraft3DRenderer from '../../../minecraft/skin/renderer/LegacyMinecraft3DRenderer.js';
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
 import MinecraftProfile from '../../../minecraft/value-objects/MinecraftProfile.js';
+import MinecraftProfileTextures from '../../../minecraft/value-objects/MinecraftProfileTextures.js';
 import { ApiV1BadRequestError, ApiV1NotFoundError } from '../../errors/ApiV1HttpError.js';
 import FastifyWebServer from '../../FastifyWebServer.js';
 import Router from '../Router.js';
@@ -32,12 +31,11 @@ export default class MinecraftV1Router implements Router {
   constructor(
     private readonly minecraftProfileService: MinecraftProfileService,
     private readonly minecraftSkinService: MinecraftSkinService,
+    private readonly minecraftSkinCache: MinecraftSkinCache,
     private readonly skinImage2DRenderer: SkinImage2DRenderer,
     private readonly userCapeProvider: UserCapeProvider,
     private readonly cape2dRenderer: Cape2dRenderer,
     private readonly serverBlocklistService: ServerBlocklistService,
-    private readonly httpClient: AutoProxiedHttpClient,
-    private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
     private readonly minecraftSkinTypeDetector: MinecraftSkinTypeDetector,
     private readonly legacyMinecraft3DRenderer: LegacyMinecraft3DRenderer
   ) {
@@ -163,17 +161,23 @@ export default class MinecraftV1Router implements Router {
           // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
           // TODO: Properly handle errors when requesting the skin (check content-type?)
 
-          let skin: CachedSkin;
-          try {
-            skin = await this.minecraftSkinService.fetchAndPersistSkin(parsedSkinUrl.href);
-          } catch (err: any) {
-            if (err instanceof ResolvedToNonUnicastIpError) {
-              throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to point to a public IP address');
+          let skin: CachedSkin | null = null;
+          if (MinecraftProfileTextures.isOfficialSkinUrl(parsedSkinUrl.href)) {
+            skin = await this.minecraftSkinCache.findByUrl(parsedSkinUrl.href);
+          }
+
+          if (skin == null) {
+            try {
+              skin = await this.minecraftSkinService.fetchAndPersistSkin(parsedSkinUrl.href);
+            } catch (err: any) {
+              if (err instanceof ResolvedToNonUnicastIpError) {
+                throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to point to a public IP address');
+              }
+              if (err instanceof SkinRequestFailedException) {
+                throw new ApiV1BadRequestError(`Provided URL returned ${err.httpStatusCode} (${https.STATUS_CODES[err.httpStatusCode]})`);
+              }
+              throw err;
             }
-            if (err instanceof SkinRequestFailedException) {
-              throw new ApiV1BadRequestError(`Provided URL returned ${err.httpStatusCode} (${https.STATUS_CODES[err.httpStatusCode]})`);
-            }
-            throw err;
           }
 
           const requestedRawSkin = this.parseBoolean((request.query as any).raw) ?? false;
@@ -217,17 +221,23 @@ export default class MinecraftV1Router implements Router {
           // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
           // TODO: Properly handle errors when requesting the skin (check content-type?)
 
-          let skin: CachedSkin;
-          try {
-            skin = await this.minecraftSkinService.fetchAndPersistSkin(parsedSkinUrl.href);
-          } catch (err: any) {
-            if (err instanceof ResolvedToNonUnicastIpError) {
-              throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to point to a public IP address');
+          let skin: CachedSkin | null = null;
+          if (MinecraftProfileTextures.isOfficialSkinUrl(parsedSkinUrl.href)) {
+            skin = await this.minecraftSkinCache.findByUrl(parsedSkinUrl.href);
+          }
+
+          if (skin == null) {
+            try {
+              skin = await this.minecraftSkinService.fetchAndPersistSkin(parsedSkinUrl.href);
+            } catch (err: any) {
+              if (err instanceof ResolvedToNonUnicastIpError) {
+                throw ApiV1BadRequestError.missingOrInvalidQueryParameter('url', 'url needs to point to a public IP address');
+              }
+              if (err instanceof SkinRequestFailedException) {
+                throw new ApiV1BadRequestError(`Provided URL returned ${err.httpStatusCode} (${https.STATUS_CODES[err.httpStatusCode]})`);
+              }
+              throw err;
             }
-            if (err instanceof SkinRequestFailedException) {
-              throw new ApiV1BadRequestError(`Provided URL returned ${err.httpStatusCode} (${https.STATUS_CODES[err.httpStatusCode]})`);
-            }
-            throw err;
           }
 
           const requestedRawSkin = this.parseBoolean((request.query as any).raw) ?? false;

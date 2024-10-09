@@ -1,6 +1,7 @@
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../database/DatabaseClient.js';
 import { UuidToProfileResponse } from '../minecraft/MinecraftApiClient.js';
+import MinecraftSkinCache from '../minecraft/skin/MinecraftSkinCache.js';
 import MinecraftProfile from '../minecraft/value-objects/MinecraftProfile.js';
 import SentrySdk from '../SentrySdk.js';
 
@@ -9,7 +10,8 @@ export default class LazyImportTaskCreator {
   private readonly danglingPromises = new Set<Promise<void>>();
 
   constructor(
-    private readonly databaseClient: DatabaseClient
+    private readonly databaseClient: DatabaseClient,
+    private readonly minecraftSkinCache: MinecraftSkinCache
   ) {
   }
 
@@ -34,7 +36,7 @@ export default class LazyImportTaskCreator {
 
   private async queueSkinUpdate(profile: MinecraftProfile): Promise<void> {
     const skinUrl = profile.parseTextures()?.getSecureSkinUrl();
-    if (skinUrl == null || (await this.isSkinUrlKnownWithTextureValue(skinUrl))) {
+    if (skinUrl == null || (await this.minecraftSkinCache.existsSkinUrlWithNonNullTextureValue(skinUrl))) {
       return;
     }
 
@@ -48,13 +50,5 @@ export default class LazyImportTaskCreator {
       }],
       skipDuplicates: true
     });
-  }
-
-  private async isSkinUrlKnownWithTextureValue(skinUrl: string): Promise<boolean> {
-    const existingSkinUrl = await this.databaseClient.skinUrl.findUnique({
-      where: { url: skinUrl, textureValue: { not: null }, textureSignature: { not: null } },
-      select: { url: true }
-    });
-    return existingSkinUrl != null;
   }
 }

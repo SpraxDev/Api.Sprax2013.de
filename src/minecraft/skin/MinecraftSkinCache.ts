@@ -45,6 +45,14 @@ export default class MinecraftSkinCache {
     };
   }
 
+  async existsSkinUrlWithNonNullTextureValue(skinUrl: string): Promise<boolean> {
+    const existingSkinUrl = await this.databaseClient.skinUrl.findUnique({
+      where: { url: skinUrl, textureValue: { not: null }, textureSignature: { not: null } },
+      select: { url: true }
+    });
+    return existingSkinUrl != null;
+  }
+
   async persist(
     skin: Buffer,
     normalizedSkin: Buffer,
