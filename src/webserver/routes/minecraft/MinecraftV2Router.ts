@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import Net from 'node:net';
 import { autoInjectable } from 'tsyringe';
+import ResolvedToNonUnicastIpError from '../../../http/dns/errors/ResolvedToNonUnicastIpError.js';
 import type ImageManipulator from '../../../minecraft/image/ImageManipulator.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService, { type Profile } from '../../../minecraft/profile/MinecraftProfileService.js';
@@ -97,6 +98,9 @@ export default class MinecraftV2Router implements Router {
           try {
             skin = await this.minecraftSkinService.fetchAndPersistSkin(parsedSkinUrl.href);
           } catch (err: any) {
+            if (err instanceof ResolvedToNonUnicastIpError) {
+              throw new BadRequestError(`Failed to fetch skin from URL, it does not resolve to a public IP address`);
+            }
             if (err instanceof SkinRequestFailedException) {
               throw new BadRequestError(`Failed to fetch skin from URL, got status code ${err.httpStatusCode}`);
             }
