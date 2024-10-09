@@ -132,3 +132,30 @@ view ServerStatusCache {
 
   @@map("server_status_cache")
 }
+
+model ImportTask {
+  id             BigInt            @id @default(autoincrement())
+  payload        Bytes
+  payloadType    ImportPayloadType
+  state          ImportTaskState   @default(QUEUED)
+  stateUpdatedAt DateTime          @default(now())
+  createdAt      DateTime          @default(now())
+
+  @@unique([payloadType, payload])
+  @@map("import_tasks")
+}
+
+enum ImportPayloadType {
+  UUID
+  USERNAME
+  PROFILE_TEXTURE_VALUE
+  SKIN_IMAGE
+  SERVER_PING
+}
+
+enum ImportTaskState {
+  QUEUED
+  DONE
+  DUPLICATE
+  ERROR
+}

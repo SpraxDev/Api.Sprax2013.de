@@ -1,4 +1,5 @@
 import { singleton } from 'tsyringe';
+import LazyImportTaskCreator from '../../import_queue/LazyImportTaskCreator.js';
 import SentrySdk from '../../SentrySdk.js';
 import MinecraftApiClient, { UsernameToUuidResponse, type UuidToProfileResponse } from '../MinecraftApiClient.js';
 import SetWithTtl from '../SetWithTtl.js';
@@ -16,7 +17,8 @@ export default class MinecraftProfileService {
 
   constructor(
     private readonly profileCache: MinecraftProfileCache,
-    private readonly minecraftApiClient: MinecraftApiClient
+    private readonly minecraftApiClient: MinecraftApiClient,
+    private readonly lazyImportTaskCreator: LazyImportTaskCreator
   ) {
   }
 
@@ -81,6 +83,8 @@ export default class MinecraftProfileService {
     }
 
     await this.profileCache.persist(profile);
+    this.lazyImportTaskCreator.queueProfileUpdate(profile);
+
     return {
       profile,
       ageInSeconds: 0

@@ -4,6 +4,7 @@ import AppConfiguration from './config/AppConfiguration.js';
 import { IS_PRODUCTION } from './constants.js';
 import DatabaseClient from './database/DatabaseClient.js';
 import QuestDbClient from './database/QuestDbClient.js';
+import LazyImportTaskCreator from './import_queue/LazyImportTaskCreator.js';
 import SentrySdk from './SentrySdk.js';
 import TaskExecutingQueue from './task_queue/TaskExecutingQueue.js';
 import TaskScheduler from './task_queue/TaskScheduler.js';
@@ -13,6 +14,7 @@ let taskQueue: TaskExecutingQueue | undefined;
 let taskScheduler: TaskScheduler | undefined;
 let webServer: FastifyWebServer | undefined;
 let questDbClient: QuestDbClient | undefined;
+let lazyImportTaskCreator: LazyImportTaskCreator | undefined;
 
 await bootstrap();
 
@@ -24,6 +26,7 @@ async function bootstrap(): Promise<void> {
   }
 
   questDbClient = container.resolve(QuestDbClient);
+  lazyImportTaskCreator = container.resolve(LazyImportTaskCreator);
 
   taskQueue = container.resolve(TaskExecutingQueue);
   taskScheduler = container.resolve(TaskScheduler);
@@ -63,6 +66,9 @@ function registerShutdownHooks(): void {
 
     await questDbClient?.shutdown();
     questDbClient = undefined;
+
+    await lazyImportTaskCreator?.waitForDanglingPromises();
+    lazyImportTaskCreator = undefined;
 
     await SentrySdk.shutdown();
 
