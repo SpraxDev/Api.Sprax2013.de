@@ -10,7 +10,7 @@ CREATE TABLE "server_status_history" (
     "online_players" INTEGER NOT NULL,
     "favicon_sha256" BYTEA,
     "raw_status" JSONB NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "server_status_history_pkey" PRIMARY KEY ("id")
 );

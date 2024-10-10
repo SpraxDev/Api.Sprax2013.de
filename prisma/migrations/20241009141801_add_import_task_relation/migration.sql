@@ -10,8 +10,8 @@ CREATE TABLE "import_tasks" (
     "payload" BYTEA NOT NULL,
     "payloadType" "ImportPayloadType" NOT NULL,
     "state" "ImportTaskState" NOT NULL DEFAULT 'QUEUED',
-    "stateUpdatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "stateUpdatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "import_tasks_pkey" PRIMARY KEY ("id")
 );

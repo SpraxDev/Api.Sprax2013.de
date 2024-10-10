@@ -2,7 +2,7 @@
 CREATE TABLE "server_blocklist_changes" (
     "sha1" BYTEA NOT NULL,
     "change_is_add" BOOLEAN NOT NULL,
-    "change_seen_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "change_seen_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "server_blocklist_changes_pkey" PRIMARY KEY ("sha1","change_seen_at")
 );

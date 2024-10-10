@@ -33,7 +33,7 @@ CREATE TABLE "skin_urls" (
     "original_image_sha256" BYTEA NOT NULL,
     "texture_value" TEXT,
     "texture_signature" TEXT,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "skin_urls_pkey" PRIMARY KEY ("url"),
     CHECK (("texture_value" IS NULL AND "texture_signature" IS NULL) OR ("texture_value" IS NOT NULL AND "texture_signature" IS NOT NULL))
@@ -44,7 +44,7 @@ CREATE TABLE "skin_images" (
     "original_image_sha256" BYTEA NOT NULL,
     "original_image" BYTEA NOT NULL,
     "normalized_image" BYTEA NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "skin_images_pkey" PRIMARY KEY ("original_image_sha256"),
     CHECK (length("original_image_sha256") = 32)

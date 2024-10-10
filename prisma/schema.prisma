@@ -12,8 +12,8 @@ model Profile {
   id            String   @id @db.Uuid
   nameLowercase String   @map("name_lowercase")
   raw           Json
-  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
-  firstSeen     DateTime @default(now()) @map("first_seen")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  firstSeen     DateTime @default(now()) @map("first_seen") @db.Timestamptz()
   deleted       Boolean  @default(false)
 
   @@map("profiles")
@@ -33,7 +33,7 @@ model SkinUrl {
   imageId          BigInt   @map("image_id")
   textureValue     String?  @map("texture_value")
   textureSignature String?  @map("texture_signature")
-  createdAt        DateTime @default(now()) @map("created_at")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   image SkinImage @relation(fields: [imageId], references: [id])
 
@@ -45,7 +45,7 @@ model SkinImage {
   imageSha256       Bytes    @unique @map("image_sha256")
   imageBytes        Bytes    @map("image_bytes")
   normalizedImageId BigInt?  @map("normalized_image_id")
-  createdAt         DateTime @default(now()) @map("created_at")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   normalizedImage         SkinImage?  @relation("NormalizedSkin", fields: [normalizedImageId], references: [id])
   knownNonNormalizedSkins SkinImage[] @relation("NormalizedSkin")
@@ -58,7 +58,7 @@ model SkinImage {
 model ServerBlocklistChanges {
   sha1         Bytes
   changeIsAdd  Boolean  @map("change_is_add")
-  changeSeenAt DateTime @default(now()) @map("change_seen_at")
+  changeSeenAt DateTime @default(now()) @map("change_seen_at") @db.Timestamptz()
 
   @@id([sha1, changeSeenAt])
   @@index([sha1, changeSeenAt(sort: Desc)])
@@ -68,7 +68,7 @@ model ServerBlocklistChanges {
 model ServerBlocklistHostHashes {
   sha1      Bytes    @id
   host      String
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   @@index([host])
   @@map("server_blocklist_host_hashes")
@@ -92,7 +92,7 @@ model ServerStatusHistory {
   onlinePlayers     Int      @map("online_players")
   faviconSha256     Bytes?   @map("favicon_sha256")
   rawStatus         Json     @map("raw_status") // TODO: We probably want to delete the contents after some time to save space?
-  createdAt         DateTime @default(now()) @map("created_at")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   favicon ServerStatusFavicon? @relation(fields: [faviconSha256], references: [sha256])
 
@@ -129,8 +129,8 @@ model ImportTask {
   payload        Bytes
   payloadType    ImportPayloadType
   state          ImportTaskState   @default(QUEUED)
-  stateUpdatedAt DateTime          @default(now())
-  createdAt      DateTime          @default(now())
+  stateUpdatedAt DateTime          @default(now()) @db.Timestamptz()
+  createdAt      DateTime          @default(now()) @db.Timestamptz()
 
   @@unique([payloadType, payload])
   @@map("import_tasks")

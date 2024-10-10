@@ -2,7 +2,7 @@
 CREATE TABLE "server_blocklist_host_hashes" (
     "sha1" BYTEA NOT NULL,
     "host" TEXT NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "server_blocklist_host_hashes_pkey" PRIMARY KEY ("sha1"),
     CHECK ("host" = lower("host"))
