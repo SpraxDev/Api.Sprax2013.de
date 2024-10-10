@@ -20,7 +20,7 @@ export default class SkinImageProcessor implements PayloadProcessor {
 
     const originalSkin = await SkinImageManipulator.createByImage(task.payload);
     const normalizedSkin = await this.minecraftSkinNormalizer.normalizeSkin(originalSkin);
-    await this.minecraftSkinCache.persist(task.payload, await normalizedSkin.toPngBuffer(), null, undefined);
+    await this.minecraftSkinCache.persist(task.payload, await normalizedSkin.toPngBuffer(), null);
     return true;
   }
 }

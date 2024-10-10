@@ -55,7 +55,7 @@ export default class ProxyPoolHttpClientHealthcheckTask extends Task {
   }
 
   private async doHealthcheck(proxy: UndiciProxyServer): Promise<void> {
-    const unhealthySeconds = proxy.health.unhealthySince ? Math.floor((Date.now() - proxy.health.unhealthySince!.getTime()) / 1000) : 0;
+    const unhealthySeconds = proxy.health.unhealthySince ? Math.floor((Date.now() - proxy.health.unhealthySince.getTime()) / 1000) : 0;
 
     try {
       const startTime = process.hrtime.bigint();
