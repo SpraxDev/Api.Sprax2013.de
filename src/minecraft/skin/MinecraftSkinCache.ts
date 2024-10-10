@@ -73,7 +73,7 @@ export default class MinecraftSkinCache {
 
     await this.databaseClient.$transaction(async (transaction) => {
       let existingSkinImage = await transaction.skinImage.findUnique({
-        select: { imageSha256: true },
+        select: { id: true },
         where: { imageSha256: originalImageSha256 }
       });
 
@@ -98,10 +98,9 @@ export default class MinecraftSkinCache {
                 textureValue: textureProperty?.value,
                 textureSignature: textureProperty?.signature
               }
-            } : undefined,
-            skins: { create: {} }
+            } : undefined
           },
-          select: { imageSha256: true }
+          select: { id: true }
         });
       }
 
@@ -115,7 +114,7 @@ export default class MinecraftSkinCache {
               url: skinUrl,
               textureValue: textureProperty?.value,
               textureSignature: textureProperty?.signature,
-              imageSha256: existingSkinImage.imageSha256
+              imageId: existingSkinImage.id
             }
           });
         }

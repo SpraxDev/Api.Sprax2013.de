@@ -28,37 +28,28 @@ view ProfileCache {
   @@map("profile_cache")
 }
 
-model Skin {
-  id          BigInt @id @default(dbgenerated("generate_snowflake('skin_urls_id_seq'::text)"))
-  imageSha256 Bytes  @map("image_sha256")
-
-  image SkinImage @relation(fields: [imageSha256], references: [imageSha256])
-
-  @@map("skins")
-}
-
 model SkinUrl {
   url              String   @id
-  imageSha256      Bytes    @map("image_sha256")
+  imageId          BigInt   @map("image_id")
   textureValue     String?  @map("texture_value")
   textureSignature String?  @map("texture_signature")
   createdAt        DateTime @default(now()) @map("created_at")
 
-  image SkinImage @relation(fields: [imageSha256], references: [imageSha256])
+  image SkinImage @relation(fields: [imageId], references: [id])
 
   @@map("skin_urls")
 }
 
 model SkinImage {
-  imageSha256           Bytes    @id @map("image_sha256")
-  imageBytes            Bytes    @map("image_bytes")
-  normalizedImageSha256 Bytes?   @map("normalized_image_sha256")
-  createdAt             DateTime @default(now()) @map("created_at")
+  id                BigInt   @id @default(dbgenerated("generate_snowflake('skin_images_id_seq'::text)"))
+  imageSha256       Bytes    @unique @map("image_sha256")
+  imageBytes        Bytes    @map("image_bytes")
+  normalizedImageId BigInt?  @map("normalized_image_id")
+  createdAt         DateTime @default(now()) @map("created_at")
 
-  normalizedImage         SkinImage?  @relation("NormalizedSkin", fields: [normalizedImageSha256], references: [imageSha256])
+  normalizedImage         SkinImage?  @relation("NormalizedSkin", fields: [normalizedImageId], references: [id])
   knownNonNormalizedSkins SkinImage[] @relation("NormalizedSkin")
 
-  skins    Skin[]
   skinUrls SkinUrl[]
 
   @@map("skin_images")
