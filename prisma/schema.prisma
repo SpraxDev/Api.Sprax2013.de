@@ -143,10 +143,10 @@ view ServerStatusCache {
 model ImportTask {
   id             BigInt            @id @default(autoincrement())
   payload        Bytes
-  payloadType    ImportPayloadType
+  payloadType    ImportPayloadType @map("payload_type")
   state          ImportTaskState   @default(QUEUED)
-  stateUpdatedAt DateTime          @default(now()) @db.Timestamptz()
-  createdAt      DateTime          @default(now()) @db.Timestamptz()
+  stateUpdatedAt DateTime          @default(now()) @map("state_updated_at") @db.Timestamptz()
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz()
 
   @@unique([payloadType, payload])
   @@map("import_tasks")
