@@ -15,7 +15,7 @@ export default class Arbeitsbeschaffungsmassnahme {
 
   async nextUuidToUpdate(): Promise<string | null> {
     if (this.uuidsToUpdate.length == 0) {
-      const shouldFetchNewBatch = Date.now() - this.lastNoUuidsToUpdate < Arbeitsbeschaffungsmassnahme.NO_UUIDS_TO_UPDATE_TIMEOUT;
+      const shouldFetchNewBatch = this.lastNoUuidsToUpdate < (Date.now() - Arbeitsbeschaffungsmassnahme.NO_UUIDS_TO_UPDATE_TIMEOUT);
       if (!shouldFetchNewBatch) {
         return null;
       }
