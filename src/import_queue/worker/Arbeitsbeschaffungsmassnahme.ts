@@ -33,13 +33,13 @@ export default class Arbeitsbeschaffungsmassnahme {
       where: {
         deleted: false,
         updatedAt: {
-          lt: new Date(now.getTime() - 15 * 60 * 1000 /* 15m */)
+          lt: new Date(now.getTime() - 24 * 60 * 60 * 1000 /* 1d */)
         }
       },
       orderBy: {
         updatedAt: 'asc'
       },
-      take: 5
+      take: 10
     });
 
     if (uuidsToUpdate.length == 0) {
