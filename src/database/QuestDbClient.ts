@@ -19,6 +19,19 @@ export default class QuestDbClient {
     }
   }
 
+  async pushImportQueueSize(size: number): Promise<void> {
+    if (this.sender == null) {
+      return;
+    }
+
+    this.sender
+      .table('sprax_api_import_queue_stats')
+      .intColumn('queued', size);
+    await this.sender.at(Date.now(), 'ms');
+
+    await this.sender.flush();
+  }
+
   async pushProxyServerMetric(metrics: ProxyServerMetric[]): Promise<void> {
     if (this.sender == null) {
       return;

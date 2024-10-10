@@ -5,6 +5,7 @@ import ClearExpiredEntriesInSetsWithTtlTask from './tasks/ClearExpiredEntriesInS
 import ProxyPoolHttpClientHealthcheckTask from './tasks/ProxyPoolHttpClientHealthcheckTask.js';
 import Task from './tasks/Task.js';
 import UpdateMinecraftServerBlocklistTask from './tasks/UpdateMinecraftServerBlocklistTask.js';
+import WriteImportQueueSizeToQuestDBTask from './tasks/WriteImportQueueSizeToQuestDBTask.js';
 
 @injectable()
 export default class TaskScheduler {
@@ -14,7 +15,8 @@ export default class TaskScheduler {
     private readonly taskQueue: TaskExecutingQueue,
     private readonly updateMinecraftServerBlocklistTask: UpdateMinecraftServerBlocklistTask,
     private readonly clearExpiredEntriesInSetsWithTtlTask: ClearExpiredEntriesInSetsWithTtlTask,
-    private readonly proxyPoolHttpClientHealthcheckTask: ProxyPoolHttpClientHealthcheckTask
+    private readonly proxyPoolHttpClientHealthcheckTask: ProxyPoolHttpClientHealthcheckTask,
+    private readonly writeImportQueueSizeToQuestDBTask: WriteImportQueueSizeToQuestDBTask
   ) {
   }
 
@@ -24,6 +26,7 @@ export default class TaskScheduler {
     this.scheduleAndRunDelayed(this.proxyPoolHttpClientHealthcheckTask, 30_000);
     this.scheduleAndRunDelayed(this.updateMinecraftServerBlocklistTask, fiveMinutes);
     this.scheduleAndRunDelayed(this.clearExpiredEntriesInSetsWithTtlTask, fiveMinutes);
+    this.scheduleAndRunDelayed(this.writeImportQueueSizeToQuestDBTask, fiveMinutes / 2);
   }
 
   shutdown(): void {
