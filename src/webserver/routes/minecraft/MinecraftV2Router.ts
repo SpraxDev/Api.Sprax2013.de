@@ -10,7 +10,10 @@ import ServerBlocklistService, {
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
 import MinecraftServerStatusService from '../../../minecraft/server/ping/MinecraftServerStatusService.js';
 import MinecraftSkinCache, { CachedSkin } from '../../../minecraft/skin/MinecraftSkinCache.js';
-import MinecraftSkinService, { SkinRequestFailedException } from '../../../minecraft/skin/MinecraftSkinService.js';
+import MinecraftSkinService, {
+  Skin,
+  SkinRequestFailedException
+} from '../../../minecraft/skin/MinecraftSkinService.js';
 import MinecraftSkinTypeDetector from '../../../minecraft/skin/MinecraftSkinTypeDetector.js';
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
 import MinecraftProfile from '../../../minecraft/value-objects/MinecraftProfile.js';
@@ -96,7 +99,7 @@ export default class MinecraftV2Router implements Router {
           // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
           // TODO: Properly handle errors when requesting the skin (check content-type?)
 
-          let skin: CachedSkin | null = null;
+          let skin: Skin | null = null;
           if (MinecraftProfileTextures.isOfficialSkinUrl(parsedSkinUrl.href)) {
             skin = await this.minecraftSkinCache.findByUrl(parsedSkinUrl.href);
           }
@@ -280,7 +283,7 @@ export default class MinecraftV2Router implements Router {
     return await this.minecraftProfileService.provideProfileByUuid(inputUser);
   }
 
-  private async processSkinRequest(request: FastifyRequest, skin: CachedSkin, renderSlim: boolean): Promise<{ pngBody: Buffer, skinArea: 'head' | 'body' | null, forceDownload: boolean }> {
+  private async processSkinRequest(request: FastifyRequest, skin: Skin, renderSlim: boolean): Promise<{ pngBody: Buffer, skinArea: 'head' | 'body' | null, forceDownload: boolean }> {
     function parseSkinArea(input: unknown): 'head' | 'body' | null {
       if (input == null) {
         return null;

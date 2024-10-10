@@ -1,12 +1,15 @@
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../../database/DatabaseClient.js';
 import type { UuidToProfileResponse } from '../MinecraftApiClient.js';
+import MinecraftSkinCache from '../skin/MinecraftSkinCache.js';
+import MinecraftProfile from '../value-objects/MinecraftProfile.js';
 import { Profile } from './MinecraftProfileService.js';
 
 @singleton()
 export default class MinecraftProfileCache {
   constructor(
-    private readonly databaseClient: DatabaseClient
+    private readonly databaseClient: DatabaseClient,
+    private readonly minecraftSkinCache: MinecraftSkinCache
   ) {
   }
 
@@ -62,5 +65,7 @@ export default class MinecraftProfileCache {
         deleted: false
       }
     });
+
+    await this.minecraftSkinCache.persistSkinHistory(new MinecraftProfile(profile));
   }
 }

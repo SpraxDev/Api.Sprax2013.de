@@ -15,7 +15,10 @@ import ServerBlocklistService, {
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
 import SkinImageManipulator from '../../../minecraft/skin/manipulator/SkinImageManipulator.js';
 import MinecraftSkinCache, { CachedSkin } from '../../../minecraft/skin/MinecraftSkinCache.js';
-import MinecraftSkinService, { SkinRequestFailedException } from '../../../minecraft/skin/MinecraftSkinService.js';
+import MinecraftSkinService, {
+  Skin,
+  SkinRequestFailedException
+} from '../../../minecraft/skin/MinecraftSkinService.js';
 import MinecraftSkinTypeDetector from '../../../minecraft/skin/MinecraftSkinTypeDetector.js';
 import LegacyMinecraft3DRenderer from '../../../minecraft/skin/renderer/LegacyMinecraft3DRenderer.js';
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
@@ -161,7 +164,7 @@ export default class MinecraftV1Router implements Router {
           // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
           // TODO: Properly handle errors when requesting the skin (check content-type?)
 
-          let skin: CachedSkin | null = null;
+          let skin: Skin | null = null;
           if (MinecraftProfileTextures.isOfficialSkinUrl(parsedSkinUrl.href)) {
             skin = await this.minecraftSkinCache.findByUrl(parsedSkinUrl.href);
           }
@@ -221,7 +224,7 @@ export default class MinecraftV1Router implements Router {
           // TODO: Cache the response (try to respect the Cache-Control header but enforce a minimum cache time and set a maximum cache time of one month)
           // TODO: Properly handle errors when requesting the skin (check content-type?)
 
-          let skin: CachedSkin | null = null;
+          let skin: Skin | null = null;
           if (MinecraftProfileTextures.isOfficialSkinUrl(parsedSkinUrl.href)) {
             skin = await this.minecraftSkinCache.findByUrl(parsedSkinUrl.href);
           }
@@ -539,7 +542,7 @@ export default class MinecraftV1Router implements Router {
 
   private async processSkinRequest(
     request: FastifyRequest,
-    skin: CachedSkin,
+    skin: Skin,
     renderSlim: boolean,
     requestedRawSkin: boolean,
     is3d: boolean = false

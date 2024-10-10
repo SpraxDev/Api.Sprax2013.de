@@ -10,6 +10,8 @@ import MinecraftSkinNormalizer from './manipulator/MinecraftSkinNormalizer.js';
 import SkinImageManipulator from './manipulator/SkinImageManipulator.js';
 import MinecraftSkinCache, { CachedSkin } from './MinecraftSkinCache.js';
 
+export type Skin = Pick<CachedSkin, 'original' | 'normalized'>;
+
 @singleton()
 export default class MinecraftSkinService {
   private static readonly steve = Fs.promises.readFile(Path.join(APP_RESOURCES_DIR, 'steve.png'));
@@ -22,7 +24,7 @@ export default class MinecraftSkinService {
   ) {
   }
 
-  async fetchEffectiveSkin(profile: MinecraftProfile): Promise<CachedSkin> {
+  async fetchEffectiveSkin(profile: MinecraftProfile): Promise<Skin> {
     const skinUrl = profile.parseTextures()?.getSecureSkinUrl();
     if (skinUrl == null) {
       const defaultSkin = await this.getDefaultSkin(profile.determineDefaultSkin());
@@ -39,7 +41,7 @@ export default class MinecraftSkinService {
     return this.fetchAndPersistSkin(skinUrl, profile.getTexturesProperty() ?? undefined);
   }
 
-  async fetchAndPersistSkin(skinUrl: string, textureProperty?: UuidToProfileResponse['properties'][0]): Promise<CachedSkin> {
+  async fetchAndPersistSkin(skinUrl: string, textureProperty?: UuidToProfileResponse['properties'][0]): Promise<Skin> {
     const skinImage = await this.httpClient.get(skinUrl);
     if (!skinImage.ok) {
       throw new SkinRequestFailedException(skinUrl, skinImage.statusCode);

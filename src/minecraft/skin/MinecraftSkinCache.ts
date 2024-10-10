@@ -1,10 +1,14 @@
 import Crypto from 'node:crypto';
-import { singleton } from 'tsyringe';
+import { container, singleton } from 'tsyringe';
 import DatabaseClient from '../../database/DatabaseClient.js';
 import { UuidToProfileResponse } from '../MinecraftApiClient.js';
+import MinecraftProfileService from '../profile/MinecraftProfileService.js';
+import MinecraftProfile from '../value-objects/MinecraftProfile.js';
+import MinecraftProfileTextures from '../value-objects/MinecraftProfileTextures.js';
 import SkinImageManipulator from './manipulator/SkinImageManipulator.js';
 
 export type CachedSkin = {
+  imageId: bigint,
   original: SkinImageManipulator,
   normalized: SkinImageManipulator
 }
@@ -22,6 +26,7 @@ export default class MinecraftSkinCache {
       select: {
         image: {
           select: {
+            id: true,
             imageBytes: true,
             normalizedImage: true
           }
@@ -40,6 +45,7 @@ export default class MinecraftSkinCache {
     }
 
     return {
+      imageId: skinInDatabase.image.id,
       original: skinImage,
       normalized: normalizedSkin
     };
@@ -118,6 +124,81 @@ export default class MinecraftSkinCache {
             }
           });
         }
+      }
+
+      if (textureProperty?.value != null) {
+        const parsedTextures = MinecraftProfileTextures.fromPropertyValue(textureProperty.value);
+        const profileId = parsedTextures.profileId;
+
+        const profile = await transaction.profile.findUnique({
+          select: { id: true },
+          where: { id: profileId }
+        });
+        if (profile == null) {
+          await container.resolve(MinecraftProfileService).provideProfileByUuid(profileId);
+        }
+
+        const existingHistoryEntry = await transaction.profileRecentSkin.findUnique({
+          where: {
+            profileId_skinImageId: {
+              profileId,
+              skinImageId: existingSkinImage.id
+            }
+          },
+          select: { lastSeenUsing: true }
+        });
+        const updateHistoryEntry = existingHistoryEntry == null || existingHistoryEntry.lastSeenUsing < parsedTextures.timestamp;
+
+        if (updateHistoryEntry) {
+          await transaction.profileRecentSkin.upsert({
+            where: {
+              profileId_skinImageId: {
+                profileId,
+                skinImageId: existingSkinImage.id
+              }
+            },
+            create: {
+              profileId,
+              skinImageId: existingSkinImage.id,
+              firstSeenUsing: parsedTextures.timestamp,
+              lastSeenUsing: parsedTextures.timestamp
+            },
+            update: {
+              lastSeenUsing: parsedTextures.timestamp
+            }
+          });
+        }
+      }
+    });
+  }
+
+  async persistSkinHistory(profile: MinecraftProfile): Promise<void> {
+    const parsedTextures = profile.parseTextures();
+    const skinUrl = parsedTextures?.getSecureSkinUrl();
+    if (parsedTextures == null || skinUrl == null) {
+      return;
+    }
+
+    const cachedSkin = await this.findByUrl(skinUrl);
+    if (cachedSkin == null) {
+      return;
+    }
+
+    await this.databaseClient.profileRecentSkin.upsert({
+      where: {
+        profileId_skinImageId: {
+          profileId: profile.id,
+          skinImageId: cachedSkin.imageId
+        }
+      },
+      create: {
+        profileId: profile.id,
+        skinImageId: cachedSkin.imageId,
+        firstSeenUsing: parsedTextures.timestamp,
+        lastSeenUsing: parsedTextures.timestamp
+      },
+      update: {
+        lastSeenUsing: parsedTextures.timestamp
       }
     });
   }
