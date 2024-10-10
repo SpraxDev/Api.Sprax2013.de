@@ -16,7 +16,8 @@ describe('AppConfiguration', () => {
     expect(config.config).toEqual({
       serverPort: 8087,
       proxyServerUris: '',
-      questDbMetricsConfig: ''
+      questDbMetricsConfig: '',
+      workerTickIntervalDynamic: false
     } satisfies AppConfig);
   });
 
@@ -35,7 +36,8 @@ describe('AppConfiguration', () => {
     expect(config.config).toEqual({
       serverPort: 8087,
       proxyServerUris: '',
-      questDbMetricsConfig: ''
+      questDbMetricsConfig: '',
+      workerTickIntervalDynamic: false
     } satisfies AppConfig);
   });
 
@@ -50,7 +52,8 @@ describe('AppConfiguration', () => {
     expect(config.config).toEqual({
       serverPort: 8087,
       proxyServerUris,
-      questDbMetricsConfig: ''
+      questDbMetricsConfig: '',
+      workerTickIntervalDynamic: false
     } satisfies AppConfig);
   });
 
@@ -64,7 +67,26 @@ describe('AppConfiguration', () => {
     expect(config.config).toEqual({
       serverPort: 8087,
       proxyServerUris: '',
-      questDbMetricsConfig
+      questDbMetricsConfig,
+      workerTickIntervalDynamic: false
+    } satisfies AppConfig);
+  });
+
+  test.each([
+    ['', false],
+    ['0', false],
+    ['false', false],
+    ['true', false],
+    ['1', true]
+  ])('Configured workerTickIntervalDynamic: %s', (value: string, expectedValue: boolean) => {
+    process.env.WORKER_TICK_INTERVAL_DYNAMIC = value;
+
+    const config = new AppConfiguration();
+    expect(config.config).toEqual({
+      serverPort: 8087,
+      proxyServerUris: '',
+      questDbMetricsConfig: '',
+      workerTickIntervalDynamic: expectedValue
     } satisfies AppConfig);
   });
 

@@ -1,6 +1,8 @@
 import * as PrismaClient from '@prisma/client';
 import { singleton } from 'tsyringe';
+import AppConfiguration from '../../config/AppConfiguration.js';
 import DatabaseClient from '../../database/DatabaseClient.js';
+import ProxyServerConfigurationProvider from '../../net/proxy/ProxyServerConfigurationProvider.js';
 import SentrySdk from '../../SentrySdk.js';
 import TaskScheduler from '../../task_queue/TaskScheduler.js';
 import Arbeitsbeschaffungsmassnahme from './Arbeitsbeschaffungsmassnahme.js';
@@ -20,11 +22,18 @@ export default class ContinuousQueueWorker {
     private readonly profileTextureValueProcessor: ProfileTextureValueProcessor,
     private readonly uuidProcessor: UuidProcessor,
     private readonly usernameProcessor: UsernameProcessor,
-    private readonly skinImageProcessor: SkinImageProcessor
+    private readonly skinImageProcessor: SkinImageProcessor,
+    private readonly proxyServerConfigurationProvider: ProxyServerConfigurationProvider,
+    private readonly appConfiguration: AppConfiguration
   ) {
   }
 
   async start(): Promise<void> {
+    let delay = 2500;
+    if (this.appConfiguration.config.workerTickIntervalDynamic) {
+      delay = 3000 / Math.max(this.proxyServerConfigurationProvider.getProxyServers().length, 1);
+    }
+
     this.taskScheduler.runRepeating(() => {
       if (this.tickRunning) {
         return;
@@ -34,7 +43,7 @@ export default class ContinuousQueueWorker {
       this.tick()
         .catch(SentrySdk.logAndCaptureError)
         .finally(() => this.tickRunning = false);
-    }, 2500);
+    }, delay);
   }
 
   private async tick(): Promise<void> {

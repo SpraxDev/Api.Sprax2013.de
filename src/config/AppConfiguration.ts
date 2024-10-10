@@ -4,6 +4,8 @@ export type AppConfig = {
   serverPort: number;
   proxyServerUris: string;
   questDbMetricsConfig: string;
+
+  workerTickIntervalDynamic: boolean;
 };
 
 @singleton()
@@ -14,7 +16,9 @@ export default class AppConfiguration {
     this.config = this.deepFreeze({
       serverPort: parseInt(process.env.SPRAXAPI_SERVER_PORT ?? '', 10) || 8087,
       proxyServerUris: process.env.PROXY_SERVER_URIS ?? '',
-      questDbMetricsConfig: process.env.QUESTDB_METRICS_CONFIG ?? ''
+      questDbMetricsConfig: process.env.QUESTDB_METRICS_CONFIG ?? '',
+
+      workerTickIntervalDynamic: process.env.WORKER_TICK_INTERVAL_DYNAMIC === '1'
     } satisfies AppConfig);
   }
 
