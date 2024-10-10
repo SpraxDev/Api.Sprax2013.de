@@ -13,7 +13,16 @@ import UuidProcessor from './payload_processors/UuidProcessor.js';
 
 @singleton()
 export default class ContinuousQueueWorker {
+  private static readonly PAYLOAD_TYPES_TO_PROCESS: PrismaClient.ImportPayloadType[] = [
+    'UUID',
+    'USERNAME',
+    'PROFILE_TEXTURE_VALUE',
+    'SKIN_IMAGE'
+  ];
+
   private tickRunning = false;
+  private bufferedTasks: PrismaClient.ImportTask[] = [];
+  private nextPayloadTypeIndexToBuffer = 0;
 
   constructor(
     private readonly taskScheduler: TaskScheduler,
@@ -102,7 +111,20 @@ export default class ContinuousQueueWorker {
   }
 
   private async fetchNextTask(): Promise<PrismaClient.ImportTask | null> {
-    return this.databaseClient.importTask.findFirst({ where: { state: 'QUEUED' } });
+    if (this.bufferedTasks.length === 0) {
+      this.bufferedTasks = await this.databaseClient.importTask.findMany({
+        where: {
+          state: 'QUEUED',
+          payloadType: ContinuousQueueWorker.PAYLOAD_TYPES_TO_PROCESS[this.nextPayloadTypeIndexToBuffer]
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 15
+      });
+
+      this.nextPayloadTypeIndexToBuffer = (this.nextPayloadTypeIndexToBuffer + 1) % ContinuousQueueWorker.PAYLOAD_TYPES_TO_PROCESS.length;
+    }
+
+    return this.bufferedTasks.shift() ?? null;
   }
 
   private async updateTaskStatus(task: PrismaClient.ImportTask, state: 'IMPORTED' | 'NO_CHANGES' | 'ERROR'): Promise<void> {
