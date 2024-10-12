@@ -27,7 +27,7 @@ export default class LazyImportTaskCreator {
     const profile = new MinecraftProfile(uuidToProfile);
 
     this.trackPromise(this.queueSkinUpdate(profile));
-    // TODO: queue updating capes
+    this.trackPromise(this.queueThirdPartyCapeUpdate(profile));
   }
 
   async waitForDanglingPromises(): Promise<void> {
@@ -77,6 +77,26 @@ export default class LazyImportTaskCreator {
         payloadType: 'PROFILE_TEXTURE_VALUE'
       }],
       skipDuplicates: true
+    });
+  }
+
+  private async queueThirdPartyCapeUpdate(profile: MinecraftProfile): Promise<void> {
+    const payloadType = 'UUID_UPDATE_THIRD_PARTY_CAPES';
+    const payload = Buffer.from(profile.id.replaceAll('-', ''));
+
+    await this.databaseClient.$transaction(async (transaction) => {
+      await transaction.importTask.deleteMany({
+        where: {
+          payloadType,
+          payload,
+          state: { notIn: ['QUEUED', 'ERROR'] }
+        }
+      });
+
+      await transaction.importTask.createMany({
+        data: [{ payloadType, payload }],
+        skipDuplicates: true
+      });
     });
   }
 }

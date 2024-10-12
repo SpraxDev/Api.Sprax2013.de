@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "ImportPayloadType" ADD VALUE 'UUID_UPDATE_THIRD_PARTY_CAPES';

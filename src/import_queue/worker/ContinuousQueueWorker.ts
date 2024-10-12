@@ -8,6 +8,7 @@ import TaskScheduler from '../../task_queue/TaskScheduler.js';
 import Arbeitsbeschaffungsmassnahme from './Arbeitsbeschaffungsmassnahme.js';
 import ProfileTextureValueProcessor from './payload_processors/ProfileTextureValueProcessor.js';
 import SkinImageProcessor from './payload_processors/SkinImageProcessor.js';
+import UpdateThirdPartyCapesProcessor from './payload_processors/UpdateThirdPartyCapesProcessor.js';
 import UsernameProcessor from './payload_processors/UsernameProcessor.js';
 import UuidProcessor from './payload_processors/UuidProcessor.js';
 
@@ -17,7 +18,8 @@ export default class ContinuousQueueWorker {
     'UUID',
     'USERNAME',
     'PROFILE_TEXTURE_VALUE',
-    'SKIN_IMAGE'
+    'SKIN_IMAGE',
+    'UUID_UPDATE_THIRD_PARTY_CAPES'
   ];
 
   private tickRunning = false;
@@ -32,6 +34,7 @@ export default class ContinuousQueueWorker {
     private readonly uuidProcessor: UuidProcessor,
     private readonly usernameProcessor: UsernameProcessor,
     private readonly skinImageProcessor: SkinImageProcessor,
+    private readonly updateThirdPartyCapesProcessor: UpdateThirdPartyCapesProcessor,
     private readonly proxyServerConfigurationProvider: ProxyServerConfigurationProvider,
     private readonly appConfiguration: AppConfiguration
   ) {
@@ -104,6 +107,8 @@ export default class ContinuousQueueWorker {
         return this.usernameProcessor.process(task);
       case 'SKIN_IMAGE':
         return this.skinImageProcessor.process(task);
+      case 'UUID_UPDATE_THIRD_PARTY_CAPES':
+        return this.updateThirdPartyCapesProcessor.process(task);
 
       default:
         throw new Error(`Unknown payload type: ${task.payloadType}`);
