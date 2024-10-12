@@ -1,9 +1,11 @@
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import DatabaseClient from '../../../../src/database/DatabaseClient.js';
 import MinecraftProfileCache from '../../../../src/minecraft/profile/MinecraftProfileCache.js';
+import MinecraftSkinCache from '../../../../src/minecraft/skin/MinecraftSkinCache.js';
 import { EXISTING_MC_ID, EXISTING_MC_NAME, EXISTING_MC_PROFILE_RESPONSE } from '../../../test-constants.js';
 
 let databaseClient: DeepMockProxy<DatabaseClient>;
+let minecraftSkinCache: DeepMockProxy<MinecraftSkinCache>;
 let minecraftProfileCache: MinecraftProfileCache;
 
 beforeEach(() => {
@@ -12,7 +14,12 @@ beforeEach(() => {
       throw new Error('Not implemented');
     }
   });
-  minecraftProfileCache = new MinecraftProfileCache(databaseClient);
+  minecraftSkinCache = mockDeep<MinecraftSkinCache>({
+    fallbackMockImplementation: () => {
+      throw new Error('Not implemented');
+    }
+  });
+  minecraftProfileCache = new MinecraftProfileCache(databaseClient, minecraftSkinCache);
 });
 
 describe('#findByUuid', () => {
