@@ -16,7 +16,7 @@ model Profile {
   firstSeen     DateTime @default(now()) @map("first_seen") @db.Timestamptz()
   deleted       Boolean  @default(false)
 
-  ProfileRecentSkins ProfileRecentSkin[]
+  profileRecentSkins ProfileRecentSkin[]
   profileRecentCapes ProfileRecentCape[]
 
   @@map("profiles")
@@ -165,7 +165,7 @@ model ServerStatusFavicon {
   sha256 Bytes @id
   image  Bytes
 
-  ServerStatusHistory ServerStatusHistory[]
+  serverStatusHistory ServerStatusHistory[]
 
   @@map("server_status_favicon")
 }
