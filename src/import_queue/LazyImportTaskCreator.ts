@@ -84,12 +84,14 @@ export default class LazyImportTaskCreator {
     const payloadType = 'UUID_UPDATE_THIRD_PARTY_CAPES';
     const payload = Buffer.from(profile.id.replaceAll('-', ''));
 
+    const now = await this.databaseClient.fetchNow();
     await this.databaseClient.$transaction(async (transaction) => {
       await transaction.importTask.deleteMany({
         where: {
           payloadType,
           payload,
-          state: { notIn: ['QUEUED', 'ERROR'] }
+          state: { notIn: ['QUEUED', 'ERROR'] },
+          stateUpdatedAt: { lt: new Date(now.getTime() - 60 * 60 * 1000 /* 1h */) }
         }
       });
 

@@ -14,7 +14,8 @@ export default class WriteImportQueueSizeToQuestDBTask extends Task {
 
   async run(): Promise<void> {
     const importQueueSize = await this.databaseClient.importTask.count({ where: { state: 'QUEUED' } });
-    await this.questDbClient.pushImportQueueSize(importQueueSize);
+    const importErroredImports = await this.databaseClient.importTask.count({ where: { state: 'ERROR' } });
+    await this.questDbClient.pushImportQueueSize(importQueueSize, importErroredImports);
   }
 
   equals(other: Task): boolean {
