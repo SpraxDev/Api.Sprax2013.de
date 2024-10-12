@@ -1,6 +1,7 @@
 export default class MinecraftProfileTextures {
   constructor(
     public readonly profileId: string,
+    public readonly profileName: string,
     public readonly timestamp: Date,
     public readonly skinUrl: string | null,
     public readonly capeUrl: string | null,
@@ -38,6 +39,7 @@ export default class MinecraftProfileTextures {
 
     return new MinecraftProfileTextures(
       parsedValue.profileId,
+      parsedValue.profileName,
       new Date(parsedValue.timestamp),
       parsedValue.textures.SKIN?.url ?? null,
       parsedValue.textures.CAPE?.url ?? null,

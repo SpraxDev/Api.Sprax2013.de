@@ -1,7 +1,10 @@
 import * as PrismaClient from '@prisma/client';
 import { singleton } from 'tsyringe';
+import { CapeType } from '../../../minecraft/cape/CapeType.js';
+import UserCapeService from '../../../minecraft/cape/UserCapeService.js';
 import MinecraftSkinCache from '../../../minecraft/skin/MinecraftSkinCache.js';
 import MinecraftSkinService from '../../../minecraft/skin/MinecraftSkinService.js';
+import MinecraftProfile from '../../../minecraft/value-objects/MinecraftProfile.js';
 import MinecraftProfileTextures from '../../../minecraft/value-objects/MinecraftProfileTextures.js';
 import YggdrasilSignatureChecker from '../../../minecraft/yggdrasil/YggdrasilSignatureChecker.js';
 import PayloadProcessor from './PayloadProcessor.js';
@@ -11,7 +14,8 @@ export default class ProfileTextureValueProcessor implements PayloadProcessor {
   constructor(
     private readonly yggdrasilSignatureChecker: YggdrasilSignatureChecker,
     private readonly minecraftSkinCache: MinecraftSkinCache,
-    private readonly minecraftSkinService: MinecraftSkinService
+    private readonly minecraftSkinService: MinecraftSkinService,
+    private readonly userCapeService: UserCapeService
   ) {
   }
 
@@ -32,6 +36,7 @@ export default class ProfileTextureValueProcessor implements PayloadProcessor {
     } : undefined;
 
     await this.minecraftSkinService.fetchAndPersistSkin(skinUrl, skinTexturesToPersist);
+    await this.userCapeService.provide(MinecraftProfile.recreateFromTextures(payload.value, payload.signature), CapeType.MOJANG);
 
     return true;
   }

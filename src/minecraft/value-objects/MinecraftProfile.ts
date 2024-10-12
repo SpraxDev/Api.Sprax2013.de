@@ -46,4 +46,18 @@ export default class MinecraftProfile {
     const unevenJavaHashCode = ((parseInt(this.id[7], 16) ^ parseInt(this.id[15], 16) ^ parseInt(this.id[23], 16) ^ parseInt(this.id[31], 16)) & 1) == 1;
     return unevenJavaHashCode ? 'alex' : 'steve';
   }
+
+  static recreateFromTextures(textureValue: string, textureSignature?: string): MinecraftProfile {
+    const textures = MinecraftProfileTextures.fromPropertyValue(textureValue);
+    return new MinecraftProfile({
+      id: textures.profileId,
+      name: textures.profileName,
+      properties: [{
+        name: 'textures',
+        value: textureValue,
+        signature: textureSignature as string
+      }],
+      profileActions: []
+    });
+  }
 }
