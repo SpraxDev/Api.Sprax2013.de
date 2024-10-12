@@ -79,6 +79,10 @@ export default class MinecraftProfileService {
 
     if (profile == null) {
       this.nullProfileCache.add(uuid.toLowerCase());
+      if (profileInDatabase != null) {
+        await this.profileCache.persistProfileAsDeleted(profileInDatabase.profile.id);
+      }
+
       return null;
     }
 

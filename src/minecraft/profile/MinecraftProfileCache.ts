@@ -68,4 +68,12 @@ export default class MinecraftProfileCache {
 
     await this.minecraftSkinCache.persistSkinHistory(new MinecraftProfile(profile));
   }
+
+  async persistProfileAsDeleted(profileId: string): Promise<void> {
+    await this.databaseClient.profile.update({
+      where: { id: profileId },
+      data: { deleted: true },
+      select: { id: true }
+    });
+  }
 }
