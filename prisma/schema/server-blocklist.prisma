@@ -1,0 +1,25 @@
+model ServerBlocklistChanges {
+  sha1         Bytes
+  changeIsAdd  Boolean  @map("change_is_add")
+  changeSeenAt DateTime @default(now()) @map("change_seen_at") @db.Timestamptz()
+
+  @@id([sha1, changeSeenAt])
+  @@index([sha1, changeSeenAt(sort: Desc)])
+  @@map("server_blocklist_changes")
+}
+
+model ServerBlocklistHostHashes {
+  sha1      Bytes    @id
+  host      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([host])
+  @@map("server_blocklist_host_hashes")
+}
+
+view ServerBlocklist {
+  sha1 Bytes   @id
+  host String?
+
+  @@map("server_blocklist")
+}

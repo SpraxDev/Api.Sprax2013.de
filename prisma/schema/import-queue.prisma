@@ -1,0 +1,26 @@
+enum ImportPayloadType {
+  UUID
+  USERNAME
+  PROFILE_TEXTURE_VALUE
+  UUID_UPDATE_THIRD_PARTY_CAPES
+  SKIN_IMAGE
+}
+
+enum ImportTaskState {
+  QUEUED
+  IMPORTED
+  NO_CHANGES
+  ERROR
+}
+
+model ImportTask {
+  id             BigInt            @id @default(autoincrement())
+  payload        Bytes
+  payloadType    ImportPayloadType @map("payload_type")
+  state          ImportTaskState   @default(QUEUED)
+  stateUpdatedAt DateTime          @default(now()) @map("state_updated_at") @db.Timestamptz()
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@unique([payloadType, payload])
+  @@map("import_tasks")
+}

@@ -1,0 +1,22 @@
+model Profile {
+  id            String   @id @db.Uuid
+  nameLowercase String   @map("name_lowercase")
+  raw           Json
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  firstSeen     DateTime @default(now()) @map("first_seen") @db.Timestamptz()
+  deleted       Boolean  @default(false)
+
+  profileRecentSkins ProfileRecentSkin[]
+  profileRecentCapes ProfileRecentCape[]
+
+  @@map("profiles")
+}
+
+view ProfileCache {
+  id            String @id @db.Uuid
+  nameLowercase String @map("name_lowercase")
+  raw           Json
+  ageInSeconds  Int    @map("age_in_seconds")
+
+  @@map("profile_cache")
+}

@@ -1,0 +1,42 @@
+enum CapeType {
+  MOJANG
+  OPTIFINE
+  LABYMOD
+}
+
+model Cape {
+  id          BigInt   @id @default(dbgenerated("generate_snowflake('capes_id_seq'::text)"))
+  type        CapeType
+  imageSha256 Bytes    @map("image_sha256")
+  imageBytes  Bytes    @map("image_bytes")
+  mimeType    String   @map("mime_type")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  profileRecentCape ProfileRecentCape[]
+  capeUrls          CapeUrl[]
+
+  @@unique([type, imageSha256])
+  @@map("capes")
+}
+
+model CapeUrl {
+  url    String @id
+  capeId BigInt @map("cape_id")
+
+  cape Cape @relation(fields: [capeId], references: [id])
+
+  @@map("cape_urls")
+}
+
+model ProfileRecentCape {
+  profileId      String   @map("profile_id") @db.Uuid
+  capeId         BigInt   @map("cape_id")
+  firstSeenUsing DateTime @default(now()) @map("first_seen_using") @db.Timestamptz()
+  lastSeenUsing  DateTime @default(now()) @map("last_seen_using") @db.Timestamptz()
+
+  profile Profile @relation(fields: [profileId], references: [id])
+  cape    Cape    @relation(fields: [capeId], references: [id])
+
+  @@id([profileId, capeId])
+  @@map("profile_recent_capes")
+}
