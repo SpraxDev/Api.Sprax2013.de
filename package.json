@@ -49,8 +49,8 @@
   "dependencies": {
     "@prisma/client": "^5.20.0",
     "@questdb/nodejs-client": "^3.0.0",
-    "@sentry/node": "^8.33.1",
-    "@sentry/profiling-node": "^8.33.1",
+    "@sentry/node": "^8.34.0",
+    "@sentry/profiling-node": "^8.34.0",
     "fastify": "^5.0.0",
     "gl": "^8.1.0",
     "ipaddr.js": "^2.2.0",
@@ -58,7 +58,7 @@
     "sharp": "^0.33.5",
     "socks": "^2.8.3",
     "tsyringe": "^4.8.0",
-    "undici": "^6.19.8"
+    "undici": "^6.20.0"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.0",
@@ -71,6 +71,6 @@
     "prisma": "^5.20.0",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.3"
   }
 }
