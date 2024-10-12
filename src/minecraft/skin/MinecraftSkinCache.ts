@@ -145,9 +145,10 @@ export default class MinecraftSkinCache {
               skinImageId: existingSkinImage.id
             }
           },
-          select: { lastSeenUsing: true }
+          select: { firstSeenUsing: true, lastSeenUsing: true }
         });
         const updateHistoryEntry = existingHistoryEntry == null || existingHistoryEntry.lastSeenUsing < parsedTextures.timestamp;
+        const overrideFirstSeenUsing = existingHistoryEntry != null && existingHistoryEntry.firstSeenUsing > parsedTextures.timestamp;
 
         if (updateHistoryEntry) {
           await transaction.profileRecentSkin.upsert({
@@ -164,6 +165,7 @@ export default class MinecraftSkinCache {
               lastSeenUsing: parsedTextures.timestamp
             },
             update: {
+              firstSeenUsing: overrideFirstSeenUsing ? parsedTextures.timestamp : undefined,
               lastSeenUsing: parsedTextures.timestamp
             }
           });
