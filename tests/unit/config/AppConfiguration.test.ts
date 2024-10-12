@@ -13,12 +13,12 @@ describe('AppConfiguration', () => {
   test('Default values without any env vars', () => {
     const config = new AppConfiguration();
 
-    expect(config.config).toEqual({
+    expect(config.config).toEqual<AppConfig>({
       serverPort: 8087,
       proxyServerUris: '',
       questDbMetricsConfig: '',
       workerTickIntervalDynamic: false
-    } satisfies AppConfig);
+    });
   });
 
   test('Configuration object is frozen', () => {
@@ -33,12 +33,12 @@ describe('AppConfiguration', () => {
     process.env.SPRAXAPI_SERVER_PORT = portValue;
 
     const config = new AppConfiguration();
-    expect(config.config).toEqual({
+    expect(config.config).toEqual<AppConfig>({
       serverPort: 8087,
       proxyServerUris: '',
       questDbMetricsConfig: '',
       workerTickIntervalDynamic: false
-    } satisfies AppConfig);
+    });
   });
 
   test.each([
@@ -49,12 +49,12 @@ describe('AppConfiguration', () => {
     process.env.PROXY_SERVER_URIS = proxyServerUris;
 
     const config = new AppConfiguration();
-    expect(config.config).toEqual({
+    expect(config.config).toEqual<AppConfig>({
       serverPort: 8087,
       proxyServerUris,
       questDbMetricsConfig: '',
       workerTickIntervalDynamic: false
-    } satisfies AppConfig);
+    });
   });
 
   test.each([
@@ -64,12 +64,12 @@ describe('AppConfiguration', () => {
     process.env.QUESTDB_METRICS_CONFIG = questDbMetricsConfig;
 
     const config = new AppConfiguration();
-    expect(config.config).toEqual({
+    expect(config.config).toEqual<AppConfig>({
       serverPort: 8087,
       proxyServerUris: '',
       questDbMetricsConfig,
       workerTickIntervalDynamic: false
-    } satisfies AppConfig);
+    });
   });
 
   test.each([
@@ -82,12 +82,12 @@ describe('AppConfiguration', () => {
     process.env.WORKER_TICK_INTERVAL_DYNAMIC = value;
 
     const config = new AppConfiguration();
-    expect(config.config).toEqual({
+    expect(config.config).toEqual<AppConfig>({
       serverPort: 8087,
       proxyServerUris: '',
       questDbMetricsConfig: '',
       workerTickIntervalDynamic: expectedValue
-    } satisfies AppConfig);
+    });
   });
 
   test('configure object frozen recursively', () => {

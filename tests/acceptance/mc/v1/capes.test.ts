@@ -66,7 +66,7 @@ describe('/mc/v1/capes/:capeType/:user?', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid url parameters',
-      details: [{ param: 'capeType', condition: `capeType in [mojang, optifine, labymod]` }]
+      details: [{ param: 'capeType', condition: `capeType in [MOJANG, OPTIFINE, LABYMOD]` }]
     });
     expect(response.statusCode).toBe(400);
   });
@@ -216,7 +216,7 @@ describe('/mc/v1/capes/:capeType/:user/render', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid url parameters',
-      details: [{ param: 'capeType', condition: `capeType in [mojang, optifine, labymod]` }]
+      details: [{ param: 'capeType', condition: `capeType in [MOJANG, OPTIFINE, LABYMOD]` }]
     });
     expect(response.statusCode).toBe(400);
   });

@@ -4,6 +4,7 @@ import { CapeType } from '../CapeType.js';
 export type CapeResponse = {
   image: Buffer;
   mimeType: string;
+  ageInSeconds: number;
 }
 
 export default interface CapeProvider {

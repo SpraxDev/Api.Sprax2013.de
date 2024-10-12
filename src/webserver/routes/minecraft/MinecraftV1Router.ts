@@ -6,7 +6,7 @@ import { autoInjectable } from 'tsyringe';
 import ResolvedToNonUnicastIpError from '../../../http/dns/errors/ResolvedToNonUnicastIpError.js';
 import { CAPE_TYPE_STRINGS, CapeType } from '../../../minecraft/cape/CapeType.js';
 import Cape2dRenderer from '../../../minecraft/cape/renderer/Cape2dRenderer.js';
-import UserCapeProvider from '../../../minecraft/cape/UserCapeProvider.js';
+import UserCapeService from '../../../minecraft/cape/UserCapeService.js';
 import ImageManipulator from '../../../minecraft/image/ImageManipulator.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService, { Profile } from '../../../minecraft/profile/MinecraftProfileService.js';
@@ -14,7 +14,7 @@ import ServerBlocklistService, {
   InvalidHostError
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
 import SkinImageManipulator from '../../../minecraft/skin/manipulator/SkinImageManipulator.js';
-import MinecraftSkinCache, { CachedSkin } from '../../../minecraft/skin/MinecraftSkinCache.js';
+import MinecraftSkinCache from '../../../minecraft/skin/MinecraftSkinCache.js';
 import MinecraftSkinService, {
   Skin,
   SkinRequestFailedException
@@ -36,7 +36,7 @@ export default class MinecraftV1Router implements Router {
     private readonly minecraftSkinService: MinecraftSkinService,
     private readonly minecraftSkinCache: MinecraftSkinCache,
     private readonly skinImage2DRenderer: SkinImage2DRenderer,
-    private readonly userCapeProvider: UserCapeProvider,
+    private readonly userCapeService: UserCapeService,
     private readonly cape2dRenderer: Cape2dRenderer,
     private readonly serverBlocklistService: ServerBlocklistService,
     private readonly minecraftSkinTypeDetector: MinecraftSkinTypeDetector,
@@ -344,10 +344,10 @@ export default class MinecraftV1Router implements Router {
       return FastifyWebServer.handleRestfully(request, reply, {
         get: async (): Promise<FastifyReply> => {
           const inputCapeType = (request.params as any).capeType;
-          if (typeof inputCapeType !== 'string' || !CAPE_TYPE_STRINGS.includes(inputCapeType.toLowerCase())) {
+          if (typeof inputCapeType !== 'string' || !CAPE_TYPE_STRINGS.includes(inputCapeType.toUpperCase())) {
             throw ApiV1BadRequestError.missingOrInvalidUrlParameter('capeType', `capeType in [${CAPE_TYPE_STRINGS.join(', ')}]`);
           }
-          const capeType = inputCapeType.toLowerCase() as CapeType;
+          const capeType = inputCapeType.toUpperCase() as CapeType;
 
           const profile = await this.resolveUserToProfile((request.params as any).user);
           if (profile == null) {
@@ -356,7 +356,7 @@ export default class MinecraftV1Router implements Router {
           }
 
           const minecraftProfile = new MinecraftProfile(profile.profile);
-          const capeResponse = await this.userCapeProvider.provide(minecraftProfile, capeType);
+          const capeResponse = await this.userCapeService.provide(minecraftProfile, capeType);
           if (capeResponse == null) {
             reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
             throw new ApiV1NotFoundError('User does not have a cape for that type');
@@ -366,7 +366,7 @@ export default class MinecraftV1Router implements Router {
 
           reply.header('Content-Type', capeResponse.mimeType);
           if (forceDownload) {
-            reply.header('Content-Disposition', `attachment; filename="${profile.profile.name}-${capeType}.png"`);
+            reply.header('Content-Disposition', `attachment; filename="${profile.profile.name}-${capeType.toLowerCase()}.png"`);
             reply.header('Content-Type', 'application/octet-stream');
           }
 
@@ -381,12 +381,12 @@ export default class MinecraftV1Router implements Router {
       return FastifyWebServer.handleRestfully(request, reply, {
         get: async (): Promise<FastifyReply> => {
           const inputCapeType = (request.params as any).capeType;
-          if (typeof inputCapeType !== 'string' || !CAPE_TYPE_STRINGS.includes(inputCapeType.toLowerCase())) {
+          if (typeof inputCapeType !== 'string' || !CAPE_TYPE_STRINGS.includes(inputCapeType.toUpperCase())) {
             throw ApiV1BadRequestError.missingOrInvalidUrlParameter('capeType', `capeType in [${CAPE_TYPE_STRINGS.join(', ')}]`);
           }
 
           const size = this.parseSize((request.query as any).size) ?? 512;
-          const capeType = inputCapeType.toLowerCase() as CapeType;
+          const capeType = inputCapeType.toUpperCase() as CapeType;
 
           if (capeType == CapeType.LABYMOD) {
             return reply
@@ -404,7 +404,7 @@ export default class MinecraftV1Router implements Router {
           }
 
           const minecraftProfile = new MinecraftProfile(profile.profile);
-          const capeResponse = await this.userCapeProvider.provide(minecraftProfile, capeType);
+          const capeResponse = await this.userCapeService.provide(minecraftProfile, capeType);
           if (capeResponse == null) {
             reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
             throw new ApiV1NotFoundError('User does not have a cape for that type');
@@ -417,7 +417,7 @@ export default class MinecraftV1Router implements Router {
 
           reply.header('Content-Type', 'image/png');
           if (forceDownload) {
-            reply.header('Content-Disposition', `attachment; filename="${profile.profile.name}-${capeType}.png"`);
+            reply.header('Content-Disposition', `attachment; filename="${profile.profile.name}-${capeType.toLowerCase()}.png"`);
             reply.header('Content-Type', 'application/octet-stream');
           }
 

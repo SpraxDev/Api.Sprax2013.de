@@ -7,7 +7,8 @@ import { EXISTING_MC_PROFILE } from '../../../test-constants.js';
 class TestCapeProvider implements CapeProvider {
   public readonly provideResponse: CapeResponse = {
     image: Buffer.from('A PNG'),
-    mimeType: 'image/png'
+    mimeType: 'image/png',
+    ageInSeconds: 0
   };
 
   get capeType() {
@@ -24,7 +25,7 @@ describe('UserCapeProvider', () => {
   const userCapeProvider = new UserCapeProvider([testCapeProvider]);
 
   test('Throws exception when no CapeProvider is found', async () => {
-    await expect(userCapeProvider.provide(EXISTING_MC_PROFILE, CapeType.MOJANG)).rejects.toThrow('No CapeProvider found for type mojang');
+    await expect(userCapeProvider.provide(EXISTING_MC_PROFILE, CapeType.MOJANG)).rejects.toThrow('No CapeProvider found for type MOJANG');
   });
 
   test('Returns the response from the CapeProvider', async () => {

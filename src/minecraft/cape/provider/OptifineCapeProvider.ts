@@ -32,7 +32,8 @@ export default class OptifineCapeProvider implements CapeProvider {
 
     return {
       image: capeResponse.body,
-      mimeType: 'image/png'
+      mimeType: 'image/png',
+      ageInSeconds: 0
     };
   }
 }

@@ -1,11 +1,9 @@
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import AutoProxiedHttpClient from '../../../../../src/http/clients/AutoProxiedHttpClient.js';
 import HttpResponse from '../../../../../src/http/HttpResponse.js';
+import { CapeResponse } from '../../../../../src/minecraft/cape/provider/CapeProvider.js';
 import LabymodCapeProvider from '../../../../../src/minecraft/cape/provider/LabymodCapeProvider.js';
-import {
-  EXISTING_MC_ID_WITH_HYPHENS,
-  EXISTING_MC_PROFILE
-} from '../../../../test-constants.js';
+import { EXISTING_MC_ID_WITH_HYPHENS, EXISTING_MC_PROFILE } from '../../../../test-constants.js';
 
 describe('LabymodCapeProvider', () => {
   let httpClient: DeepMockProxy<AutoProxiedHttpClient>;
@@ -17,7 +15,7 @@ describe('LabymodCapeProvider', () => {
   });
 
   test('returned capeType is labymod', () => {
-    expect(capeProvider.capeType).toBe('labymod');
+    expect(capeProvider.capeType).toBe('LABYMOD');
   });
 
   test('Returns null when a user has no cape', async () => {
@@ -44,9 +42,10 @@ describe('LabymodCapeProvider', () => {
   test('Returns the response body when a user has a cape', async () => {
     httpClient.get.mockResolvedValue(new HttpResponse(200, new Map([['content-type', 'application/octet-stream']]), Buffer.from('A PNG')));
 
-    await expect(capeProvider.provide(EXISTING_MC_PROFILE)).resolves.toEqual({
+    await expect(capeProvider.provide(EXISTING_MC_PROFILE)).resolves.toEqual<CapeResponse>({
       image: Buffer.from('A PNG'),
-      mimeType: 'image/png'
+      mimeType: 'image/png',
+      ageInSeconds: 0
     });
     expect(httpClient.get).toHaveBeenCalledWith(`https://dl.labymod.net/capes/${EXISTING_MC_ID_WITH_HYPHENS}`);
   });

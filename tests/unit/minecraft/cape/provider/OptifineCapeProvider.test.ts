@@ -1,6 +1,7 @@
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import AutoProxiedHttpClient from '../../../../../src/http/clients/AutoProxiedHttpClient.js';
 import HttpResponse from '../../../../../src/http/HttpResponse.js';
+import { CapeResponse } from '../../../../../src/minecraft/cape/provider/CapeProvider.js';
 import OptifineCapeProvider from '../../../../../src/minecraft/cape/provider/OptifineCapeProvider.js';
 import { EXISTING_MC_NAME, EXISTING_MC_PROFILE } from '../../../../test-constants.js';
 
@@ -14,7 +15,7 @@ describe('OptiFineCapeProvider', () => {
   });
 
   test('returned capeType is optifine', () => {
-    expect(capeProvider.capeType).toBe('optifine');
+    expect(capeProvider.capeType).toBe('OPTIFINE');
   });
 
   test('Returns null when a user has no cape', async () => {
@@ -41,9 +42,10 @@ describe('OptiFineCapeProvider', () => {
   test('Returns the response body when a user has a cape', async () => {
     httpClient.get.mockResolvedValue(new HttpResponse(200, new Map([['content-type', 'image/png']]), Buffer.from('A PNG')));
 
-    await expect(capeProvider.provide(EXISTING_MC_PROFILE)).resolves.toEqual({
+    await expect(capeProvider.provide(EXISTING_MC_PROFILE)).resolves.toEqual<CapeResponse>({
       image: Buffer.from('A PNG'),
-      mimeType: 'image/png'
+      mimeType: 'image/png',
+      ageInSeconds: 0
     });
     expect(httpClient.get).toHaveBeenCalledWith(`http://s.optifine.net/capes/${EXISTING_MC_NAME}.png`);
   });
