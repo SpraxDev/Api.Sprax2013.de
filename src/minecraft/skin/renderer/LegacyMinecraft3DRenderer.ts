@@ -1,10 +1,10 @@
 import Path from 'node:path';
 import { singleton } from 'tsyringe';
 import { APP_RESOURCES_DIR } from '../../../constants.js';
-import { Camera, createCamera, createModel, Model } from './legacy-3d/modelRender.js';
 import ImageManipulator from '../../image/ImageManipulator.js';
 import MinecraftSkinNormalizer from '../manipulator/MinecraftSkinNormalizer.js';
 import SkinImageManipulator from '../manipulator/SkinImageManipulator.js';
+import { Camera, createCamera, createModel, Model } from './legacy-3d/modelRender.js';
 
 @singleton()
 export default class LegacyMinecraft3DRenderer {

@@ -9,7 +9,7 @@ import ServerBlocklistService, {
   InvalidHostError
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
 import MinecraftServerStatusService from '../../../minecraft/server/ping/MinecraftServerStatusService.js';
-import MinecraftSkinCache, { CachedSkin } from '../../../minecraft/skin/MinecraftSkinCache.js';
+import MinecraftSkinCache from '../../../minecraft/skin/MinecraftSkinCache.js';
 import MinecraftSkinService, {
   Skin,
   SkinRequestFailedException

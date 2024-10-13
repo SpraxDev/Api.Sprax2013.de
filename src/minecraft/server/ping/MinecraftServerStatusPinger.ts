@@ -1,9 +1,9 @@
 import { singleton } from 'tsyringe';
 import type { PingResult } from './AbstractMinecraftServerPing.js';
-import LatestServerStatusPinger from './LatestServerStatusPinger.js';
-import LegacyServerStatusPinger from './LegacyServerStatusPinger.js';
 import ProtocolViolationError from './error/ProtocolViolationError.js';
 import SocketClosedError from './error/SocketClosedError.js';
+import LatestServerStatusPinger from './LatestServerStatusPinger.js';
+import LegacyServerStatusPinger from './LegacyServerStatusPinger.js';
 import ServerHostResolver from './resolve/ServerHostResolver.js';
 
 @singleton()

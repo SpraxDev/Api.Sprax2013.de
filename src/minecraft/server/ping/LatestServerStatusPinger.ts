@@ -1,8 +1,8 @@
 import Net from 'node:net';
 import AbstractMinecraftServerPing, { type PingResult } from './AbstractMinecraftServerPing.js';
+import ProtocolViolationError from './error/ProtocolViolationError.js';
 import MinecraftPacketBuilder from './protocol/MinecraftPacketBuilder.js';
 import MinecraftProtocolReader from './protocol/MinecraftProtocolReader.js';
-import ProtocolViolationError from './error/ProtocolViolationError.js';
 
 export default class LatestServerStatusPinger extends AbstractMinecraftServerPing {
   private readonly packetBuilder = new MinecraftPacketBuilder();
