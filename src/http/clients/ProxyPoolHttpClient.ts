@@ -6,7 +6,7 @@ import ProxyServerConfigurationProvider, {
   SocksProxyServer
 } from '../../net/proxy/ProxyServerConfigurationProvider.js';
 import RoundRobinProxyPool from '../../net/proxy/RoundRobinProxyPool.js';
-import SentrySdk from '../../SentrySdk.js';
+import SentrySdk from '../../util/SentrySdk.js';
 import ProxyPoolHttpClientHealthcheckTask from '../../task_queue/tasks/ProxyPoolHttpClientHealthcheckTask.js';
 import ResolvedToNonUnicastIpError from '../dns/errors/ResolvedToNonUnicastIpError.js';
 import HttpResponse from '../HttpResponse.js';

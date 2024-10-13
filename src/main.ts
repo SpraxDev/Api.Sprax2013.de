@@ -6,9 +6,9 @@ import DatabaseClient from './database/DatabaseClient.js';
 import QuestDbClient from './database/QuestDbClient.js';
 import LazyImportTaskCreator from './import_queue/LazyImportTaskCreator.js';
 import ContinuousQueueWorker from './import_queue/worker/ContinuousQueueWorker.js';
-import SentrySdk from './SentrySdk.js';
 import TaskExecutingQueue from './task_queue/TaskExecutingQueue.js';
 import TaskScheduler from './task_queue/TaskScheduler.js';
+import SentrySdk from './util/SentrySdk.js';
 import FastifyWebServer from './webserver/FastifyWebServer.js';
 
 let taskQueue: TaskExecutingQueue | undefined;

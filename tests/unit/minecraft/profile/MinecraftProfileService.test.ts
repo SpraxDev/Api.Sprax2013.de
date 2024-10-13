@@ -4,7 +4,7 @@ import LazyImportTaskCreator from '../../../../src/import_queue/LazyImportTaskCr
 import MinecraftApiClient from '../../../../src/minecraft/MinecraftApiClient.js';
 import MinecraftProfileCache from '../../../../src/minecraft/profile/MinecraftProfileCache.js';
 import MinecraftProfileService, { Profile } from '../../../../src/minecraft/profile/MinecraftProfileService.js';
-import SentrySdk from '../../../../src/SentrySdk.js';
+import SentrySdk from '../../../../src/util/SentrySdk.js';
 import { EXISTING_MC_ID, EXISTING_MC_NAME, EXISTING_MC_PROFILE_RESPONSE } from '../../../test-constants.js';
 
 let profileCache: DeepMockProxy<MinecraftProfileCache>;

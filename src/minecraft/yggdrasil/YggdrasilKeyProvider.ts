@@ -4,7 +4,7 @@ import Path from 'node:path';
 import { singleton } from 'tsyringe';
 import { APP_RESOURCES_DIR } from '../../constants.js';
 import AutoProxiedHttpClient from '../../http/clients/AutoProxiedHttpClient.js';
-import SentrySdk from '../../SentrySdk.js';
+import SentrySdk from '../../util/SentrySdk.js';
 import TaskScheduler from '../../task_queue/TaskScheduler.js';
 
 @singleton()

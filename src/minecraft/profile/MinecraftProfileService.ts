@@ -1,6 +1,6 @@
 import { singleton } from 'tsyringe';
 import LazyImportTaskCreator from '../../import_queue/LazyImportTaskCreator.js';
-import SentrySdk from '../../SentrySdk.js';
+import SentrySdk from '../../util/SentrySdk.js';
 import UUID from '../../util/UUID.js';
 import MinecraftApiClient, { UsernameToUuidResponse, type UuidToProfileResponse } from '../MinecraftApiClient.js';
 import SetWithTtl from '../SetWithTtl.js';

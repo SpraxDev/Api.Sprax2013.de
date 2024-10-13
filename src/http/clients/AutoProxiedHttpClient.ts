@@ -1,6 +1,6 @@
 import { singleton } from 'tsyringe';
 import { Dispatcher } from 'undici';
-import SentrySdk from '../../SentrySdk.js';
+import SentrySdk from '../../util/SentrySdk.js';
 import ResolvedToNonUnicastIpError from '../dns/errors/ResolvedToNonUnicastIpError.js';
 import HttpResponse from '../HttpResponse.js';
 import HttpClient, { FullRequestOptions, GetRequestOptions, PostRequestOptions } from './HttpClient.js';

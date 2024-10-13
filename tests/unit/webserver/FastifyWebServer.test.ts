@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { FastifyInstance, type FastifyReply } from 'fastify';
-import SentrySdk from '../../../src/SentrySdk.js';
+import SentrySdk from '../../../src/util/SentrySdk.js';
 import FastifyWebServer from '../../../src/webserver/FastifyWebServer.js';
 import Router from '../../../src/webserver/routes/Router.js';
 

@@ -1,5 +1,5 @@
 import { singleton } from 'tsyringe';
-import SentrySdk from '../../SentrySdk.js';
+import SentrySdk from '../../util/SentrySdk.js';
 import MinecraftProfile from '../value-objects/MinecraftProfile.js';
 import CapeCache from './CapeCache.js';
 import { CapeType } from './CapeType.js';

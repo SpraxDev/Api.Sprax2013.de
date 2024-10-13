@@ -3,7 +3,7 @@ import * as Undici from 'undici';
 import QuestDbClient, { ProxyServerMetric } from '../../database/QuestDbClient.js';
 import ProxyPoolHttpClient, { UndiciProxyServer } from '../../http/clients/ProxyPoolHttpClient.js';
 import UserAgentGenerator from '../../http/UserAgentGenerator.js';
-import SentrySdk from '../../SentrySdk.js';
+import SentrySdk from '../../util/SentrySdk.js';
 import Task, { TaskPriority } from './Task.js';
 
 @singleton()

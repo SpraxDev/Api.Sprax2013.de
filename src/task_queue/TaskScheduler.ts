@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe';
-import SentrySdk from '../SentrySdk.js';
+import SentrySdk from '../util/SentrySdk.js';
 import TaskExecutingQueue from './TaskExecutingQueue.js';
 import ClearExpiredEntriesInSetsWithTtlTask from './tasks/ClearExpiredEntriesInSetsWithTtlTask.js';
 import ProxyPoolHttpClientHealthcheckTask from './tasks/ProxyPoolHttpClientHealthcheckTask.js';

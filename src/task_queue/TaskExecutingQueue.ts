@@ -1,5 +1,5 @@
 import { singleton } from 'tsyringe';
-import SentrySdk from '../SentrySdk.js';
+import SentrySdk from '../util/SentrySdk.js';
 import Task from './tasks/Task.js';
 
 @singleton()

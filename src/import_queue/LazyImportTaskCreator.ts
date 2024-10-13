@@ -3,7 +3,7 @@ import DatabaseClient from '../database/DatabaseClient.js';
 import { UuidToProfileResponse } from '../minecraft/MinecraftApiClient.js';
 import MinecraftSkinCache from '../minecraft/skin/MinecraftSkinCache.js';
 import MinecraftProfile from '../minecraft/value-objects/MinecraftProfile.js';
-import SentrySdk from '../SentrySdk.js';
+import SentrySdk from '../util/SentrySdk.js';
 import UUID from '../util/UUID.js';
 
 @singleton()

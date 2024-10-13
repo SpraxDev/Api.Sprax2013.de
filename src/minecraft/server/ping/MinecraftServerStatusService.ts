@@ -2,7 +2,7 @@ import Crypto from 'node:crypto';
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../../../database/DatabaseClient.js';
 import ResolvedToNonUnicastIpError from '../../../http/dns/errors/ResolvedToNonUnicastIpError.js';
-import SentrySdk from '../../../SentrySdk.js';
+import SentrySdk from '../../../util/SentrySdk.js';
 import SetWithTtl from '../../SetWithTtl.js';
 import { PingResult } from './AbstractMinecraftServerPing.js';
 import ServerStatusPingError from './error/ServerStatusPingError.js';

@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import ProxyServerConfigurationProvider from '../../../../src/net/proxy/ProxyServerConfigurationProvider.js';
-import SentrySdk from '../../../../src/SentrySdk.js';
+import SentrySdk from '../../../../src/util/SentrySdk.js';
 
 describe('ProxyServerConfigurationProvider', () => {
   test('Provide for empty proxy server list', () => {

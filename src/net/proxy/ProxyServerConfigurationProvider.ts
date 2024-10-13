@@ -1,5 +1,5 @@
 import { inject, injectable } from 'tsyringe';
-import SentrySdk from '../../SentrySdk.js';
+import SentrySdk from '../../util/SentrySdk.js';
 
 export type SocksProxyOptions = {
   version: 4 | 5,

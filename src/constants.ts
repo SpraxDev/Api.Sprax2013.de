@@ -1,7 +1,7 @@
 import Fs from 'node:fs';
 import Path from 'node:path';
 import Url from 'node:url';
-import SentrySdk from './SentrySdk.js';
+import SentrySdk from './util/SentrySdk.js';
 
 type AppInfo = { name: string, version: string, homepage: string };
 let appInfo: AppInfo;

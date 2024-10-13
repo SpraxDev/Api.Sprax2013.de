@@ -3,7 +3,7 @@ import { singleton } from 'tsyringe';
 import AppConfiguration from '../../config/AppConfiguration.js';
 import DatabaseClient from '../../database/DatabaseClient.js';
 import ProxyServerConfigurationProvider from '../../net/proxy/ProxyServerConfigurationProvider.js';
-import SentrySdk from '../../SentrySdk.js';
+import SentrySdk from '../../util/SentrySdk.js';
 import TaskScheduler from '../../task_queue/TaskScheduler.js';
 import Arbeitsbeschaffungsmassnahme from './Arbeitsbeschaffungsmassnahme.js';
 import ProfileTextureValueProcessor from './payload_processors/ProfileTextureValueProcessor.js';
