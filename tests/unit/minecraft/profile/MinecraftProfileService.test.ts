@@ -268,15 +268,11 @@ describe('#provideProfileByUsername', () => {
     jest.spyOn(SentrySdk, 'captureError').mockReturnValue(undefined);
     profileCache.findByUsername.mockResolvedValue(expectedProfile);
     profileCache.findByUuid.mockResolvedValue(expectedProfile);
-    minecraftApiClient.fetchUuidForUsername.mockImplementation(() => {
+    minecraftApiClient.fetchProfileForUuid.mockImplementation(() => {
       throw new Error('Connection timed out or something');
     });
-    minecraftApiClient.fetchProfileForUuid.mockResolvedValue(null);
 
     await expect(minecraftProfileService.provideProfileByUsername(EXISTING_MC_NAME)).resolves.toEqual(expectedProfile);
-
-    expect(minecraftApiClient.fetchUuidForUsername).toHaveBeenCalledTimes(1);
-    expect(minecraftApiClient.fetchUuidForUsername).toHaveBeenCalledWith(EXISTING_MC_NAME);
 
     expect(minecraftApiClient.fetchProfileForUuid).toHaveBeenCalledTimes(1);
     expect(minecraftApiClient.fetchProfileForUuid).toHaveBeenCalledWith(EXISTING_MC_ID);
