@@ -18,6 +18,7 @@ import MinecraftSkinTypeDetector from '../../../minecraft/skin/MinecraftSkinType
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
 import MinecraftProfile from '../../../minecraft/value-objects/MinecraftProfile.js';
 import MinecraftProfileTextures from '../../../minecraft/value-objects/MinecraftProfileTextures.js';
+import UUID from '../../../util/UUID.js';
 import { BadRequestError, NotFoundError } from '../../errors/HttpErrors.js';
 import FastifyWebServer from '../../FastifyWebServer.js';
 import Router from '../Router.js';
@@ -272,7 +273,7 @@ export default class MinecraftV2Router implements Router {
     }
 
     const inputUserLooksLikeUsername = inputUser.length <= 16;
-    const inputUserLooksLikeUuid = inputUser.replaceAll('-', '').length === 32;
+    const inputUserLooksLikeUuid = UUID.looksLikeUuid(inputUser);
     if (!inputUserLooksLikeUsername && !inputUserLooksLikeUuid) {
       throw new BadRequestError('Invalid username or UUID');
     }

@@ -24,6 +24,7 @@ import LegacyMinecraft3DRenderer from '../../../minecraft/skin/renderer/LegacyMi
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
 import MinecraftProfile from '../../../minecraft/value-objects/MinecraftProfile.js';
 import MinecraftProfileTextures from '../../../minecraft/value-objects/MinecraftProfileTextures.js';
+import UUID from '../../../util/UUID.js';
 import { ApiV1BadRequestError, ApiV1NotFoundError } from '../../errors/ApiV1HttpError.js';
 import FastifyWebServer from '../../FastifyWebServer.js';
 import Router from '../Router.js';
@@ -529,7 +530,7 @@ export default class MinecraftV1Router implements Router {
     }
 
     const inputUserLooksLikeUsername = inputUser.length <= 16;
-    const inputUserLooksLikeUuid = inputUser.replaceAll('-', '').length === 32;
+    const inputUserLooksLikeUuid = UUID.looksLikeUuid(inputUser);
     if (!inputUserLooksLikeUsername && !inputUserLooksLikeUuid) {
       throw ApiV1BadRequestError.missingOrInvalidUrlParameter('user', 'Is valid uuid string or user.length <= 16');
     }

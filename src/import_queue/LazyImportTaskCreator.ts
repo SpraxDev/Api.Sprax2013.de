@@ -4,6 +4,7 @@ import { UuidToProfileResponse } from '../minecraft/MinecraftApiClient.js';
 import MinecraftSkinCache from '../minecraft/skin/MinecraftSkinCache.js';
 import MinecraftProfile from '../minecraft/value-objects/MinecraftProfile.js';
 import SentrySdk from '../SentrySdk.js';
+import UUID from '../util/UUID.js';
 
 @singleton()
 export default class LazyImportTaskCreator {
@@ -45,7 +46,7 @@ export default class LazyImportTaskCreator {
   private async queueUuid(uuid: string): Promise<void> {
     await this.databaseClient.importTask.createMany({
       data: [{
-        payload: Buffer.from(uuid.replaceAll('-', '')),
+        payload: Buffer.from(UUID.normalize(uuid)),
         payloadType: 'UUID'
       }],
       skipDuplicates: true
@@ -82,7 +83,7 @@ export default class LazyImportTaskCreator {
 
   private async queueThirdPartyCapeUpdate(profile: MinecraftProfile): Promise<void> {
     const payloadType = 'UUID_UPDATE_THIRD_PARTY_CAPES';
-    const payload = Buffer.from(profile.id.replaceAll('-', ''));
+    const payload = Buffer.from(UUID.normalize(profile.id));
 
     const now = await this.databaseClient.fetchNow();
     await this.databaseClient.$transaction(async (transaction) => {

@@ -1,6 +1,7 @@
 import { singleton } from 'tsyringe';
 import LazyImportTaskCreator from '../../import_queue/LazyImportTaskCreator.js';
 import SentrySdk from '../../SentrySdk.js';
+import UUID from '../../util/UUID.js';
 import MinecraftApiClient, { UsernameToUuidResponse, type UuidToProfileResponse } from '../MinecraftApiClient.js';
 import SetWithTtl from '../SetWithTtl.js';
 import MinecraftProfileCache from './MinecraftProfileCache.js';
@@ -23,11 +24,12 @@ export default class MinecraftProfileService {
   }
 
   async provideProfileByUuid(uuid: string): Promise<Profile | null> {
-    if (this.nullProfileCache.has(uuid.toLowerCase())) {
+    uuid = UUID.normalize(uuid);
+    if (this.nullProfileCache.has(uuid)) {
       return null;
     }
 
-    const inFlightKey = `u.${uuid.toLowerCase()}`;
+    const inFlightKey = `u.${uuid}`;
     if (this.inFlightRequests.has(inFlightKey)) {
       return await this.inFlightRequests.get(inFlightKey)!;
     }

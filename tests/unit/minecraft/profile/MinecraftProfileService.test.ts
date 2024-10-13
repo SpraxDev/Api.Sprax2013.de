@@ -58,10 +58,10 @@ describe('#provideProfileByUuid', () => {
     await expect(minecraftProfileService.provideProfileByUuid(nonExistingProfileUuid)).resolves.toBeNull();
 
     expect(profileCache.findByUuid).toHaveBeenCalledTimes(1);
-    expect(profileCache.findByUuid).toHaveBeenCalledWith(nonExistingProfileUuid);
+    expect(profileCache.findByUuid).toHaveBeenCalledWith('54118d2884c411efb8640242ac120002');
 
     expect(minecraftApiClient.fetchProfileForUuid).toHaveBeenCalledTimes(1);
-    expect(minecraftApiClient.fetchProfileForUuid).toHaveBeenCalledWith(nonExistingProfileUuid);
+    expect(minecraftApiClient.fetchProfileForUuid).toHaveBeenCalledWith('54118d2884c411efb8640242ac120002');
   });
 
   test('Multiple profile requests at the same time are not processed individually', async () => {

@@ -13,9 +13,9 @@ export default class UuidProcessor implements PayloadProcessor {
   }
 
   async process(task: PrismaClient.ImportTask | string): Promise<boolean> {
-    const uuid = typeof task === 'string' ? task : task.payload.toString().replaceAll('-', '');
+    const uuid = typeof task === 'string' ? task : task.payload.toString();
     if (uuid.length !== 32) {
-      throw new Error('Invalid UUID');
+      throw new Error('Invalid UUID (hyphens are not allowed)');
     }
 
     const alreadyKnowUuid = await this.minecraftProfileCache.findByUuid(uuid) != null;

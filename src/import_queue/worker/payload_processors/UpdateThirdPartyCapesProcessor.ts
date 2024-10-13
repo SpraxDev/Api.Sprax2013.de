@@ -15,9 +15,9 @@ export default class UpdateThirdPartyCapesProcessor implements PayloadProcessor 
   }
 
   async process(task: PrismaClient.ImportTask): Promise<boolean> {
-    const uuid = task.payload.toString().replaceAll('-', '');
+    const uuid = task.payload.toString();
     if (uuid.length !== 32) {
-      throw new Error('Invalid UUID');
+      throw new Error('Invalid UUID (hyphens are not allowed)');
     }
 
     const profile = await this.minecraftProfileService.provideProfileByUuid(uuid);
