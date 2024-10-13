@@ -1,9 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import ChildProcess from 'node:child_process';
-import { singleton } from 'tsyringe';
+import { Disposable, singleton } from 'tsyringe';
 
 @singleton()
-export default class DatabaseClient extends PrismaClient {
+export default class DatabaseClient extends PrismaClient implements Disposable {
   constructor() {
     super();
   }
@@ -22,5 +22,9 @@ export default class DatabaseClient extends PrismaClient {
 
   async runDatabaseMigrations(): Promise<void> {
     ChildProcess.execSync('npm run prisma:migrate:deploy', { stdio: 'inherit' });
+  }
+
+  async dispose(): Promise<void> {
+    await this.$disconnect();
   }
 }

@@ -1,4 +1,5 @@
-import { injectable } from 'tsyringe';
+import { clearInterval } from 'node:timers';
+import { Disposable, injectable } from 'tsyringe';
 import SentrySdk from '../util/SentrySdk.js';
 import TaskExecutingQueue from './TaskExecutingQueue.js';
 import ClearExpiredEntriesInSetsWithTtlTask from './tasks/ClearExpiredEntriesInSetsWithTtlTask.js';
@@ -8,7 +9,7 @@ import UpdateMinecraftServerBlocklistTask from './tasks/UpdateMinecraftServerBlo
 import WriteImportQueueSizeToQuestDBTask from './tasks/WriteImportQueueSizeToQuestDBTask.js';
 
 @injectable()
-export default class TaskScheduler {
+export default class TaskScheduler implements Disposable {
   private readonly intervalTimeouts: NodeJS.Timeout[] = [];
 
   constructor(
@@ -29,7 +30,7 @@ export default class TaskScheduler {
     this.scheduleAndRunDelayed(this.writeImportQueueSizeToQuestDBTask, fiveMinutes / 2);
   }
 
-  shutdown(): void {
+  dispose(): void {
     for (const timeout of this.intervalTimeouts) {
       clearInterval(timeout);
     }

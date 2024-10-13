@@ -1,9 +1,9 @@
-import { singleton } from 'tsyringe';
+import { Disposable, singleton } from 'tsyringe';
 import SentrySdk from '../util/SentrySdk.js';
 import Task from './tasks/Task.js';
 
 @singleton()
-export default class TaskExecutingQueue {
+export default class TaskExecutingQueue implements Disposable {
   private readonly queue: Task[] = [];
   private runningTask: Task | null = null;
 
@@ -30,7 +30,8 @@ export default class TaskExecutingQueue {
     this.tickProcessing();
   }
 
-  shutdown(): void {
+  // TODO: Maybe we can await the currently running task with a timeout?
+  dispose(): void {
     this.queue.length = 0;
   }
 

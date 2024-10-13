@@ -1,4 +1,4 @@
-import { singleton } from 'tsyringe';
+import { Disposable, singleton } from 'tsyringe';
 import DatabaseClient from '../database/DatabaseClient.js';
 import { UuidToProfileResponse } from '../minecraft/MinecraftApiClient.js';
 import MinecraftSkinCache from '../minecraft/skin/MinecraftSkinCache.js';
@@ -7,7 +7,7 @@ import SentrySdk from '../util/SentrySdk.js';
 import UUID from '../util/UUID.js';
 
 @singleton()
-export default class LazyImportTaskCreator {
+export default class LazyImportTaskCreator implements Disposable {
   private readonly danglingPromises = new Set<Promise<void>>();
 
   constructor(
@@ -33,6 +33,10 @@ export default class LazyImportTaskCreator {
 
   async waitForDanglingPromises(): Promise<void> {
     await Promise.all(Array.from(this.danglingPromises));
+  }
+
+  async dispose(): Promise<void> {
+    await this.waitForDanglingPromises();
   }
 
   private trackPromise(promise: Promise<void>): void {

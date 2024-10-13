@@ -1,5 +1,5 @@
 import QuestDb from '@questdb/nodejs-client';
-import { singleton } from 'tsyringe';
+import { Disposable, singleton } from 'tsyringe';
 import AppConfiguration from '../config/AppConfiguration.js';
 
 export type ProxyServerMetric = {
@@ -10,7 +10,7 @@ export type ProxyServerMetric = {
 }
 
 @singleton()
-export default class QuestDbClient {
+export default class QuestDbClient implements Disposable {
   private readonly sender?: QuestDb.Sender;
 
   constructor(appConfig: AppConfiguration) {
@@ -53,7 +53,7 @@ export default class QuestDbClient {
     await this.sender.flush();
   }
 
-  async shutdown(): Promise<void> {
+  async dispose(): Promise<void> {
     await this.sender?.flush();
     await this.sender?.close();
   }
