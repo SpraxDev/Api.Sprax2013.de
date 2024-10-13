@@ -29,7 +29,7 @@ function registerShutdownHooks(): void {
   let shutdownInProgress = false;
   const handleShutdown = async () => {
     if (shutdownInProgress) {
-      console.warn('Received seconds shutdown signal – Forcing shutdown');
+      console.warn('Received second shutdown signal – Forcing shutdown');
       process.exit(90);
     }
 
