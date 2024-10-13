@@ -35,8 +35,8 @@
 
     "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" jest --coverage",
     "test:ci": "npm run test -- --ci --randomize --reporters github-actions --reporters summary",
-    "dev": "node --watch --env-file .env --loader ts-node/esm --import ./src/sentry-init.ts --enable-source-maps src/main.ts",
-    "dev:queue-worker": "node --watch --env-file .env --loader ts-node/esm --import ./src/sentry-init.ts --enable-source-maps src/main.ts --spraxapi-run-as-queue-worker",
+    "dev": "node --watch --env-file .env --loader ts-node/esm --import ./src/sentry-init.ts --enable-source-maps src/main.ts web",
+    "dev:queue-worker": "node --watch --env-file .env --loader ts-node/esm --import ./src/sentry-init.ts --enable-source-maps src/main.ts queue-worker",
 
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
@@ -54,6 +54,7 @@
     "fastify": "^5.0.0",
     "gl": "^8.1.0",
     "ipaddr.js": "^2.2.0",
+    "mri": "^1.2.0",
     "reflect-metadata": "^0.2.2",
     "sharp": "^0.33.5",
     "socks": "^2.8.3",

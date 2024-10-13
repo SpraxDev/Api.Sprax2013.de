@@ -3,6 +3,7 @@ import { container } from 'tsyringe';
 import type App from './boot/App.js';
 import QueueWorkerApp from './boot/QueueWorkerApp.js';
 import WebApp from './boot/WebApp.js';
+import CliArgumentProvider, { AppCommand } from './cli/CliArgumentProvider.js';
 import { IS_PRODUCTION } from './constants.js';
 import SentrySdk from './util/SentrySdk.js';
 
@@ -13,16 +14,14 @@ await bootstrap();
 async function bootstrap(): Promise<void> {
   registerShutdownHooks();
 
-  if (process.argv.includes('--spraxapi-run-as-queue-worker')) {
-    app = new QueueWorkerApp();
-  } else {
-    app = new WebApp();
-  }
-
+  const parsedCliArguments = CliArgumentProvider.determineAppArguments();
+  app = createApp(parsedCliArguments.command);
   await app.boot();
+
   if (!IS_PRODUCTION) {
     console.log(`RUNNING IN DEVELOPMENT MODE`);
   }
+  console.log();
 }
 
 function registerShutdownHooks(): void {
@@ -49,4 +48,13 @@ function registerShutdownHooks(): void {
   process.on('SIGINT', handleShutdown);
   process.on('SIGQUIT', handleShutdown);
   process.on('SIGHUP', handleShutdown);
+}
+
+function createApp(appCommand: AppCommand): App {
+  switch (appCommand) {
+    case 'web':
+      return new WebApp();
+    case 'queue-worker':
+      return new QueueWorkerApp();
+  }
 }
