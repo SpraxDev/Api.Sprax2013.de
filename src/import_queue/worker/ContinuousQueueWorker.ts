@@ -133,9 +133,27 @@ export default class ContinuousQueueWorker {
   }
 
   private async updateTaskStatus(task: PrismaClient.ImportTask, state: 'IMPORTED' | 'NO_CHANGES' | 'ERROR'): Promise<void> {
-    await this.databaseClient.importTask.update({
-      where: { id: task.id },
-      data: { state }
+    this.databaseClient.$transaction(async (transaction) => {
+      await transaction.importTask.update({
+        where: { id: task.id },
+        data: { state },
+        select: { id: true }
+      });
+
+      if (task.importGroupId != null) {
+        let importGroupUpdateData: PrismaClient.Prisma.ImportGroupUpdateInput = { succeededImports: { increment: 1 } };
+        if (state === 'ERROR') {
+          importGroupUpdateData = { erroredImports: { increment: 1 } };
+        }
+        if (state === 'NO_CHANGES') {
+          importGroupUpdateData = { duplicateImports: { increment: 1 } };
+        }
+
+        await transaction.importGroup.update({
+          where: { id: task.importGroupId },
+          data: importGroupUpdateData
+        });
+      }
     });
   }
 

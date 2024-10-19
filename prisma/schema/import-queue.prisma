@@ -20,7 +20,29 @@ model ImportTask {
   state          ImportTaskState   @default(QUEUED)
   stateUpdatedAt DateTime          @default(now()) @map("state_updated_at") @db.Timestamptz()
   createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+  importGroupId  BigInt?           @map("import_group_id")
+
+  importGroup ImportGroup? @relation(fields: [importGroupId], references: [id])
 
   @@unique([payloadType, payload])
   @@map("import_tasks")
+}
+
+model ImportGroup {
+  id        BigInt   @id @default(dbgenerated("generate_snowflake('import_groups_id_seq'::text)"))
+  ownerTmp  String   @map("owner_tmp") // TODO: This needs to be something else (API key related probably)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  done             Boolean @default(false)
+  lastErrorMessage String? @map("last_error_message")
+
+  totalParsedPayloads Int @default(0) @map("total_parsed_payloads")
+  succeededImports    Int @default(0) @map("succeeded_imports")
+  erroredImports      Int @default(0) @map("errored_imports")
+  duplicateImports    Int @default(0) @map("duplicate_imports")
+
+  tasks ImportTask[]
+
+  @@map("import_groups")
 }
