@@ -15,14 +15,14 @@ await bootstrap();
 async function bootstrap(): Promise<void> {
   registerShutdownHooks();
 
-  const parsedCliArguments = CliArgumentProvider.determineAppArguments();
-  app = createApp(parsedCliArguments.command);
-  await app.boot();
-
   if (!IS_PRODUCTION) {
     console.log(`RUNNING IN DEVELOPMENT MODE`);
   }
   console.log();
+
+  const parsedCliArguments = CliArgumentProvider.determineAppArguments();
+  app = createApp(parsedCliArguments.command);
+  await app.boot();
 }
 
 function registerShutdownHooks(): void {
