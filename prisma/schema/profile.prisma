@@ -8,6 +8,7 @@ model Profile {
 
   profileRecentSkins ProfileRecentSkin[]
   profileRecentCapes ProfileRecentCape[]
+  apiKeys            ApiKey[]
 
   @@map("profiles")
 }

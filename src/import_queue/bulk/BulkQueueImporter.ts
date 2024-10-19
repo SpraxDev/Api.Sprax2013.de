@@ -19,7 +19,7 @@ export default class BulkQueueImporter {
   ) {
   }
 
-  async importEachLine(filePath: string, type: 'uuid', ownerTmp: string): Promise<BulkQueueImportResult> {
+  async importEachLine(filePath: string, type: 'uuid', importingApiKeyId: bigint): Promise<BulkQueueImportResult> {
     const fileHandle = await Fs.promises.open(filePath, 'r');
     const totalFileBytes = (await fileHandle.stat()).size;
 
@@ -37,7 +37,7 @@ export default class BulkQueueImporter {
         let lastReportedProgress = Date.now();
 
         const importGroup = await transaction.importGroup.create({
-          data: { ownerTmp },
+          data: { importingApiKeyId },
           select: { id: true }
         });
         result = {

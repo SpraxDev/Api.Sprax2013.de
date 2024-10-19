@@ -1,0 +1,13 @@
+model ApiKey {
+  id       BigInt  @id @default(autoincrement())
+  key      Bytes   @unique @default(dbgenerated("gen_random_bytes(32)"))
+  ownerId  String  @map("owner_id") @db.Uuid
+  name     String
+  internal Boolean @default(false)
+  deleted  Boolean @default(false)
+
+  owner        Profile       @relation(fields: [ownerId], references: [id])
+  importGroups ImportGroup[]
+
+  @@map("api_keys")
+}

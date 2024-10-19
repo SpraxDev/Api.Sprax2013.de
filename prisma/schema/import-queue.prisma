@@ -29,10 +29,10 @@ model ImportTask {
 }
 
 model ImportGroup {
-  id        BigInt   @id @default(dbgenerated("generate_snowflake('import_groups_id_seq'::text)"))
-  ownerTmp  String   @map("owner_tmp") // TODO: This needs to be something else (API key related probably)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  id                BigInt   @id @default(dbgenerated("generate_snowflake('import_groups_id_seq'::text)"))
+  importingApiKeyId BigInt   @map("importing_api_key_id")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   done             Boolean @default(false)
   lastErrorMessage String? @map("last_error_message")
@@ -42,7 +42,8 @@ model ImportGroup {
   erroredImports      Int @default(0) @map("errored_imports")
   duplicateImports    Int @default(0) @map("duplicate_imports")
 
-  tasks ImportTask[]
+  tasks           ImportTask[]
+  importingApiKey ApiKey       @relation(fields: [importingApiKeyId], references: [id])
 
   @@map("import_groups")
 }
