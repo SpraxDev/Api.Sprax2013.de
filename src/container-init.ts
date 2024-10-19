@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { container, Lifecycle } from 'tsyringe';
+import ImportCommand from './cli/commands/ImportCommand.js';
 import AppConfiguration from './config/AppConfiguration.js';
 import LabymodCapeProvider from './minecraft/cape/provider/LabymodCapeProvider.js';
 import MojangCapeProvider from './minecraft/cape/provider/MojangCapeProvider.js';
@@ -15,6 +16,8 @@ container.register('Router', { useClass: MinecraftV1Router }, { lifecycle: Lifec
 container.register('CapeProvider', { useClass: MojangCapeProvider }, { lifecycle: Lifecycle.Singleton });
 container.register('CapeProvider', { useClass: OptifineCapeProvider }, { lifecycle: Lifecycle.Singleton });
 container.register('CapeProvider', { useClass: LabymodCapeProvider }, { lifecycle: Lifecycle.Singleton });
+
+container.register('CliCommand', { useClass: ImportCommand }, { lifecycle: Lifecycle.Singleton });
 
 container.register('value.proxy_server_uris', {
   useFactory: (container): string[] => {

@@ -1,7 +1,7 @@
 import Mri from 'mri';
 import { getAppInfo } from '../constants.js';
 
-export type AppCommand = 'web' | 'queue-worker';
+export type AppCommand = 'web' | 'queue-worker' | 'cli';
 export type AppArguments = { command: AppCommand };
 
 type ParsedCliArguments = {
@@ -11,7 +11,7 @@ type ParsedCliArguments = {
 }
 
 export default class CliArgumentProvider {
-  private static readonly VALID_COMMANDS: AppCommand[] = ['web', 'queue-worker'];
+  private static readonly VALID_COMMANDS: AppCommand[] = ['web', 'queue-worker', 'cli'];
 
   static determineAppArguments(): AppArguments {
     const parsedArgs = this.getParsedArgs();
@@ -28,13 +28,14 @@ export default class CliArgumentProvider {
       this.printHelp();
       process.exit(1);
     }
-    if (parsedArgs._.length !== 1) {
-      throw new Error('Expected exactly one command, but got ' + JSON.stringify(parsedArgs._));
-    }
 
     return {
       command: this.toAppCommand(parsedArgs._[0])
     };
+  }
+
+  static determineLeftoverArgs(): string[] {
+    return this.getParsedArgs()._.slice(1);
   }
 
   private static printHelp(): void {

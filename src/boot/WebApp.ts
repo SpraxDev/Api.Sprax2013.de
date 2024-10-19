@@ -1,4 +1,5 @@
 import { container } from 'tsyringe';
+import CliArgumentProvider from '../cli/CliArgumentProvider.js';
 import AppConfiguration from '../config/AppConfiguration.js';
 import { IS_PRODUCTION } from '../constants.js';
 import DatabaseClient from '../database/DatabaseClient.js';
@@ -11,6 +12,10 @@ export default class WebApp implements App {
   private webServer: FastifyWebServer | undefined;
 
   async boot(): Promise<void> {
+    if (CliArgumentProvider.determineLeftoverArgs().length !== 0) {
+      throw new Error('Invalid number of arguments');
+    }
+
     if (IS_PRODUCTION) {
       await container.resolve(DatabaseClient).runDatabaseMigrations();
     }

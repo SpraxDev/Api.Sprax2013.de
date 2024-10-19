@@ -1,6 +1,7 @@
 import './container-init.js';
 import { container } from 'tsyringe';
 import type App from './boot/App.js';
+import CommandLineApp from './boot/CommandLineApp.js';
 import QueueWorkerApp from './boot/QueueWorkerApp.js';
 import WebApp from './boot/WebApp.js';
 import CliArgumentProvider, { AppCommand } from './cli/CliArgumentProvider.js';
@@ -41,7 +42,7 @@ function registerShutdownHooks(): void {
     await SentrySdk.shutdown();
 
     console.log('Finished graceful shutdown.');
-    process.exit(0);
+    process.exit();
   };
 
   process.on('SIGTERM', handleShutdown);
@@ -56,5 +57,7 @@ function createApp(appCommand: AppCommand): App {
       return new WebApp();
     case 'queue-worker':
       return new QueueWorkerApp();
+    case 'cli':
+      return new CommandLineApp();
   }
 }
