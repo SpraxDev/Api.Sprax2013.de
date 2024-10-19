@@ -21,13 +21,16 @@ export default class TaskScheduler implements Disposable {
   ) {
   }
 
-  start(): void {
+  start(isWebApp: boolean): void {
     const fiveMinutes = 5 * 60 * 1000;
 
     this.scheduleAndRunDelayed(this.proxyPoolHttpClientHealthcheckTask, 30_000);
-    this.scheduleAndRunDelayed(this.updateMinecraftServerBlocklistTask, fiveMinutes);
     this.scheduleAndRunDelayed(this.clearExpiredEntriesInSetsWithTtlTask, fiveMinutes);
-    this.scheduleAndRunDelayed(this.writeImportQueueSizeToQuestDBTask, fiveMinutes / 2);
+
+    if (isWebApp) {
+      this.scheduleAndRunDelayed(this.updateMinecraftServerBlocklistTask, fiveMinutes);
+      this.scheduleAndRunDelayed(this.writeImportQueueSizeToQuestDBTask, fiveMinutes / 2);
+    }
   }
 
   dispose(): void {
