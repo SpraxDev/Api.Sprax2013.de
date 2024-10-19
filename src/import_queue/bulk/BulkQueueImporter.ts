@@ -2,14 +2,18 @@ import * as  PrismaClient from '@prisma/client';
 import Fs from 'node:fs';
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../../database/DatabaseClient.js';
-import UUID from '../../util/UUID.js';
+import BulkImporter from './importer/BulkImporter.js';
+import ProfileTextureValueBulkImporter from './importer/ProfileTextureValueBulkImporter.js';
+import UsernameBulkImporter from './importer/UsernameBulkImporter.js';
+import UuidBulkImporter from './importer/UuidBulkImporter.js';
 
 export type BulkQueueImportResult = {
   importGroupId: bigint,
   queued: number,
   error: number,
   duplicate: number,
-  lastError: string | null
+  lastError: string | null,
+  aborted: boolean
 }
 
 @singleton()
@@ -19,12 +23,24 @@ export default class BulkQueueImporter {
   ) {
   }
 
-  async importEachLine(filePath: string, type: 'uuid', importingApiKeyId: bigint): Promise<BulkQueueImportResult> {
+  async importEachLine(filePath: string, type: 'uuid' | 'username' | 'profile-texture-value', importingApiKeyId: bigint): Promise<BulkQueueImportResult> {
     const fileHandle = await Fs.promises.open(filePath, 'r');
     const totalFileBytes = (await fileHandle.stat()).size;
 
-    if (type !== 'uuid') {
-      throw new Error(`Unsupported bulk queue import type: ${type}`);
+    let payloadImporter: BulkImporter;
+    switch (type) {
+      case 'uuid':
+        payloadImporter = new UuidBulkImporter();
+        break;
+      case 'username':
+        payloadImporter = new UsernameBulkImporter();
+        break;
+      case 'profile-texture-value':
+        payloadImporter = new ProfileTextureValueBulkImporter(new UuidBulkImporter());
+        break;
+
+      default:
+        throw new Error(`Unsupported bulk queue import type: ${type}`);
     }
 
     try {
@@ -45,7 +61,8 @@ export default class BulkQueueImporter {
           queued: 0,
           error: 0,
           duplicate: 0,
-          lastError: null
+          lastError: null,
+          aborted: false
         };
 
         const insertBatch: PrismaClient.Prisma.ImportTaskCreateManyInput[] = [];
@@ -62,22 +79,20 @@ export default class BulkQueueImporter {
             lastProgressReportTotalPayloads = totalPayloadsProcessed;
           }
 
-          if (!UUID.looksLikeUuid(payload)) {
+          const validationResult = payloadImporter.isValidPayload(payload);
+          if (validationResult !== true) {
             ++result.error;
-            result.lastError = `Invalid UUID: ${JSON.stringify(payload)}`;
-            if (result.error >= 5) {
-              result.lastError = `Aborting import due to too many errors (previous error: ${result.lastError})`;
-              break;
-            }
+            result.lastError = validationResult;
+            //            if (result.error >= 5) {
+            //              result.aborted = true;
+            //              result.lastError = `Aborting import due to too many errors (previous error: ${result.lastError})`;
+            //              break;
+            //            }
 
             continue;
           }
 
-          insertBatch.push({
-            payload: Buffer.from(UUID.normalize(payload)),
-            payloadType: 'UUID',
-            importGroupId: importGroup.id
-          });
+          insertBatch.push(...payloadImporter.createTasks(payload, importGroup.id));
           if (insertBatch.length >= 250) {
             const newlyQueued = await this.writeBatch(transaction, insertBatch);
             result.queued += newlyQueued;

@@ -4,14 +4,14 @@ import BulkQueueImporter from '../../import_queue/bulk/BulkQueueImporter.js';
 import CliCommand from './CliCommand.js';
 
 type ImportCommandArgs = {
-  type: 'uuid',
+  type: 'uuid' | 'username' | 'profile-texture-value',
   filePath: string,
   apiKeyId: bigint
 };
 
 @singleton()
 export default class ImportCommand implements CliCommand {
-  private readonly VALID_IMPORT_TYPES = ['uuid'] satisfies ImportCommandArgs['type'][];
+  private readonly VALID_IMPORT_TYPES: string[] = ['uuid', 'username', 'profile-texture-value'] satisfies ImportCommandArgs['type'][];
 
   constructor(
     private readonly bulkQueueImporter: BulkQueueImporter
@@ -41,11 +41,11 @@ export default class ImportCommand implements CliCommand {
     const result = await this.bulkQueueImporter.importEachLine(parsedArgs.filePath, parsedArgs.type, parsedArgs.apiKeyId);
     console.log('\nFinished adding everything to the import queue:');
     console.log(result);
-    return true;
+    return !result.aborted;
   }
 
   private parseArgs(args: string[]): ImportCommandArgs {
-    if (!['uuid', 'username'].includes(args[0])) {
+    if (!this.VALID_IMPORT_TYPES.includes(args[0])) {
       throw new Error(`Invalid import type ${JSON.stringify(args[0])} – Expected one of [${this.VALID_IMPORT_TYPES.join(', ')}]`);
     }
     if (args[1].length === 0 || !Fs.existsSync(args[1])) {
