@@ -48,6 +48,7 @@ export default class MinecraftProfileTextures {
   }
 
   static isOfficialSkinUrl(skinUrl: string): boolean {
-    return skinUrl != null && new URL(skinUrl).hostname.endsWith('.minecraft.net');
+    const parsedHostname = new URL(skinUrl).hostname;
+    return parsedHostname.endsWith('.minecraft.net') || parsedHostname.endsWith('.mojang.com');
   }
 }
