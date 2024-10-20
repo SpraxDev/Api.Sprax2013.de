@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { container, Lifecycle } from 'tsyringe';
 import CreateInternalApiKeyCommand from './cli/commands/CreateInternalApiKeyCommand.js';
 import ImportCommand from './cli/commands/ImportCommand.js';
+import MigrateSkinUrlsCommand from './cli/commands/MigrateSkinUrlsCommand.js';
 import AppConfiguration from './config/AppConfiguration.js';
 import LabymodCapeProvider from './minecraft/cape/provider/LabymodCapeProvider.js';
 import MojangCapeProvider from './minecraft/cape/provider/MojangCapeProvider.js';
@@ -20,6 +21,7 @@ container.register('CapeProvider', { useClass: LabymodCapeProvider }, { lifecycl
 
 container.register('CliCommand', { useClass: ImportCommand }, { lifecycle: Lifecycle.Singleton });
 container.register('CliCommand', { useClass: CreateInternalApiKeyCommand }, { lifecycle: Lifecycle.Singleton });
+container.register('CliCommand', { useClass: MigrateSkinUrlsCommand }, { lifecycle: Lifecycle.Singleton });
 
 container.register('value.proxy_server_uris', {
   useFactory: (container): string[] => {
