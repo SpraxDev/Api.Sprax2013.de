@@ -83,6 +83,8 @@ export default class MinecraftSkinCache {
         where: { imageSha256: originalImageSha256 }
       });
 
+      const parsedTextures = textureProperty?.value ? MinecraftProfileTextures.fromPropertyValue(textureProperty.value) : null;
+
       if (existingSkinImage == null) {
         existingSkinImage = await transaction.skin.create({
           data: {
@@ -102,7 +104,8 @@ export default class MinecraftSkinCache {
               create: {
                 url: skinUrl,
                 textureValue: textureProperty?.value,
-                textureSignature: textureProperty?.signature
+                textureSignature: textureProperty?.signature,
+                createdAt: parsedTextures?.timestamp
               }
             } : undefined
           },
@@ -120,7 +123,8 @@ export default class MinecraftSkinCache {
               url: skinUrl,
               textureValue: textureProperty?.value,
               textureSignature: textureProperty?.signature,
-              imageId: existingSkinImage.id
+              imageId: existingSkinImage.id,
+              createdAt: parsedTextures?.timestamp
             }
           });
         }
