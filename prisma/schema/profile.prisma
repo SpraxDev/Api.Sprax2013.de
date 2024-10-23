@@ -6,9 +6,9 @@ model Profile {
   firstSeen     DateTime @default(now()) @map("first_seen") @db.Timestamptz()
   deleted       Boolean  @default(false)
 
-  profileRecentSkins ProfileRecentSkin[]
-  profileRecentCapes ProfileRecentCape[]
-  apiKeys            ApiKey[]
+  skinsSeenWith ProfileSeenSkin[]
+  capesSeenWith ProfileSeenCape[]
+  apiKeys       ApiKey[]
 
   @@map("profiles")
 }

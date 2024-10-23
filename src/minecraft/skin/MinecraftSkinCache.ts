@@ -142,7 +142,7 @@ export default class MinecraftSkinCache {
           await container.resolve(MinecraftProfileService).provideProfileByUuid(profileId);
         }
 
-        const existingHistoryEntry = await transaction.profileRecentSkin.findUnique({
+        const existingHistoryEntry = await transaction.profileSeenSkin.findUnique({
           where: {
             profileId_skinId: {
               profileId,
@@ -155,7 +155,7 @@ export default class MinecraftSkinCache {
         const overrideFirstSeenUsing = existingHistoryEntry != null && existingHistoryEntry.firstSeenUsing > parsedTextures.timestamp;
 
         if (updateHistoryEntry) {
-          await transaction.profileRecentSkin.upsert({
+          await transaction.profileSeenSkin.upsert({
             where: {
               profileId_skinId: {
                 profileId,
@@ -190,7 +190,7 @@ export default class MinecraftSkinCache {
       return;
     }
 
-    await this.databaseClient.profileRecentSkin.upsert({
+    await this.databaseClient.profileSeenSkin.upsert({
       where: {
         profileId_skinId: {
           profileId: profile.id,

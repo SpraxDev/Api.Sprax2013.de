@@ -18,7 +18,7 @@ export default class CapeCache {
   }
 
   async findByProfileAndType(profileId: string, capeType: PrismaClient.CapeType): Promise<CachedProfileCape | null> {
-    const cape = await this.databaseClient.profileRecentCape.findFirst({
+    const cape = await this.databaseClient.profileSeenCape.findFirst({
       where: {
         profileId,
         cape: { type: capeType }
@@ -78,7 +78,7 @@ export default class CapeCache {
         });
       }
 
-      const existingHistoryEntry = await transaction.profileRecentCape.findUnique({
+      const existingHistoryEntry = await transaction.profileSeenCape.findUnique({
         where: {
           profileId_capeId: {
             profileId: parsedTextures.profileId,
@@ -91,7 +91,7 @@ export default class CapeCache {
       const overrideFirstSeenUsing = existingHistoryEntry != null && existingHistoryEntry.firstSeenUsing > parsedTextures.timestamp;
 
       if (updateHistoryEntry) {
-        await transaction.profileRecentCape.upsert({
+        await transaction.profileSeenCape.upsert({
           where: {
             profileId_capeId: {
               profileId: parsedTextures.profileId,
@@ -142,7 +142,7 @@ export default class CapeCache {
         return;
       }
 
-      await transaction.profileRecentCape.upsert({
+      await transaction.profileSeenCape.upsert({
         where: {
           profileId_capeId: {
             profileId: profileIdSeenWithCapeJustNow,

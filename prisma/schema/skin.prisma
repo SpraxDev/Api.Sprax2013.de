@@ -8,8 +8,8 @@ model Skin {
   normalizedImage         Skin?  @relation("NormalizedSkin", fields: [normalizedImageId], references: [id])
   knownNonNormalizedSkins Skin[] @relation("NormalizedSkin")
 
-  skinUrls           SkinUrl[]
-  profileRecentSkins ProfileRecentSkin[]
+  skinUrls         SkinUrl[]
+  profilesSeenWith ProfileSeenSkin[]
 
   @@map("skins")
 }
@@ -26,7 +26,7 @@ model SkinUrl {
   @@map("skin_urls")
 }
 
-model ProfileRecentSkin {
+model ProfileSeenSkin {
   profileId      String   @map("profile_id") @db.Uuid
   skinId         BigInt   @map("skin_id")
   firstSeenUsing DateTime @default(now()) @map("first_seen_using") @db.Timestamptz()
@@ -36,5 +36,5 @@ model ProfileRecentSkin {
   skin    Skin    @relation(fields: [skinId], references: [id])
 
   @@id([profileId, skinId])
-  @@map("profile_recent_skins")
+  @@map("profile_seen_skins")
 }
