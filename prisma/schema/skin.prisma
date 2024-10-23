@@ -1,17 +1,17 @@
-model SkinImage {
+model Skin {
   id                BigInt   @id @default(dbgenerated("generate_snowflake('skin_images_id_seq'::text)"))
   imageSha256       Bytes    @unique @map("image_sha256")
   imageBytes        Bytes    @map("image_bytes")
   normalizedImageId BigInt?  @map("normalized_image_id")
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
-  normalizedImage         SkinImage?  @relation("NormalizedSkin", fields: [normalizedImageId], references: [id])
-  knownNonNormalizedSkins SkinImage[] @relation("NormalizedSkin")
+  normalizedImage         Skin?  @relation("NormalizedSkin", fields: [normalizedImageId], references: [id])
+  knownNonNormalizedSkins Skin[] @relation("NormalizedSkin")
 
   skinUrls           SkinUrl[]
   profileRecentSkins ProfileRecentSkin[]
 
-  @@map("skin_images")
+  @@map("skins")
 }
 
 model SkinUrl {
@@ -21,20 +21,20 @@ model SkinUrl {
   textureSignature String?  @map("texture_signature")
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
-  image SkinImage @relation(fields: [imageId], references: [id])
+  image Skin @relation(fields: [imageId], references: [id])
 
   @@map("skin_urls")
 }
 
 model ProfileRecentSkin {
   profileId      String   @map("profile_id") @db.Uuid
-  skinImageId    BigInt   @map("skin_image_id")
+  skinId         BigInt   @map("skin_id")
   firstSeenUsing DateTime @default(now()) @map("first_seen_using") @db.Timestamptz()
   lastSeenUsing  DateTime @default(now()) @map("last_seen_using") @db.Timestamptz()
 
-  profile Profile   @relation(fields: [profileId], references: [id])
-  skin    SkinImage @relation(fields: [skinImageId], references: [id])
+  profile Profile @relation(fields: [profileId], references: [id])
+  skin    Skin    @relation(fields: [skinId], references: [id])
 
-  @@id([profileId, skinImageId])
+  @@id([profileId, skinId])
   @@map("profile_recent_skins")
 }

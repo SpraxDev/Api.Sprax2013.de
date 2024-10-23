@@ -61,7 +61,7 @@ export default class MinecraftSkinCache {
 
   async existsByImageBytes(skin: Buffer): Promise<boolean> {
     const skinImageSha256 = this.computeSha256(skin);
-    const existingSkinImage = await this.databaseClient.skinImage.findUnique({
+    const existingSkinImage = await this.databaseClient.skin.findUnique({
       where: { imageSha256: skinImageSha256 },
       select: { imageSha256: true }
     });
@@ -78,13 +78,13 @@ export default class MinecraftSkinCache {
     const normalizedImageSha256 = this.computeSha256(normalizedSkin);
 
     await this.databaseClient.$transaction(async (transaction) => {
-      let existingSkinImage = await transaction.skinImage.findUnique({
+      let existingSkinImage = await transaction.skin.findUnique({
         select: { id: true },
         where: { imageSha256: originalImageSha256 }
       });
 
       if (existingSkinImage == null) {
-        existingSkinImage = await transaction.skinImage.create({
+        existingSkinImage = await transaction.skin.create({
           data: {
             imageSha256: originalImageSha256,
             imageBytes: skin,
@@ -140,9 +140,9 @@ export default class MinecraftSkinCache {
 
         const existingHistoryEntry = await transaction.profileRecentSkin.findUnique({
           where: {
-            profileId_skinImageId: {
+            profileId_skinId: {
               profileId,
-              skinImageId: existingSkinImage.id
+              skinId: existingSkinImage.id
             }
           },
           select: { firstSeenUsing: true, lastSeenUsing: true }
@@ -153,14 +153,14 @@ export default class MinecraftSkinCache {
         if (updateHistoryEntry) {
           await transaction.profileRecentSkin.upsert({
             where: {
-              profileId_skinImageId: {
+              profileId_skinId: {
                 profileId,
-                skinImageId: existingSkinImage.id
+                skinId: existingSkinImage.id
               }
             },
             create: {
               profileId,
-              skinImageId: existingSkinImage.id,
+              skinId: existingSkinImage.id,
               firstSeenUsing: parsedTextures.timestamp,
               lastSeenUsing: parsedTextures.timestamp
             },
@@ -188,14 +188,14 @@ export default class MinecraftSkinCache {
 
     await this.databaseClient.profileRecentSkin.upsert({
       where: {
-        profileId_skinImageId: {
+        profileId_skinId: {
           profileId: profile.id,
-          skinImageId: cachedSkin.imageId
+          skinId: cachedSkin.imageId
         }
       },
       create: {
         profileId: profile.id,
-        skinImageId: cachedSkin.imageId,
+        skinId: cachedSkin.imageId,
         firstSeenUsing: parsedTextures.timestamp,
         lastSeenUsing: parsedTextures.timestamp
       },
