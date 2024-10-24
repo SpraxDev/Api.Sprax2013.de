@@ -130,11 +130,18 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
 
             await this.processSkinUrl(skinUrl, fallbackImageBytes, migrateResult);
 
-            const apiKeyId = apiKeyCache.get(apiKeyIdentifier) ?? await this.findApiKeyId(transaction, apiKeyIdentifier);
-            const importGroupId = importGroupCache.get(apiKeyId) ?? (await transaction.importGroup.create({
-              data: { importingApiKeyId: apiKeyId, totalParsedPayloads: -1 },
-              select: { id: true }
-            })).id;
+            if (!apiKeyCache.has(apiKeyIdentifier)) {
+              apiKeyCache.set(apiKeyIdentifier, await this.findApiKeyId(transaction, apiKeyIdentifier));
+            }
+            const apiKeyId = apiKeyCache.get(apiKeyIdentifier)!;
+
+            if (!importGroupCache.has(apiKeyId)) {
+              importGroupCache.set(apiKeyId, (await transaction.importGroup.create({
+                data: { importingApiKeyId: apiKeyId, totalParsedPayloads: -1 },
+                select: { id: true }
+              })).id);
+            }
+            const importGroupId = importGroupCache.get(apiKeyId)!;
 
             if (importType === 'profile-texture-values') {
               const [textureValue, textureSignature] = this.splitPayloadTextureValues(payload);
