@@ -1,7 +1,7 @@
 -- CreateTable
 CREATE TABLE "profiles" (
     "id" UUID NOT NULL,
-    "name_lowercase" TEXT NOT NULL,
+    "name_lowercase" TEXT NOT NULL CHECK ( "name_lowercase" = lower("name_lowercase") ),
     "raw" JSONB NOT NULL,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "first_seen" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
