@@ -89,8 +89,10 @@ export default class LazyImportTaskCreator implements Disposable {
     const payloadType = 'UUID_UPDATE_THIRD_PARTY_CAPES';
     const payload = Buffer.from(UUID.normalize(profile.id));
 
-    const now = await this.databaseClient.fetchNow();
+
     await this.databaseClient.$transaction(async (transaction) => {
+      const now = await this.databaseClient.fetchNow(transaction);
+
       await transaction.importTask.deleteMany({
         where: {
           payloadType,
