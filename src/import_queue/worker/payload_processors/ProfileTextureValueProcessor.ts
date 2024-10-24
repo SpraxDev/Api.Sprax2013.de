@@ -1,10 +1,12 @@
 import * as PrismaClient from '@prisma/client';
 import { singleton } from 'tsyringe';
-import { CapeType } from '../../../minecraft/cape/CapeType.js';
-import UserCapeService from '../../../minecraft/cape/UserCapeService.js';
+import AutoProxiedHttpClient from '../../../http/clients/AutoProxiedHttpClient.js';
+import SkinPersister from '../../../minecraft/persistance/base/SkinPersister.js';
+import ByTexturesPropertyPersister from '../../../minecraft/persistance/ByTexturesPropertyPersister.js';
+import MinecraftSkinNormalizer from '../../../minecraft/skin/manipulator/MinecraftSkinNormalizer.js';
+import SkinImageManipulator from '../../../minecraft/skin/manipulator/SkinImageManipulator.js';
 import MinecraftSkinCache from '../../../minecraft/skin/MinecraftSkinCache.js';
-import MinecraftSkinService from '../../../minecraft/skin/MinecraftSkinService.js';
-import MinecraftProfile from '../../../minecraft/value-objects/MinecraftProfile.js';
+import { SkinRequestFailedException } from '../../../minecraft/skin/MinecraftSkinService.js';
 import MinecraftProfileTextures from '../../../minecraft/value-objects/MinecraftProfileTextures.js';
 import YggdrasilSignatureChecker from '../../../minecraft/yggdrasil/YggdrasilSignatureChecker.js';
 import PayloadProcessor from './PayloadProcessor.js';
@@ -14,8 +16,10 @@ export default class ProfileTextureValueProcessor implements PayloadProcessor {
   constructor(
     private readonly yggdrasilSignatureChecker: YggdrasilSignatureChecker,
     private readonly minecraftSkinCache: MinecraftSkinCache,
-    private readonly minecraftSkinService: MinecraftSkinService,
-    private readonly userCapeService: UserCapeService
+    private readonly httpClient: AutoProxiedHttpClient,
+    private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
+    private readonly skinPersister: SkinPersister,
+    private readonly byTexturesPropertyPersister: ByTexturesPropertyPersister
   ) {
   }
 
@@ -28,16 +32,21 @@ export default class ProfileTextureValueProcessor implements PayloadProcessor {
       return false;
     }
 
-    const storeTextureValue = await this.shouldBePersistedWithTextureValue(skinUrl, payload.value, payload.signature);
-    const skinTexturesToPersist = storeTextureValue ? {
-      name: 'textures',
-      value: payload.value,
-      signature: payload.signature as string
-    } : undefined;
+    const texturePropertiesAreValid = await this.shouldBePersistedWithTextureValue(skinUrl, payload.value, payload.signature);
+    if (texturePropertiesAreValid) {
+      await this.byTexturesPropertyPersister.persist({ value: payload.value, signature: payload.signature! });
+      return true;
+    }
 
-    await this.minecraftSkinService.fetchAndPersistSkin(skinUrl, skinTexturesToPersist);
-    await this.userCapeService.provide(MinecraftProfile.recreateFromTextures(payload.value, payload.signature), CapeType.MOJANG);
+    const skinImage = await this.httpClient.get(skinUrl);
+    if (!skinImage.ok) {
+      throw new SkinRequestFailedException(skinUrl, skinImage.statusCode);
+    }
 
+    const originalSkin = await SkinImageManipulator.createByImage(skinImage.body);
+    const normalizedSkin = await this.minecraftSkinNormalizer.normalizeSkin(originalSkin);
+
+    await this.skinPersister.persist(skinImage.body, await normalizedSkin.toPngBuffer(), skinUrl);
     return true;
   }
 

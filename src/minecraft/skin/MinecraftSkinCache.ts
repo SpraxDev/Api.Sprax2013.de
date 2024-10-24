@@ -1,10 +1,6 @@
 import Crypto from 'node:crypto';
-import { container, singleton } from 'tsyringe';
+import { singleton } from 'tsyringe';
 import DatabaseClient from '../../database/DatabaseClient.js';
-import { UuidToProfileResponse } from '../MinecraftApiClient.js';
-import MinecraftProfileService from '../profile/MinecraftProfileService.js';
-import MinecraftProfile from '../value-objects/MinecraftProfile.js';
-import MinecraftProfileTextures from '../value-objects/MinecraftProfileTextures.js';
 import SkinImageManipulator from './manipulator/SkinImageManipulator.js';
 
 export type CachedSkin = {
@@ -18,6 +14,16 @@ export default class MinecraftSkinCache {
   constructor(
     private readonly databaseClient: DatabaseClient
   ) {
+  }
+
+  async findIdByUrl(skinUrl: string): Promise<bigint | null> {
+    const skinInDatabase = await this.databaseClient.skinUrl.findUnique({
+      where: { url: skinUrl },
+      select: {
+        imageId: true
+      }
+    });
+    return skinInDatabase?.imageId ?? null;
   }
 
   async findByUrl(skinUrl: string): Promise<CachedSkin | null> {
@@ -66,180 +72,6 @@ export default class MinecraftSkinCache {
       select: { imageSha256: true }
     });
     return existingSkinImage != null;
-  }
-
-  async persist(
-    skin: Buffer,
-    normalizedSkin: Buffer,
-    skinUrl: string | null,
-    textureProperty?: UuidToProfileResponse['properties'][0]
-  ): Promise<void> {
-    const originalImageSha256 = this.computeSha256(skin);
-    const normalizedImageSha256 = this.computeSha256(normalizedSkin);
-
-    await this.databaseClient.$transaction(async (transaction) => {
-      let existingSkinImage = await transaction.skin.findUnique({
-        select: { id: true },
-        where: { imageSha256: originalImageSha256 }
-      });
-
-      const parsedTextures = textureProperty?.value ? MinecraftProfileTextures.fromPropertyValue(textureProperty.value) : null;
-
-      if (existingSkinImage == null) {
-        existingSkinImage = await transaction.skin.create({
-          data: {
-            imageSha256: originalImageSha256,
-            imageBytes: skin,
-            normalizedImage: {
-              connectOrCreate: {
-                where: { imageSha256: normalizedImageSha256 },
-                create: {
-                  imageSha256: normalizedImageSha256,
-                  imageBytes: normalizedSkin
-                }
-              }
-            },
-
-            skinUrls: skinUrl != null ? {
-              create: {
-                url: skinUrl,
-                textureValue: textureProperty?.value,
-                textureSignature: textureProperty?.signature,
-                createdAt: parsedTextures?.timestamp
-              }
-            } : undefined
-          },
-          select: { id: true }
-        });
-      }
-
-      if (skinUrl != null) {
-        const existingSkinUrl = await transaction.skinUrl.findUnique({
-          where: { url: skinUrl }
-        });
-        if (existingSkinUrl == null) {
-          await transaction.skinUrl.create({
-            data: {
-              url: skinUrl,
-              textureValue: textureProperty?.value,
-              textureSignature: textureProperty?.signature,
-              imageId: existingSkinImage.id,
-              createdAt: parsedTextures?.timestamp
-            }
-          });
-        }
-      }
-
-      if (textureProperty?.value != null) {
-        const parsedTextures = MinecraftProfileTextures.fromPropertyValue(textureProperty.value);
-        const profileId = parsedTextures.profileId;
-
-        const profile = await transaction.profile.findUnique({
-          select: { id: true },
-          where: { id: profileId }
-        });
-        if (profile == null) {
-          await container.resolve(MinecraftProfileService).provideProfileByUuid(profileId);
-        }
-
-        const existingSkinHistoryEntry = await transaction.profileSeenSkin.findUnique({
-          where: {
-            profileId_skinId: {
-              profileId,
-              skinId: existingSkinImage.id
-            }
-          },
-          select: { firstSeenUsing: true, lastSeenUsing: true }
-        });
-        const updateSkinHistoryEntry = existingSkinHistoryEntry == null || existingSkinHistoryEntry.lastSeenUsing < parsedTextures.timestamp;
-        const overrideSkinFirstSeenUsing = existingSkinHistoryEntry != null && existingSkinHistoryEntry.firstSeenUsing > parsedTextures.timestamp;
-
-        if (updateSkinHistoryEntry) {
-          await transaction.profileSeenSkin.upsert({
-            where: {
-              profileId_skinId: {
-                profileId,
-                skinId: existingSkinImage.id
-              }
-            },
-            create: {
-              profileId,
-              skinId: existingSkinImage.id,
-              firstSeenUsing: parsedTextures.timestamp,
-              lastSeenUsing: parsedTextures.timestamp
-            },
-            update: {
-              firstSeenUsing: overrideSkinFirstSeenUsing ? parsedTextures.timestamp : undefined,
-              lastSeenUsing: parsedTextures.timestamp
-            }
-          });
-        }
-
-        const existingNameHistoryEntry = await transaction.profileSeenNames.findUnique({
-          where: {
-            profileId_nameLowercase: {
-              profileId,
-              nameLowercase: parsedTextures.profileName.toLowerCase()
-            }
-          },
-          select: { firstSeen: true, lastSeen: true }
-        });
-        const updateNameHistoryEntry = existingNameHistoryEntry == null || existingNameHistoryEntry.lastSeen < parsedTextures.timestamp;
-        const overrideNameFirstSeenUsing = existingNameHistoryEntry != null && existingNameHistoryEntry.firstSeen > parsedTextures.timestamp;
-
-        if (updateNameHistoryEntry) {
-          await transaction.profileSeenNames.upsert({
-            where: {
-              profileId_nameLowercase: {
-                profileId,
-                nameLowercase: parsedTextures.profileName.toLowerCase()
-              }
-            },
-            create: {
-              profileId,
-              nameLowercase: parsedTextures.profileName.toLowerCase(),
-              firstSeen: parsedTextures.timestamp,
-              lastSeen: parsedTextures.timestamp
-            },
-            update: {
-              firstSeen: overrideNameFirstSeenUsing ? parsedTextures.timestamp : undefined,
-              lastSeen: parsedTextures.timestamp
-            }
-          });
-        }
-      }
-    });
-  }
-
-  async persistSkinHistory(profile: MinecraftProfile): Promise<void> {
-    const parsedTextures = profile.parseTextures();
-    const skinUrl = parsedTextures?.getSecureSkinUrl();
-    if (parsedTextures == null || skinUrl == null) {
-      return;
-    }
-
-    const cachedSkin = await this.findByUrl(skinUrl);
-    if (cachedSkin == null) {
-      return;
-    }
-
-    await this.databaseClient.profileSeenSkin.upsert({
-      where: {
-        profileId_skinId: {
-          profileId: profile.id,
-          skinId: cachedSkin.imageId
-        }
-      },
-      create: {
-        profileId: profile.id,
-        skinId: cachedSkin.imageId,
-        firstSeenUsing: parsedTextures.timestamp,
-        lastSeenUsing: parsedTextures.timestamp
-      },
-      update: {
-        lastSeenUsing: parsedTextures.timestamp
-      }
-    });
   }
 
   private computeSha256(buffer: Buffer): Buffer {

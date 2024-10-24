@@ -1,5 +1,7 @@
 import { singleton } from 'tsyringe';
 import SentrySdk from '../../util/SentrySdk.js';
+import CapePersister from '../persistance/base/CapePersister.js';
+import ProfileSeenCapePersister from '../persistance/base/ProfileSeenCapePersister.js';
 import MinecraftProfile from '../value-objects/MinecraftProfile.js';
 import CapeCache from './CapeCache.js';
 import { CapeType } from './CapeType.js';
@@ -12,7 +14,9 @@ export default class UserCapeService {
 
   constructor(
     private readonly capeCache: CapeCache,
-    private readonly userCapeProvider: UserCapeProvider
+    private readonly userCapeProvider: UserCapeProvider,
+    private readonly capePersister: CapePersister,
+    private readonly profileSeenCapePersister:ProfileSeenCapePersister
   ) {
   }
 
@@ -59,9 +63,10 @@ export default class UserCapeService {
 
     if (cape != null) {
       if (type === CapeType.MOJANG) {
-        await this.capeCache.persistMojangCape(cape.image, profile.getTexturesProperty()!);
+        await this.capePersister.persistMojangCape(profile.getTexturesProperty()!.value, cape.image);
       } else {
-        await this.capeCache.persistGenericCape(type, cape.image, cape.mimeType, profile.id);
+        const capeId = await this.capePersister.persistGenericCape(type, cape.image, cape.mimeType);
+        await this.profileSeenCapePersister.persist(profile.id, capeId, new Date());
       }
 
       return {

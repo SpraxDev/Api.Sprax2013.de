@@ -1,8 +1,9 @@
 import { singleton } from 'tsyringe';
-import LazyImportTaskCreator from '../../import_queue/LazyImportTaskCreator.js';
 import SentrySdk from '../../util/SentrySdk.js';
 import UUID from '../../util/UUID.js';
 import MinecraftApiClient, { UsernameToUuidResponse, type UuidToProfileResponse } from '../MinecraftApiClient.js';
+import ProfilePersister from '../persistance/base/ProfilePersister.js';
+import ByPlayerProfileLazyPersister from '../persistance/ByPlayerProfileLazyPersister.js';
 import SetWithTtl from '../SetWithTtl.js';
 import MinecraftProfileCache from './MinecraftProfileCache.js';
 
@@ -19,7 +20,8 @@ export default class MinecraftProfileService {
   constructor(
     private readonly profileCache: MinecraftProfileCache,
     private readonly minecraftApiClient: MinecraftApiClient,
-    private readonly lazyImportTaskCreator: LazyImportTaskCreator
+    private readonly profilePersister: ProfilePersister,
+    private readonly byPlayerProfileLazyPersister: ByPlayerProfileLazyPersister
   ) {
   }
 
@@ -82,15 +84,13 @@ export default class MinecraftProfileService {
     if (profile == null) {
       this.nullProfileCache.add(uuid.toLowerCase());
       if (profileInDatabase != null) {
-        await this.profileCache.persistProfileAsDeleted(profileInDatabase.profile.id);
+        await this.profilePersister.persistProfileAsDeleted(profileInDatabase.profile.id);
       }
 
       return null;
     }
 
-    await this.profileCache.persist(profile);
-    this.lazyImportTaskCreator.queueProfileUpdate(profile);
-
+    await this.byPlayerProfileLazyPersister.persist(profile);
     return {
       profile,
       ageInSeconds: 0

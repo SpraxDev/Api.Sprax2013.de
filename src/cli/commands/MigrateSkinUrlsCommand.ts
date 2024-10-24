@@ -5,6 +5,7 @@ import DatabaseClient from '../../database/DatabaseClient.js';
 import AutoProxiedHttpClient from '../../http/clients/AutoProxiedHttpClient.js';
 import ProfileTextureValueBulkImporter from '../../import_queue/bulk/importer/ProfileTextureValueBulkImporter.js';
 import UuidBulkImporter from '../../import_queue/bulk/importer/UuidBulkImporter.js';
+import SkinPersister from '../../minecraft/persistance/base/SkinPersister.js';
 import MinecraftSkinNormalizer from '../../minecraft/skin/manipulator/MinecraftSkinNormalizer.js';
 import SkinImageManipulator from '../../minecraft/skin/manipulator/SkinImageManipulator.js';
 import MinecraftSkinCache from '../../minecraft/skin/MinecraftSkinCache.js';
@@ -34,7 +35,8 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
     private readonly minecraftSkinCache: MinecraftSkinCache,
     private readonly httpClient: AutoProxiedHttpClient,
     private readonly databaseClient: DatabaseClient,
-    private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer
+    private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
+    private readonly skinPersister: SkinPersister
   ) {
   }
 
@@ -198,8 +200,8 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
   }
 
   private async processSkinUrl(skinUrl: string, fallbackImageBytes: string, migrateResult: MigrateResult): Promise<void> {
-    const cachedSkin = await this.minecraftSkinCache.findByUrl(skinUrl);
-    if (cachedSkin != null) {
+    const cachedSkinId = await this.minecraftSkinCache.findIdByUrl(skinUrl);
+    if (cachedSkinId != null) {
       ++migrateResult.duplicateSkinUrls;
       return;
     }
@@ -237,12 +239,11 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
     const originalSkin = await SkinImageManipulator.createByImage(skinImage);
     const normalizedSkin = await this.minecraftSkinNormalizer.normalizeSkin(originalSkin);
 
-    const isMinecraftSkinUrl = MinecraftProfileTextures.isOfficialSkinUrl(skinUrl);
-    await this.minecraftSkinCache.persist(
+    const isOfficialSkinUrl = MinecraftProfileTextures.isOfficialSkinUrl(skinUrl);
+    await this.skinPersister.persist(
       skinImage,
       await normalizedSkin.toPngBuffer(),
-      isMinecraftSkinUrl ? skinUrl : null,
-      undefined
+      isOfficialSkinUrl ? skinUrl : null
     );
   }
 

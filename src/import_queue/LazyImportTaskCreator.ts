@@ -16,6 +16,12 @@ export default class LazyImportTaskCreator implements Disposable {
   ) {
   }
 
+  lazyQueueTextureProperty(textureProperty: UuidToProfileResponse['properties'][0]): void {
+    this.trackPromise(this.queueTextureProperty(textureProperty));
+  }
+
+  //
+
   queueUuidUpdate(uuid: string): void {
     this.trackPromise(this.queueUuid(uuid));
   }
@@ -46,6 +52,21 @@ export default class LazyImportTaskCreator implements Disposable {
       .catch(SentrySdk.logAndCaptureError)
       .finally(() => this.danglingPromises.delete(promise));
   }
+
+  private async queueTextureProperty(textureProperty: UuidToProfileResponse['properties'][0]): Promise<void> {
+    await this.databaseClient.importTask.createMany({
+      data: [{
+        payload: Buffer.from(JSON.stringify({
+          value: textureProperty.value,
+          signature: textureProperty.signature
+        })),
+        payloadType: 'PROFILE_TEXTURE_VALUE'
+      }],
+      skipDuplicates: true
+    });
+  }
+
+  //
 
   private async queueUuid(uuid: string): Promise<void> {
     await this.databaseClient.importTask.createMany({

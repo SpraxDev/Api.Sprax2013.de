@@ -3,7 +3,9 @@ import Path from 'node:path';
 import { singleton } from 'tsyringe';
 import { APP_RESOURCES_DIR } from '../../constants.js';
 import AutoProxiedHttpClient from '../../http/clients/AutoProxiedHttpClient.js';
+import LazyImportTaskCreator from '../../import_queue/LazyImportTaskCreator.js';
 import { UuidToProfileResponse } from '../MinecraftApiClient.js';
+import SkinPersister from '../persistance/base/SkinPersister.js';
 import MinecraftProfile, { DefaultSkin } from '../value-objects/MinecraftProfile.js';
 import MinecraftProfileTextures from '../value-objects/MinecraftProfileTextures.js';
 import MinecraftSkinNormalizer from './manipulator/MinecraftSkinNormalizer.js';
@@ -20,7 +22,9 @@ export default class MinecraftSkinService {
   constructor(
     private readonly httpClient: AutoProxiedHttpClient,
     private readonly minecraftSkinCache: MinecraftSkinCache,
-    private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer
+    private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
+    private readonly skinPersister: SkinPersister,
+    private readonly lazyImportTaskCreator: LazyImportTaskCreator
   ) {
   }
 
@@ -50,13 +54,15 @@ export default class MinecraftSkinService {
     const originalSkin = await SkinImageManipulator.createByImage(skinImage.body);
     const normalizedSkin = await this.minecraftSkinNormalizer.normalizeSkin(originalSkin);
 
-    const isMinecraftSkinUrl = MinecraftProfileTextures.isOfficialSkinUrl(skinUrl);
-    await this.minecraftSkinCache.persist(
+    const isOfficialSkinUrl = MinecraftProfileTextures.isOfficialSkinUrl(skinUrl);
+    await this.skinPersister.persist(
       skinImage.body,
       await normalizedSkin.toPngBuffer(),
-      isMinecraftSkinUrl ? skinUrl : null,
-      isMinecraftSkinUrl ? textureProperty : undefined
+      isOfficialSkinUrl ? (textureProperty ?? null) : null
     );
+    if (textureProperty != null) {
+      this.lazyImportTaskCreator.lazyQueueTextureProperty(textureProperty);
+    }
 
     return {
       original: originalSkin,

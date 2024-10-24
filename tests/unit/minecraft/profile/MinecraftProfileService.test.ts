@@ -1,7 +1,8 @@
 import { jest } from '@jest/globals';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
-import LazyImportTaskCreator from '../../../../src/import_queue/LazyImportTaskCreator.js';
 import MinecraftApiClient from '../../../../src/minecraft/MinecraftApiClient.js';
+import ProfilePersister from '../../../../src/minecraft/persistance/base/ProfilePersister.js';
+import ByPlayerProfileLazyPersister from '../../../../src/minecraft/persistance/ByPlayerProfileLazyPersister.js';
 import MinecraftProfileCache from '../../../../src/minecraft/profile/MinecraftProfileCache.js';
 import MinecraftProfileService, { Profile } from '../../../../src/minecraft/profile/MinecraftProfileService.js';
 import SentrySdk from '../../../../src/util/SentrySdk.js';
@@ -9,7 +10,8 @@ import { EXISTING_MC_ID, EXISTING_MC_NAME, EXISTING_MC_PROFILE_RESPONSE } from '
 
 let profileCache: DeepMockProxy<MinecraftProfileCache>;
 let minecraftApiClient: DeepMockProxy<MinecraftApiClient>;
-let lazyImportTaskCreator: DeepMockProxy<LazyImportTaskCreator>;
+let profilePersister: DeepMockProxy<ProfilePersister>;
+let byPlayerProfileLazyPersister: DeepMockProxy<ByPlayerProfileLazyPersister>;
 let minecraftProfileService: MinecraftProfileService;
 
 beforeEach(() => {
@@ -23,12 +25,17 @@ beforeEach(() => {
       throw new Error('Not implemented');
     }
   });
-  lazyImportTaskCreator = mockDeep<LazyImportTaskCreator>({
+  profilePersister = mockDeep<ProfilePersister>({
     fallbackMockImplementation: () => {
       throw new Error('Not implemented');
     }
   });
-  minecraftProfileService = new MinecraftProfileService(profileCache, minecraftApiClient, lazyImportTaskCreator);
+  byPlayerProfileLazyPersister = mockDeep<ByPlayerProfileLazyPersister>({
+    fallbackMockImplementation: () => {
+      throw new Error('Not implemented');
+    }
+  });
+  minecraftProfileService = new MinecraftProfileService(profileCache, minecraftApiClient, profilePersister, byPlayerProfileLazyPersister);
 });
 
 describe('#provideProfileByUuid', () => {
@@ -71,8 +78,7 @@ describe('#provideProfileByUuid', () => {
     } satisfies Profile;
 
     profileCache.findByUuid.mockResolvedValue(null);
-    profileCache.persist.mockResolvedValue(undefined);
-    lazyImportTaskCreator.queueProfileUpdate.mockReturnValue(undefined);
+    byPlayerProfileLazyPersister.persist.mockResolvedValue(undefined);
     minecraftApiClient.fetchProfileForUuid.mockImplementation(() => {
       return new Promise((resolve) => {
         setImmediate(() => resolve(EXISTING_MC_PROFILE_RESPONSE));
@@ -95,10 +101,8 @@ describe('#provideProfileByUuid', () => {
     expect(profileCache.findByUuid).toHaveBeenCalledTimes(1);
     expect(profileCache.findByUuid).toHaveBeenCalledWith(EXISTING_MC_ID);
 
-    expect(profileCache.persist).toHaveBeenCalledTimes(1);
-    expect(profileCache.persist).toHaveBeenCalledWith(EXISTING_MC_PROFILE_RESPONSE);
-
-    expect(lazyImportTaskCreator.queueProfileUpdate).toHaveBeenCalledTimes(1);
+    expect(byPlayerProfileLazyPersister.persist).toHaveBeenCalledTimes(1);
+    expect(byPlayerProfileLazyPersister.persist).toHaveBeenCalledWith(EXISTING_MC_PROFILE_RESPONSE);
   });
 
   test('On Mojang API troubles, a recent but outdated cached profile is returned', async () => {
@@ -171,8 +175,7 @@ describe('#provideProfileByUsername', () => {
 
     profileCache.findByUsername.mockResolvedValue(null);
     profileCache.findByUuid.mockResolvedValue(null);
-    profileCache.persist.mockResolvedValue(undefined);
-    lazyImportTaskCreator.queueProfileUpdate.mockReturnValue(undefined);
+    byPlayerProfileLazyPersister.persist.mockResolvedValue(undefined);
     minecraftApiClient.fetchUuidForUsername.mockImplementation(() => {
       return new Promise((resolve) => {
         setImmediate(() => resolve({ id: EXISTING_MC_ID, name: EXISTING_MC_NAME }));
@@ -202,10 +205,8 @@ describe('#provideProfileByUsername', () => {
     expect(profileCache.findByUuid).toHaveBeenCalledTimes(1);
     expect(profileCache.findByUuid).toHaveBeenCalledWith(EXISTING_MC_ID);
 
-    expect(profileCache.persist).toHaveBeenCalledTimes(1);
-    expect(profileCache.persist).toHaveBeenCalledWith(EXISTING_MC_PROFILE_RESPONSE);
-
-    expect(lazyImportTaskCreator.queueProfileUpdate).toHaveBeenCalledTimes(1);
+    expect(byPlayerProfileLazyPersister.persist).toHaveBeenCalledTimes(1);
+    expect(byPlayerProfileLazyPersister.persist).toHaveBeenCalledWith(EXISTING_MC_PROFILE_RESPONSE);
   });
 
   test('Return a cached profile if it is very recent', async () => {
@@ -321,8 +322,7 @@ describe('#provideProfileByUsername', () => {
 
     profileCache.findByUsername.mockResolvedValue(cachedProfile);
     profileCache.findByUuid.mockResolvedValue(cachedProfile);
-    profileCache.persist.mockResolvedValue(undefined);
-    lazyImportTaskCreator.queueProfileUpdate.mockReturnValue(undefined);
+    byPlayerProfileLazyPersister.persist.mockResolvedValue(undefined);
     minecraftApiClient.fetchProfileForUuid.mockResolvedValue(EXISTING_MC_PROFILE_RESPONSE);
 
     await expect(minecraftProfileService.provideProfileByUsername(EXISTING_MC_NAME))
@@ -341,10 +341,8 @@ describe('#provideProfileByUsername', () => {
     expect(profileCache.findByUuid).toHaveBeenCalledTimes(1);
     expect(profileCache.findByUuid).toHaveBeenCalledWith(EXISTING_MC_ID);
 
-    expect(profileCache.persist).toHaveBeenCalledTimes(1);
-    expect(profileCache.persist).toHaveBeenCalledWith(EXISTING_MC_PROFILE_RESPONSE);
-
-    expect(lazyImportTaskCreator.queueProfileUpdate).toHaveBeenCalledTimes(1);
+    expect(byPlayerProfileLazyPersister.persist).toHaveBeenCalledTimes(1);
+    expect(byPlayerProfileLazyPersister.persist).toHaveBeenCalledWith(EXISTING_MC_PROFILE_RESPONSE);
   });
 
   test('If the cached username profile is not recent, try refreshing it but resolve UUID if not the same name', async () => {
@@ -357,8 +355,7 @@ describe('#provideProfileByUsername', () => {
     profileCache.findByUuid
       .mockResolvedValue(null)
       .mockResolvedValueOnce(outdatedCachedProfileForUsernameThatNowBelongsToAnotherUuid);
-    profileCache.persist.mockResolvedValue(undefined);
-    lazyImportTaskCreator.queueProfileUpdate.mockReturnValue(undefined);
+    byPlayerProfileLazyPersister.persist.mockResolvedValue(undefined);
     minecraftApiClient.fetchUuidForUsername.mockResolvedValue({ id: EXISTING_MC_ID, name: EXISTING_MC_NAME });
     minecraftApiClient.fetchProfileForUuid
       .mockResolvedValueOnce({ ...EXISTING_MC_PROFILE_RESPONSE, id: 'some-other-user', name: 'new_username' })
@@ -385,20 +382,12 @@ describe('#provideProfileByUsername', () => {
     expect(profileCache.findByUuid).toHaveBeenNthCalledWith(1, 'some-other-user');
     expect(profileCache.findByUuid).toHaveBeenNthCalledWith(2, EXISTING_MC_ID);
 
-    expect(profileCache.persist).toHaveBeenCalledTimes(2);
-    expect(profileCache.persist).toHaveBeenNthCalledWith(1, {
+    expect(byPlayerProfileLazyPersister.persist).toHaveBeenCalledTimes(2);
+    expect(byPlayerProfileLazyPersister.persist).toHaveBeenNthCalledWith(1, {
       ...EXISTING_MC_PROFILE_RESPONSE,
       id: 'some-other-user',
       name: 'new_username'
     });
-    expect(profileCache.persist).toHaveBeenNthCalledWith(2, EXISTING_MC_PROFILE_RESPONSE);
-
-    expect(lazyImportTaskCreator.queueProfileUpdate).toHaveBeenCalledTimes(2);
-    expect(lazyImportTaskCreator.queueProfileUpdate).toHaveBeenNthCalledWith(1, {
-      ...EXISTING_MC_PROFILE_RESPONSE,
-      id: 'some-other-user',
-      name: 'new_username'
-    });
-    expect(lazyImportTaskCreator.queueProfileUpdate).toHaveBeenNthCalledWith(2, EXISTING_MC_PROFILE_RESPONSE);
+    expect(byPlayerProfileLazyPersister.persist).toHaveBeenNthCalledWith(2, EXISTING_MC_PROFILE_RESPONSE);
   });
 });
