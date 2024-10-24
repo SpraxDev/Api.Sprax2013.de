@@ -21,3 +21,13 @@ view ProfileCache {
 
   @@map("profile_cache")
 }
+
+model ProfileSeenNames {
+  profileId     String   @map("profile_id") @db.Uuid
+  nameLowercase String   @map("name_lowercase")
+  firstSeen     DateTime @default(now()) @map("first_seen") @db.Timestamptz()
+  lastSeen      DateTime @default(now()) @map("last_seen") @db.Timestamptz()
+
+  @@id([profileId, nameLowercase])
+  @@map("profile_seen_names")
+}

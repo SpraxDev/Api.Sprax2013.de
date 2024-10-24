@@ -142,7 +142,7 @@ export default class MinecraftSkinCache {
           await container.resolve(MinecraftProfileService).provideProfileByUuid(profileId);
         }
 
-        const existingHistoryEntry = await transaction.profileSeenSkin.findUnique({
+        const existingSkinHistoryEntry = await transaction.profileSeenSkin.findUnique({
           where: {
             profileId_skinId: {
               profileId,
@@ -151,10 +151,10 @@ export default class MinecraftSkinCache {
           },
           select: { firstSeenUsing: true, lastSeenUsing: true }
         });
-        const updateHistoryEntry = existingHistoryEntry == null || existingHistoryEntry.lastSeenUsing < parsedTextures.timestamp;
-        const overrideFirstSeenUsing = existingHistoryEntry != null && existingHistoryEntry.firstSeenUsing > parsedTextures.timestamp;
+        const updateSkinHistoryEntry = existingSkinHistoryEntry == null || existingSkinHistoryEntry.lastSeenUsing < parsedTextures.timestamp;
+        const overrideSkinFirstSeenUsing = existingSkinHistoryEntry != null && existingSkinHistoryEntry.firstSeenUsing > parsedTextures.timestamp;
 
-        if (updateHistoryEntry) {
+        if (updateSkinHistoryEntry) {
           await transaction.profileSeenSkin.upsert({
             where: {
               profileId_skinId: {
@@ -169,8 +169,41 @@ export default class MinecraftSkinCache {
               lastSeenUsing: parsedTextures.timestamp
             },
             update: {
-              firstSeenUsing: overrideFirstSeenUsing ? parsedTextures.timestamp : undefined,
+              firstSeenUsing: overrideSkinFirstSeenUsing ? parsedTextures.timestamp : undefined,
               lastSeenUsing: parsedTextures.timestamp
+            }
+          });
+        }
+
+        const existingNameHistoryEntry = await transaction.profileSeenNames.findUnique({
+          where: {
+            profileId_nameLowercase: {
+              profileId,
+              nameLowercase: parsedTextures.profileName.toLowerCase()
+            }
+          },
+          select: { firstSeen: true, lastSeen: true }
+        });
+        const updateNameHistoryEntry = existingNameHistoryEntry == null || existingNameHistoryEntry.lastSeen < parsedTextures.timestamp;
+        const overrideNameFirstSeenUsing = existingNameHistoryEntry != null && existingNameHistoryEntry.firstSeen > parsedTextures.timestamp;
+
+        if (updateNameHistoryEntry) {
+          await transaction.profileSeenNames.upsert({
+            where: {
+              profileId_nameLowercase: {
+                profileId,
+                nameLowercase: parsedTextures.profileName.toLowerCase()
+              }
+            },
+            create: {
+              profileId,
+              nameLowercase: parsedTextures.profileName.toLowerCase(),
+              firstSeen: parsedTextures.timestamp,
+              lastSeen: parsedTextures.timestamp
+            },
+            update: {
+              firstSeen: overrideNameFirstSeenUsing ? parsedTextures.timestamp : undefined,
+              lastSeen: parsedTextures.timestamp
             }
           });
         }

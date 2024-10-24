@@ -3,6 +3,7 @@ import DatabaseClient from '../../database/DatabaseClient.js';
 import type { UuidToProfileResponse } from '../MinecraftApiClient.js';
 import MinecraftSkinCache from '../skin/MinecraftSkinCache.js';
 import MinecraftProfile from '../value-objects/MinecraftProfile.js';
+import MinecraftProfileTextures from '../value-objects/MinecraftProfileTextures.js';
 import { Profile } from './MinecraftProfileService.js';
 
 @singleton()
@@ -65,6 +66,44 @@ export default class MinecraftProfileCache {
         deleted: false
       }
     });
+
+    const textureProperty = new MinecraftProfile(profile).getTexturesProperty();
+    if (textureProperty?.value != null) {
+      const parsedTextures = MinecraftProfileTextures.fromPropertyValue(textureProperty.value);
+
+      const existingNameHistoryEntry = await this.databaseClient.profileSeenNames.findUnique({
+        where: {
+          profileId_nameLowercase: {
+            profileId: profile.id,
+            nameLowercase: profile.name.toLowerCase()
+          }
+        },
+        select: { firstSeen: true, lastSeen: true }
+      });
+      const updateNameHistoryEntry = existingNameHistoryEntry == null || existingNameHistoryEntry.lastSeen < parsedTextures.timestamp;
+      const overrideNameFirstSeenUsing = existingNameHistoryEntry != null && existingNameHistoryEntry.firstSeen > parsedTextures.timestamp;
+
+      if (updateNameHistoryEntry) {
+        await this.databaseClient.profileSeenNames.upsert({
+          where: {
+            profileId_nameLowercase: {
+              profileId: profile.id,
+              nameLowercase: profile.name.toLowerCase()
+            }
+          },
+          create: {
+            profileId: profile.id,
+            nameLowercase: profile.name.toLowerCase(),
+            firstSeen: parsedTextures.timestamp,
+            lastSeen: parsedTextures.timestamp
+          },
+          update: {
+            firstSeen: overrideNameFirstSeenUsing ? parsedTextures.timestamp : undefined,
+            lastSeen: parsedTextures.timestamp
+          }
+        });
+      }
+    }
 
     await this.minecraftSkinCache.persistSkinHistory(new MinecraftProfile(profile));
   }
