@@ -19,22 +19,20 @@ export default class MinecraftSkinCache {
   async findIdByUrl(skinUrl: string): Promise<bigint | null> {
     const skinInDatabase = await this.databaseClient.skinUrl.findUnique({
       where: { url: skinUrl },
-      select: {
-        imageId: true
-      }
+      select: { skinId: true }
     });
-    return skinInDatabase?.imageId ?? null;
+    return skinInDatabase?.skinId ?? null;
   }
 
   async findByUrl(skinUrl: string): Promise<CachedSkin | null> {
     const skinInDatabase = await this.databaseClient.skinUrl.findUnique({
       where: { url: skinUrl },
       select: {
-        image: {
+        skin: {
           select: {
             id: true,
             imageBytes: true,
-            normalizedImage: true
+            normalizedSkin: true
           }
         }
       }
@@ -44,14 +42,14 @@ export default class MinecraftSkinCache {
       return null;
     }
 
-    const skinImage = await SkinImageManipulator.createByImage(skinInDatabase.image.imageBytes);
+    const skinImage = await SkinImageManipulator.createByImage(skinInDatabase.skin.imageBytes);
     let normalizedSkin = skinImage;
-    if (skinInDatabase.image.normalizedImage != null) {
-      normalizedSkin = await SkinImageManipulator.createByImage(skinInDatabase.image.normalizedImage.imageBytes);
+    if (skinInDatabase.skin.normalizedSkin != null) {
+      normalizedSkin = await SkinImageManipulator.createByImage(skinInDatabase.skin.normalizedSkin.imageBytes);
     }
 
     return {
-      imageId: skinInDatabase.image.id,
+      imageId: skinInDatabase.skin.id,
       original: skinImage,
       normalized: normalizedSkin
     };

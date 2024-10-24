@@ -38,10 +38,10 @@ export default class SkinPersister {
       if (skinUrl != null) {
         const existingSkinByUrl = await transaction.skinUrl.findUnique({
           where: { url: skinUrl },
-          select: { imageId: true }
+          select: { skinId: true }
         });
         if (existingSkinByUrl != null) {
-          return existingSkinByUrl.imageId;
+          return existingSkinByUrl.skinId;
         }
       }
 
@@ -59,7 +59,7 @@ export default class SkinPersister {
               url: skinUrl,
               textureValue,
               textureSignature,
-              imageId: existingSkin.id,
+              skinId: existingSkin.id,
               createdAt
             }
           });
@@ -71,7 +71,7 @@ export default class SkinPersister {
         data: {
           imageSha256: originalImageSha256,
           imageBytes: originalSkinPng,
-          normalizedImage: {
+          normalizedSkin: {
             connectOrCreate: {
               where: { imageSha256: normalizedImageSha256 },
               create: {

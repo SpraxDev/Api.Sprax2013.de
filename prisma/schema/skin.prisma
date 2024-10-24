@@ -1,11 +1,11 @@
 model Skin {
-  id                BigInt   @id @default(dbgenerated("generate_snowflake('skin_images_id_seq'::text)"))
-  imageSha256       Bytes    @unique @map("image_sha256")
-  imageBytes        Bytes    @map("image_bytes")
-  normalizedImageId BigInt?  @map("normalized_image_id")
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  id               BigInt   @id @default(dbgenerated("generate_snowflake('skin_images_id_seq'::text)"))
+  imageSha256      Bytes    @unique @map("image_sha256")
+  imageBytes       Bytes    @map("image_bytes")
+  normalizedSkinId BigInt?  @map("normalized_skin_id")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
-  normalizedImage         Skin?  @relation("NormalizedSkin", fields: [normalizedImageId], references: [id])
+  normalizedSkin          Skin?  @relation("NormalizedSkin", fields: [normalizedSkinId], references: [id])
   knownNonNormalizedSkins Skin[] @relation("NormalizedSkin")
 
   skinUrls         SkinUrl[]
@@ -16,12 +16,12 @@ model Skin {
 
 model SkinUrl {
   url              String   @id
-  imageId          BigInt   @map("image_id")
+  skinId           BigInt   @map("skin_id")
   textureValue     String?  @map("texture_value")
   textureSignature String?  @map("texture_signature")
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
-  image Skin @relation(fields: [imageId], references: [id])
+  skin Skin @relation(fields: [skinId], references: [id])
 
   @@map("skin_urls")
 }
