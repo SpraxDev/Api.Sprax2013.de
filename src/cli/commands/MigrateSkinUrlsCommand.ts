@@ -239,7 +239,7 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
     const originalSkin = await SkinImageManipulator.createByImage(skinImage);
     const normalizedSkin = await this.minecraftSkinNormalizer.normalizeSkin(originalSkin);
 
-    const isOfficialSkinUrl = MinecraftProfileTextures.isOfficialSkinUrl(skinUrl);
+    const isOfficialSkinUrl = MinecraftProfileTextures.isOfficialTextureUrl(skinUrl);
     await this.skinPersister.persist(
       skinImage,
       await normalizedSkin.toPngBuffer(),

@@ -101,7 +101,7 @@ export default class MinecraftV2Router implements Router {
           // TODO: Properly handle errors when requesting the skin (check content-type?)
 
           let skin: Skin | null = null;
-          if (MinecraftProfileTextures.isOfficialSkinUrl(parsedSkinUrl.href)) {
+          if (MinecraftProfileTextures.isOfficialTextureUrl(parsedSkinUrl.href)) {
             skin = await this.minecraftSkinCache.findByUrl(parsedSkinUrl.href);
           }
 

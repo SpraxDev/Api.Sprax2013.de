@@ -54,7 +54,7 @@ export default class MinecraftSkinService {
     const originalSkin = await SkinImageManipulator.createByImage(skinImage.body);
     const normalizedSkin = await this.minecraftSkinNormalizer.normalizeSkin(originalSkin);
 
-    const isOfficialSkinUrl = MinecraftProfileTextures.isOfficialSkinUrl(skinUrl);
+    const isOfficialSkinUrl = MinecraftProfileTextures.isOfficialTextureUrl(skinUrl);
     await this.skinPersister.persist(
       skinImage.body,
       await normalizedSkin.toPngBuffer(),

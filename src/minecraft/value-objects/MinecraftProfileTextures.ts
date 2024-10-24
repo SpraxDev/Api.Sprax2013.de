@@ -23,8 +23,8 @@ export default class MinecraftProfileTextures {
     return this.turnIntoSecureUrl(this.capeUrl);
   }
 
-  isOfficialSkinUrl(): boolean {
-    return this.skinUrl != null && MinecraftProfileTextures.isOfficialSkinUrl(this.skinUrl);
+  hasOfficialSkinUrl(): boolean {
+    return this.skinUrl != null && MinecraftProfileTextures.isOfficialTextureUrl(this.skinUrl);
   }
 
   private turnIntoSecureUrl(url: string): string {
@@ -47,7 +47,7 @@ export default class MinecraftProfileTextures {
     );
   }
 
-  static isOfficialSkinUrl(skinUrl: string): boolean {
+  static isOfficialTextureUrl(skinUrl: string): boolean {
     const parsedHostname = new URL(skinUrl).hostname;
     return parsedHostname.endsWith('.minecraft.net') || parsedHostname.endsWith('.mojang.com');
   }

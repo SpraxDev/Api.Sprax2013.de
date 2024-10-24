@@ -29,7 +29,7 @@ export default class SkinPersister {
       createdAt = parsedTextures.timestamp;
     }
 
-    if (skinUrl != null && !MinecraftProfileTextures.isOfficialSkinUrl(skinUrl)) {
+    if (skinUrl != null && !MinecraftProfileTextures.isOfficialTextureUrl(skinUrl)) {
       throw new Error('Expecting an official skin URL');
     }
 

@@ -18,7 +18,7 @@ export default class CapePersister {
     if (capeUrl == null) {
       throw new Error('Cannot persist cape for texture value without cape URL');
     }
-    if (!MinecraftProfileTextures.isOfficialSkinUrl(capeUrl)) {
+    if (!MinecraftProfileTextures.isOfficialTextureUrl(capeUrl)) {
       throw new Error('Expecting an official cape URL in profile textures');
     }
 

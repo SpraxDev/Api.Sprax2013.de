@@ -51,7 +51,7 @@ export default class ProfileTextureValueProcessor implements PayloadProcessor {
   }
 
   private async shouldBePersistedWithTextureValue(url: string, textureValue: string, textureSignature?: string): Promise<boolean> {
-    if (textureSignature == null || !MinecraftProfileTextures.isOfficialSkinUrl(url)) {
+    if (textureSignature == null || !MinecraftProfileTextures.isOfficialTextureUrl(url)) {
       return false;
     }
     return this.yggdrasilSignatureChecker.checkProfileProperty(textureValue, textureSignature);
