@@ -51,7 +51,7 @@ export default class ImportCommand implements CliCommand {
     if (args[1].length === 0 || !Fs.existsSync(args[1])) {
       throw new Error(`File ${JSON.stringify(args[1])} does not exist`);
     }
-    if (!/^[0-9]+$/.test(args[2])) {
+    if (!/^\d+$/.test(args[2])) {
       throw new Error(`Invalid apiKeyId ${JSON.stringify(args[2])} – Expected a number`);
     }
 
