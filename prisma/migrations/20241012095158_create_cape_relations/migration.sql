@@ -25,7 +25,7 @@ CREATE TABLE "capes" (
 
 -- CreateTable
 CREATE TABLE "cape_urls" (
-    "url" TEXT NOT NULL,
+    "url" TEXT NOT NULL CHECK (starts_with("url", 'https://') AND (strpos("url", '.minecraft.net/') > 0 OR strpos("url", '.mojang.com/') > 0)),
     "cape_id" BIGINT NOT NULL,
 
     CONSTRAINT "cape_urls_pkey" PRIMARY KEY ("url")
