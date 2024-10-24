@@ -2,6 +2,7 @@ import { singleton } from 'tsyringe';
 import * as Undici from 'undici';
 import QuestDbClient, { ProxyServerMetric } from '../../database/QuestDbClient.js';
 import ProxyPoolHttpClient, { UndiciProxyServer } from '../../http/clients/ProxyPoolHttpClient.js';
+import HttpResponse from '../../http/HttpResponse.js';
 import UserAgentGenerator from '../../http/UserAgentGenerator.js';
 import SentrySdk from '../../util/SentrySdk.js';
 import Task, { TaskPriority } from './Task.js';
@@ -67,6 +68,7 @@ export default class ProxyPoolHttpClientHealthcheckTask extends Task {
         bodyTimeout: 3000,
         headersTimeout: 3000
       });
+      await HttpResponse.fromUndiciResponse(response);  // consume body
       if (response.statusCode !== 200) {
         throw new Error('Unexpected HTTP status code: ' + response.statusCode);
       }
