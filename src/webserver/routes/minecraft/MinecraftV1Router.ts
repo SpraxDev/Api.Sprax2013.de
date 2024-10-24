@@ -29,7 +29,6 @@ import { ApiV1BadRequestError, ApiV1NotFoundError } from '../../errors/ApiV1Http
 import FastifyWebServer from '../../FastifyWebServer.js';
 import Router from '../Router.js';
 
-// FIXME: Cache-Control header should take 'Age' header into account
 @autoInjectable()
 export default class MinecraftV1Router implements Router {
   constructor(
@@ -66,7 +65,7 @@ export default class MinecraftV1Router implements Router {
 
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .header('Cache-Control', this.createCacheControlHeader(60, profile.ageInSeconds))
             .send({
               id: profile.profile.id,
               name: profile.profile.name
@@ -96,7 +95,7 @@ export default class MinecraftV1Router implements Router {
 
           reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            .header('Cache-Control', this.createCacheControlHeader(60, profile.ageInSeconds));
 
           if (!sendProcessedProfile) {
             return reply
@@ -197,7 +196,7 @@ export default class MinecraftV1Router implements Router {
 
           return reply
             // .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .header('Cache-Control', this.createCacheControlHeader(60, 0))
             .send(skinResponse.pngBody);
         }
       });
@@ -258,7 +257,7 @@ export default class MinecraftV1Router implements Router {
 
           return reply
             // .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .header('Cache-Control', this.createCacheControlHeader(60, 0))
             .send(skinResponse.pngBody);
         }
       });
@@ -289,7 +288,7 @@ export default class MinecraftV1Router implements Router {
 
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .header('Cache-Control', this.createCacheControlHeader(60, profile.ageInSeconds))
             .send(skinResponse.pngBody);
         }
       });
@@ -320,7 +319,7 @@ export default class MinecraftV1Router implements Router {
 
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .header('Cache-Control', this.createCacheControlHeader(60, profile.ageInSeconds))
             .send(skinResponse.pngBody);
         }
       });
@@ -647,5 +646,10 @@ export default class MinecraftV1Router implements Router {
       throw ApiV1BadRequestError.missingOrInvalidQueryParameter('size', 'size >= 8 and size <= 1024');
     }
     return result;
+  }
+
+  private createCacheControlHeader(cacheTimeInSeconds: number, ageInSeconds: number): string {
+    const maxAge = Math.ceil(cacheTimeInSeconds - ageInSeconds);
+    return `public, max-age=${maxAge}, s-maxage=${maxAge}`;
   }
 }
