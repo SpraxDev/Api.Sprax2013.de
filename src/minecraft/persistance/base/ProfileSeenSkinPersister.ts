@@ -32,7 +32,8 @@ export default class ProfileSeenSkinPersister {
         update: {
           firstSeenUsing: overrideSkinFirstSeenUsing ? seenAt : undefined,
           lastSeenUsing: overrideSkinLastSeenUsing ? seenAt : undefined
-        }
+        },
+        select: { skinId: true }
       });
     });
   }

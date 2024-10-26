@@ -32,7 +32,8 @@ export default class ProfileSeenCapePersister {
         update: {
           firstSeenUsing: overrideSkinFirstSeenUsing ? seenAt : undefined,
           lastSeenUsing: overrideSkinLastSeenUsing ? seenAt : undefined
-        }
+        },
+        select: { capeId: true }
       });
     });
   }

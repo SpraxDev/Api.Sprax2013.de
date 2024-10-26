@@ -39,7 +39,8 @@ export default class ProfileSeenNamesPersister {
         update: {
           firstSeen: overrideSkinFirstSeenUsing ? seenAt : undefined,
           lastSeen: overrideSkinLastSeenUsing ? seenAt : undefined
-        }
+        },
+        select: { nameLowercase: true }
       });
     });
   }
