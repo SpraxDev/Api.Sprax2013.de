@@ -69,6 +69,10 @@ export default class CapePersister {
     capeImage: Buffer,
     mimeType: string
   ): Promise<bigint> {
+    if (type === 'MOJANG') {
+      throw new Error('persisting MOJANG capes has to be done with #persistMojangCape');
+    }
+
     //noinspection ES6RedundantAwait
     return await this.databaseClient.$transaction(async (transaction): Promise<bigint> => {
       const capeImageSha256 = this.computeSha256(capeImage);
