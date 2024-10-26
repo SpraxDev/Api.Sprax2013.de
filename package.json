@@ -35,6 +35,7 @@
 
     "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" jest --coverage",
     "test:ci": "npm run test -- --ci --randomize --reporters github-actions --reporters summary",
+    "type-check": "npm run build -- --noEmit && tsc --project tests/tsconfig.json",
     "dev": "node --watch --env-file .env --loader ts-node/esm --import ./src/sentry-init.ts --enable-source-maps src/main.ts web",
     "dev:queue-worker": "node --watch --env-file .env --loader ts-node/esm --import ./src/sentry-init.ts --enable-source-maps src/main.ts queue-worker",
     "dev:cli": "node --watch --env-file .env --loader ts-node/esm --import ./src/sentry-init.ts --enable-source-maps src/main.ts cli",
