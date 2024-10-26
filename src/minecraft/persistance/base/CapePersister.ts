@@ -43,7 +43,8 @@ export default class CapePersister {
           data: {
             url: capeUrl,
             capeId: existingCape.id
-          }
+          },
+          select: { capeId: true }
         });
         return existingCape.id;
       }
