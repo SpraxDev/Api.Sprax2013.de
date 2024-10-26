@@ -1,7 +1,7 @@
+import type * as PrismaClient from '@prisma/client';
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../../../database/DatabaseClient.js';
 
-// TODO: Seen Capes, Skins and Names have very similar code – Maybe we can refactor this?
 @singleton()
 export default class ProfileSeenNamesPersister {
   constructor(
@@ -21,13 +21,12 @@ export default class ProfileSeenNamesPersister {
         where: { profileId_nameLowercase: { profileId, nameLowercase } },
         select: { firstSeen: true, lastSeen: true }
       });
-      const updateNameSeenEntry = existingNameSeenEntry == null || existingNameSeenEntry.lastSeen < seenAt || existingNameSeenEntry.firstSeen > seenAt;
-      if (!updateNameSeenEntry) {
+      if (!this.shouldUpdateTimestamps(existingNameSeenEntry, seenAt)) {
         return;
       }
 
-      const overrideSkinFirstSeenUsing = existingNameSeenEntry != null && existingNameSeenEntry.firstSeen > seenAt;
-      const overrideSkinLastSeenUsing = existingNameSeenEntry != null && existingNameSeenEntry.lastSeen < seenAt;
+      const overrideFirstSeenUsing = existingNameSeenEntry == null || existingNameSeenEntry.firstSeen > seenAt;
+      const overrideLastSeenUsing = existingNameSeenEntry == null || existingNameSeenEntry.lastSeen < seenAt;
       await transaction.profileSeenNames.upsert({
         where: { profileId_nameLowercase: { profileId, nameLowercase } },
         create: {
@@ -37,11 +36,20 @@ export default class ProfileSeenNamesPersister {
           lastSeen: seenAt
         },
         update: {
-          firstSeen: overrideSkinFirstSeenUsing ? seenAt : undefined,
-          lastSeen: overrideSkinLastSeenUsing ? seenAt : undefined
+          firstSeen: overrideFirstSeenUsing ? seenAt : undefined,
+          lastSeen: overrideLastSeenUsing ? seenAt : undefined
         },
         select: { nameLowercase: true }
       });
     });
+  }
+
+  private shouldUpdateTimestamps(
+    existingCapeSeenEntry: Pick<PrismaClient.ProfileSeenNames, 'firstSeen' | 'lastSeen'> | null,
+    seenAt: Date
+  ): boolean {
+    return existingCapeSeenEntry == null ||
+      existingCapeSeenEntry.lastSeen < seenAt ||
+      existingCapeSeenEntry.firstSeen > seenAt;
   }
 }

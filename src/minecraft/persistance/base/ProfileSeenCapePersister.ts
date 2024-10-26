@@ -1,3 +1,4 @@
+import type * as PrismaClient from '@prisma/client';
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../../../database/DatabaseClient.js';
 
@@ -14,13 +15,12 @@ export default class ProfileSeenCapePersister {
         where: { profileId_capeId: { profileId, capeId } },
         select: { firstSeenUsing: true, lastSeenUsing: true }
       });
-      const updateCapeSeenEntry = existingCapeSeenEntry == null || existingCapeSeenEntry.lastSeenUsing < seenAt || existingCapeSeenEntry.firstSeenUsing > seenAt;
-      if (!updateCapeSeenEntry) {
+      if (!this.shouldUpdateTimestamps(existingCapeSeenEntry, seenAt)) {
         return;
       }
 
-      const overrideSkinFirstSeenUsing = existingCapeSeenEntry != null && existingCapeSeenEntry.firstSeenUsing > seenAt;
-      const overrideSkinLastSeenUsing = existingCapeSeenEntry != null && existingCapeSeenEntry.lastSeenUsing < seenAt;
+      const overrideFirstSeenUsing = existingCapeSeenEntry == null || existingCapeSeenEntry.firstSeenUsing > seenAt;
+      const overrideLastSeenUsing = existingCapeSeenEntry == null || existingCapeSeenEntry.lastSeenUsing < seenAt;
       await transaction.profileSeenCape.upsert({
         where: { profileId_capeId: { profileId, capeId } },
         create: {
@@ -30,11 +30,20 @@ export default class ProfileSeenCapePersister {
           lastSeenUsing: seenAt
         },
         update: {
-          firstSeenUsing: overrideSkinFirstSeenUsing ? seenAt : undefined,
-          lastSeenUsing: overrideSkinLastSeenUsing ? seenAt : undefined
+          firstSeenUsing: overrideFirstSeenUsing ? seenAt : undefined,
+          lastSeenUsing: overrideLastSeenUsing ? seenAt : undefined
         },
         select: { capeId: true }
       });
     });
+  }
+
+  private shouldUpdateTimestamps(
+    existingCapeSeenEntry: Pick<PrismaClient.ProfileSeenCape, 'firstSeenUsing' | 'lastSeenUsing'> | null,
+    seenAt: Date
+  ): boolean {
+    return existingCapeSeenEntry == null ||
+      existingCapeSeenEntry.lastSeenUsing < seenAt ||
+      existingCapeSeenEntry.firstSeenUsing > seenAt;
   }
 }
