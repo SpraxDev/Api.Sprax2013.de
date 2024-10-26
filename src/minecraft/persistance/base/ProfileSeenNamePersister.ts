@@ -3,7 +3,7 @@ import { singleton } from 'tsyringe';
 import DatabaseClient from '../../../database/DatabaseClient.js';
 
 @singleton()
-export default class ProfileSeenNamesPersister {
+export default class ProfileSeenNamePersister {
   constructor(
     private readonly databaseClient: DatabaseClient
   ) {
@@ -17,27 +17,27 @@ export default class ProfileSeenNamesPersister {
         seenAt = await this.databaseClient.fetchNow(transaction);
       }
 
-      const existingNameSeenEntry = await transaction.profileSeenNames.findUnique({
+      const existingNameSeenEntry = await transaction.profileSeenName.findUnique({
         where: { profileId_nameLowercase: { profileId, nameLowercase } },
-        select: { firstSeen: true, lastSeen: true }
+        select: { firstSeenUsing: true, lastSeenUsing: true }
       });
       if (!this.shouldUpdateTimestamps(existingNameSeenEntry, seenAt)) {
         return;
       }
 
-      const overrideFirstSeenUsing = existingNameSeenEntry == null || existingNameSeenEntry.firstSeen > seenAt;
-      const overrideLastSeenUsing = existingNameSeenEntry == null || existingNameSeenEntry.lastSeen < seenAt;
-      await transaction.profileSeenNames.upsert({
+      const overrideFirstSeenUsing = existingNameSeenEntry == null || existingNameSeenEntry.firstSeenUsing > seenAt;
+      const overrideLastSeenUsing = existingNameSeenEntry == null || existingNameSeenEntry.lastSeenUsing < seenAt;
+      await transaction.profileSeenName.upsert({
         where: { profileId_nameLowercase: { profileId, nameLowercase } },
         create: {
           profileId,
           nameLowercase,
-          firstSeen: seenAt,
-          lastSeen: seenAt
+          firstSeenUsing: seenAt,
+          lastSeenUsing: seenAt
         },
         update: {
-          firstSeen: overrideFirstSeenUsing ? seenAt : undefined,
-          lastSeen: overrideLastSeenUsing ? seenAt : undefined
+          firstSeenUsing: overrideFirstSeenUsing ? seenAt : undefined,
+          lastSeenUsing: overrideLastSeenUsing ? seenAt : undefined
         },
         select: { nameLowercase: true }
       });
@@ -45,11 +45,11 @@ export default class ProfileSeenNamesPersister {
   }
 
   private shouldUpdateTimestamps(
-    existingCapeSeenEntry: Pick<PrismaClient.ProfileSeenNames, 'firstSeen' | 'lastSeen'> | null,
+    existingCapeSeenEntry: Pick<PrismaClient.ProfileSeenName, 'firstSeenUsing' | 'lastSeenUsing'> | null,
     seenAt: Date
   ): boolean {
     return existingCapeSeenEntry == null ||
-      existingCapeSeenEntry.lastSeen < seenAt ||
-      existingCapeSeenEntry.firstSeen > seenAt;
+      existingCapeSeenEntry.lastSeenUsing < seenAt ||
+      existingCapeSeenEntry.firstSeenUsing > seenAt;
   }
 }

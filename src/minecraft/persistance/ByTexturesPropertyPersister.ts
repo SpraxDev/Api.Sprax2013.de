@@ -8,7 +8,7 @@ import MinecraftSkinCache from '../skin/MinecraftSkinCache.js';
 import MinecraftProfileTextures from '../value-objects/MinecraftProfileTextures.js';
 import CapePersister from './base/CapePersister.js';
 import ProfileSeenCapePersister from './base/ProfileSeenCapePersister.js';
-import ProfileSeenNamesPersister from './base/ProfileSeenNamesPersister.js';
+import ProfileSeenNamePersister from './base/ProfileSeenNamePersister.js';
 import ProfileSeenSkinPersister from './base/ProfileSeenSkinPersister.js';
 import SkinPersister from './base/SkinPersister.js';
 
@@ -21,7 +21,7 @@ export default class ByTexturesPropertyPersister {
     private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
     private readonly skinPersister: SkinPersister,
     private readonly capePersister: CapePersister,
-    private readonly profileSeenNamesPersister: ProfileSeenNamesPersister,
+    private readonly profileSeenNamesPersister: ProfileSeenNamePersister,
     private readonly profileSeenSkinPersister: ProfileSeenSkinPersister,
     private readonly profileSeenCapePersister: ProfileSeenCapePersister
   ) {

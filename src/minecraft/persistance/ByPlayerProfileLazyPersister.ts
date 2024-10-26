@@ -3,13 +3,13 @@ import LazyImportTaskCreator from '../../import_queue/LazyImportTaskCreator.js';
 import type { UuidToProfileResponse } from '../MinecraftApiClient.js';
 import MinecraftProfile from '../value-objects/MinecraftProfile.js';
 import ProfilePersister from './base/ProfilePersister.js';
-import ProfileSeenNamesPersister from './base/ProfileSeenNamesPersister.js';
+import ProfileSeenNamePersister from './base/ProfileSeenNamePersister.js';
 
 @singleton()
 export default class ByPlayerProfileLazyPersister {
   constructor(
     private readonly profilePersister: ProfilePersister,
-    private readonly profileSeenNamesPersister: ProfileSeenNamesPersister,
+    private readonly profileSeenNamesPersister: ProfileSeenNamePersister,
     private readonly lazyImportTaskCreator: LazyImportTaskCreator
   ) {
   }
