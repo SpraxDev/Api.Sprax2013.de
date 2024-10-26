@@ -1,7 +1,7 @@
 import * as PrismaClient from '@prisma/client';
-import Crypto from 'node:crypto';
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../../../database/DatabaseClient.js';
+import ImageManipulator from '../../image/ImageManipulator.js';
 import MinecraftProfileTextures from '../../value-objects/MinecraftProfileTextures.js';
 
 @singleton()
@@ -32,11 +32,11 @@ export default class CapePersister {
         return existingCapeByUrl.capeId;
       }
 
-      const capeImageSha256 = this.computeSha256(capeImage);
+      const capePixelDataHash = await this.computePixelDataHash(capeImage);
 
       const existingCape = await transaction.cape.findUnique({
         select: { id: true },
-        where: { type_imageSha256: { type: 'MOJANG', imageSha256: capeImageSha256 } }
+        where: { type_pixelDataHash: { type: 'MOJANG', pixelDataHash: capePixelDataHash } }
       });
       if (existingCape != null) {
         await transaction.capeUrl.create({
@@ -52,7 +52,7 @@ export default class CapePersister {
       const persistedCape = await transaction.cape.create({
         data: {
           type: 'MOJANG',
-          imageSha256: capeImageSha256,
+          pixelDataHash: capePixelDataHash,
           imageBytes: capeImage,
           mimeType: 'image/png',
 
@@ -75,11 +75,11 @@ export default class CapePersister {
 
     //noinspection ES6RedundantAwait
     return await this.databaseClient.$transaction(async (transaction): Promise<bigint> => {
-      const capeImageSha256 = this.computeSha256(capeImage);
+      const capePixelDataHash = await this.computePixelDataHash(capeImage);
 
       const existingCape = await transaction.cape.findUnique({
         select: { id: true },
-        where: { type_imageSha256: { type, imageSha256: capeImageSha256 } }
+        where: { type_pixelDataHash: { type, pixelDataHash: capePixelDataHash } }
       });
       if (existingCape != null) {
         return existingCape.id;
@@ -88,7 +88,7 @@ export default class CapePersister {
       const persistedCape = await transaction.cape.create({
         data: {
           type,
-          imageSha256: capeImageSha256,
+          pixelDataHash: capePixelDataHash,
           imageBytes: capeImage,
           mimeType
         },
@@ -98,10 +98,7 @@ export default class CapePersister {
     });
   }
 
-  private computeSha256(buffer: Buffer): Buffer {
-    return Crypto
-      .createHash('sha256')
-      .update(buffer)
-      .digest();
+  private async computePixelDataHash(buffer: Buffer): Promise<Buffer> {
+    return (await ImageManipulator.createByImage(buffer)).calculatePixelDataHashXXH128();
   }
 }

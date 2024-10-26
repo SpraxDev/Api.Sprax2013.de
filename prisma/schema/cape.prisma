@@ -5,17 +5,17 @@ enum CapeType {
 }
 
 model Cape {
-  id          BigInt   @id @default(dbgenerated("generate_snowflake('capes_id_seq'::text)"))
-  type        CapeType
-  imageSha256 Bytes    @map("image_sha256")
-  imageBytes  Bytes    @map("image_bytes")
-  mimeType    String   @map("mime_type")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  id            BigInt   @id @default(dbgenerated("generate_snowflake('capes_id_seq'::text)"))
+  type          CapeType
+  pixelDataHash Bytes    @map("pixel_data_hash")
+  imageBytes    Bytes    @map("image_bytes")
+  mimeType      String   @map("mime_type")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   profilesSeenWith ProfileSeenCape[]
   capeUrls         CapeUrl[]
 
-  @@unique([type, imageSha256])
+  @@unique([type, pixelDataHash])
   @@map("capes")
 }
 

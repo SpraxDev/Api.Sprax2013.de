@@ -1,3 +1,4 @@
+import * as PrismaClient from '@prisma/client';
 import { CapeType } from '@prisma/client';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import AutoProxiedHttpClient from '../../../../../src/http/clients/AutoProxiedHttpClient.js';
@@ -92,11 +93,11 @@ describe('MojangCapeProvider', () => {
     capeCache.findByTypeAndUrl.mockResolvedValue({
       id: 123n,
       type: CapeType.MOJANG,
-      imageSha256: Buffer.from('784495b27874e2d6dd5700d64ebcf74aa694d89074a875be9ac237c688c15072', 'hex'),
+      pixelDataHash: Buffer.from('20de1b0d249a9ee22e857b379e1eb623', 'hex'),
       imageBytes: Buffer.from('A PNG'),
       mimeType: 'image/png',
       createdAt: new Date()
-    });
+    } satisfies PrismaClient.Cape);
 
     await expect(capeProvider.provide(profileWithCape)).resolves.toEqual<CapeResponse>({
       image: Buffer.from('A PNG'),

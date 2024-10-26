@@ -3,6 +3,7 @@ import * as PrismaClient from '@prisma/client';
 import { DeepMockProxy } from 'jest-mock-extended';
 import DatabaseClient from '../../../../../src/database/DatabaseClient.js';
 import CapePersister from '../../../../../src/minecraft/persistance/base/CapePersister.js';
+import { readTestResource } from '../../../../resources/resources.js';
 import { createStrictDeepMock } from '../../../../test-helpers.js';
 
 let databaseClient: DeepMockProxy<DatabaseClient>;
@@ -23,6 +24,9 @@ beforeEach(() => {
 });
 
 describe('#persistGenericCape', () => {
+  const capeImage = readTestResource('capes/OptiFine.png');
+  const capePixelDataHash = Buffer.from('20de1b0d249a9ee22e857b379e1eb623', 'hex');
+
   test('Throws for MOJANG capes', async () => {
     await expect(capePersister.persistGenericCape('MOJANG', Buffer.from('A PNG'), 'image/png')).rejects.toThrow('persisting MOJANG capes has to be done with #persistMojangCape');
     expect(databaseClient.$transaction).toHaveBeenCalledTimes(0);
@@ -31,15 +35,15 @@ describe('#persistGenericCape', () => {
   test('Persisting a known cape does not write to the database', async () => {
     databaseTransaction.cape.findUnique.mockResolvedValue({ id: 123n } satisfies Pick<PrismaClient.Cape, 'id'> as any);
 
-    await expect(capePersister.persistGenericCape('OPTIFINE', Buffer.from('A PNG'), 'image/png')).resolves.toBe(123n);
+    await expect(capePersister.persistGenericCape('OPTIFINE', await capeImage, 'image/png')).resolves.toBe(123n);
 
     expect(databaseClient.$transaction).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.cape.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.cape.findUnique).toHaveBeenCalledWith({
       where: {
-        type_imageSha256: {
+        type_pixelDataHash: {
           type: 'OPTIFINE',
-          imageSha256: Buffer.from('784495b27874e2d6dd5700d64ebcf74aa694d89074a875be9ac237c688c15072', 'hex')
+          pixelDataHash: capePixelDataHash
         }
       },
       select: { id: true }
@@ -53,16 +57,16 @@ describe('#persistGenericCape', () => {
     databaseTransaction.cape.findUnique.mockResolvedValue(null);
     databaseTransaction.cape.create.mockResolvedValue({ id: 123n } satisfies Pick<PrismaClient.Cape, 'id'> as any);
 
-    await expect(capePersister.persistGenericCape(capeType, Buffer.from('A JPEG'), 'image/jpeg')).resolves.toBe(123n);
+    await expect(capePersister.persistGenericCape(capeType, await capeImage, 'image/jpeg')).resolves.toBe(123n);
 
     expect(databaseClient.$transaction).toHaveBeenCalledTimes(1);
 
     expect(databaseTransaction.cape.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.cape.findUnique).toHaveBeenCalledWith({
       where: {
-        type_imageSha256: {
+        type_pixelDataHash: {
           type: capeType,
-          imageSha256: Buffer.from('10c15b5f94de621f202ed13b1040b987b942830c08853219332320d9399f4e01', 'hex')
+          pixelDataHash: capePixelDataHash
         }
       },
       select: { id: true }
@@ -72,8 +76,8 @@ describe('#persistGenericCape', () => {
     expect(databaseTransaction.cape.create).toHaveBeenCalledWith({
       data: {
         type: capeType,
-        imageSha256: Buffer.from('10c15b5f94de621f202ed13b1040b987b942830c08853219332320d9399f4e01', 'hex'),
-        imageBytes: Buffer.from('A JPEG'),
+        pixelDataHash: capePixelDataHash,
+        imageBytes: await capeImage,
         mimeType: 'image/jpeg'
       },
       select: { id: true }
@@ -92,6 +96,8 @@ describe('#persistMojangCape', () => {
     '    }\n' +
     '  }\n' +
     '}').toString('base64');
+  const capeImage = readTestResource('capes/Mojang.png');
+  const capePixelDataHash = Buffer.from('b24489e58d7c2d8bc1ae16e18de689a2', 'hex');
 
   test('Throws for textures without cape', async () => {
     const textureValue = Buffer.from('{\n' +
@@ -133,7 +139,7 @@ describe('#persistMojangCape', () => {
   test('Persisting a known cape URL does not write to the database', async () => {
     databaseTransaction.capeUrl.findUnique.mockResolvedValue({ capeId: 123n } satisfies Pick<PrismaClient.CapeUrl, 'capeId'> as any);
 
-    await expect(capePersister.persistMojangCape(textureValueWithCape, Buffer.from('A PNG'))).resolves.toBe(123n);
+    await expect(capePersister.persistMojangCape(textureValueWithCape, await capeImage)).resolves.toBe(123n);
 
     expect(databaseClient.$transaction).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.capeUrl.findUnique).toHaveBeenCalledTimes(1);
@@ -148,7 +154,7 @@ describe('#persistMojangCape', () => {
     databaseTransaction.cape.findUnique.mockResolvedValue(null);
     databaseTransaction.cape.create.mockResolvedValue({ id: 123n } satisfies Pick<PrismaClient.Cape, 'id'> as any);
 
-    await expect(capePersister.persistMojangCape(textureValueWithCape, Buffer.from('A PNG'))).resolves.toBe(123n);
+    await expect(capePersister.persistMojangCape(textureValueWithCape, await capeImage)).resolves.toBe(123n);
 
     expect(databaseClient.$transaction).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.capeUrl.findUnique).toHaveBeenCalledTimes(1);
@@ -158,8 +164,8 @@ describe('#persistMojangCape', () => {
     expect(databaseTransaction.cape.create).toHaveBeenCalledWith({
       data: {
         type: 'MOJANG',
-        imageSha256: Buffer.from('784495b27874e2d6dd5700d64ebcf74aa694d89074a875be9ac237c688c15072', 'hex'),
-        imageBytes: Buffer.from('A PNG'),
+        pixelDataHash: capePixelDataHash,
+        imageBytes: await capeImage,
         mimeType: 'image/png',
         capeUrls: {
           create: {
@@ -176,7 +182,7 @@ describe('#persistMojangCape', () => {
     databaseTransaction.cape.findUnique.mockResolvedValue({ id: 123n } satisfies Pick<PrismaClient.Cape, 'id'> as any);
     databaseTransaction.capeUrl.create.mockResolvedValue({ capeId: 123n } satisfies Pick<PrismaClient.CapeUrl, 'capeId'> as any);
 
-    await expect(capePersister.persistMojangCape(textureValueWithCape, Buffer.from('A PNG'))).resolves.toBe(123n);
+    await expect(capePersister.persistMojangCape(textureValueWithCape, await capeImage)).resolves.toBe(123n);
 
     expect(databaseClient.$transaction).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.capeUrl.findUnique).toHaveBeenCalledTimes(1);
