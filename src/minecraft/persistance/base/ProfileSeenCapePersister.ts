@@ -14,7 +14,7 @@ export default class ProfileSeenCapePersister {
         where: { profileId_capeId: { profileId, capeId } },
         select: { firstSeenUsing: true, lastSeenUsing: true }
       });
-      const updateCapeSeenEntry = existingCapeSeenEntry == null || existingCapeSeenEntry.lastSeenUsing < seenAt;
+      const updateCapeSeenEntry = existingCapeSeenEntry == null || existingCapeSeenEntry.lastSeenUsing < seenAt || existingCapeSeenEntry.firstSeenUsing > seenAt;
       if (!updateCapeSeenEntry) {
         return;
       }

@@ -21,7 +21,7 @@ export default class ProfileSeenNamesPersister {
         where: { profileId_nameLowercase: { profileId, nameLowercase } },
         select: { firstSeen: true, lastSeen: true }
       });
-      const updateNameSeenEntry = existingNameSeenEntry == null || existingNameSeenEntry.lastSeen < seenAt;
+      const updateNameSeenEntry = existingNameSeenEntry == null || existingNameSeenEntry.lastSeen < seenAt || existingNameSeenEntry.firstSeen > seenAt;
       if (!updateNameSeenEntry) {
         return;
       }

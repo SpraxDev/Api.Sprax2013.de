@@ -14,7 +14,7 @@ export default class ProfileSeenSkinPersister {
         where: { profileId_skinId: { profileId, skinId } },
         select: { firstSeenUsing: true, lastSeenUsing: true }
       });
-      const updateSkinSeenEntry = existingSkinSeenEntry == null || existingSkinSeenEntry.lastSeenUsing < seenAt;
+      const updateSkinSeenEntry = existingSkinSeenEntry == null || existingSkinSeenEntry.lastSeenUsing < seenAt || existingSkinSeenEntry.firstSeenUsing > seenAt;
       if (!updateSkinSeenEntry) {
         return;
       }
