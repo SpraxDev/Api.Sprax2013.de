@@ -10,7 +10,7 @@ export default class SkinPersister {
   ) {
   }
 
-  // TODO: refactor
+  // TODO: Maybe we should use pixel-data for the hash?
   async persist(
     originalSkinPng: Buffer,
     normalizedSkinPng: Buffer,
@@ -61,7 +61,8 @@ export default class SkinPersister {
               textureSignature,
               skinId: existingSkin.id,
               createdAt
-            }
+            },
+            select: { skinId: true }
           });
         }
         return existingSkin.id;
@@ -71,7 +72,7 @@ export default class SkinPersister {
         data: {
           imageSha256: originalImageSha256,
           imageBytes: originalSkinPng,
-          normalizedSkin: {
+          normalizedSkin: !originalImageSha256.equals(normalizedImageSha256) ? {
             connectOrCreate: {
               where: { imageSha256: normalizedImageSha256 },
               create: {
@@ -79,7 +80,7 @@ export default class SkinPersister {
                 imageBytes: normalizedSkinPng
               }
             }
-          },
+          } : undefined,
 
           skinUrls: skinUrl ? {
             create: {
