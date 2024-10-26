@@ -1,6 +1,6 @@
-import Crypto from 'node:crypto';
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../../database/DatabaseClient.js';
+import ImageManipulator from '../image/ImageManipulator.js';
 import SkinImageManipulator from './manipulator/SkinImageManipulator.js';
 
 export type CachedSkin = {
@@ -64,18 +64,15 @@ export default class MinecraftSkinCache {
   }
 
   async existsByImageBytes(skin: Buffer): Promise<boolean> {
-    const skinImageSha256 = this.computeSha256(skin);
+    const skinPixelDataHash = await this.computePixelDataHash(skin);
     const existingSkinImage = await this.databaseClient.skin.findUnique({
-      where: { imageSha256: skinImageSha256 },
-      select: { imageSha256: true }
+      where: { pixelDataHash: skinPixelDataHash },
+      select: { id: true }
     });
     return existingSkinImage != null;
   }
 
-  private computeSha256(buffer: Buffer): Buffer {
-    return Crypto
-      .createHash('sha256')
-      .update(buffer)
-      .digest();
+  private async computePixelDataHash(buffer: Buffer): Promise<Buffer> {
+    return (await ImageManipulator.createByImage(buffer)).calculatePixelDataHashXXH128();
   }
 }

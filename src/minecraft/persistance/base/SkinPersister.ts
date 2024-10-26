@@ -1,6 +1,6 @@
-import Crypto from 'node:crypto';
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../../../database/DatabaseClient.js';
+import ImageManipulator from '../../image/ImageManipulator.js';
 import MinecraftProfileTextures from '../../value-objects/MinecraftProfileTextures.js';
 
 @singleton()
@@ -10,7 +10,6 @@ export default class SkinPersister {
   ) {
   }
 
-  // TODO: Maybe we should use pixel-data for the hash?
   async persist(
     originalSkinPng: Buffer,
     normalizedSkinPng: Buffer,
@@ -45,12 +44,12 @@ export default class SkinPersister {
         }
       }
 
-      const originalImageSha256 = this.computeSha256(originalSkinPng);
-      const normalizedImageSha256 = this.computeSha256(normalizedSkinPng);
+      const originalPixelDataHash = await this.computePixelDataHash(originalSkinPng);
+      const normalizedPixelDataHash = await this.computePixelDataHash(normalizedSkinPng);
 
       const existingSkin = await transaction.skin.findUnique({
         select: { id: true },
-        where: { imageSha256: originalImageSha256 }
+        where: { pixelDataHash: originalPixelDataHash }
       });
       if (existingSkin != null) {
         if (skinUrl != null) {
@@ -70,13 +69,13 @@ export default class SkinPersister {
 
       const persistedSkin = await transaction.skin.create({
         data: {
-          imageSha256: originalImageSha256,
+          pixelDataHash: originalPixelDataHash,
           imageBytes: originalSkinPng,
-          normalizedSkin: !originalImageSha256.equals(normalizedImageSha256) ? {
+          normalizedSkin: !originalPixelDataHash.equals(normalizedPixelDataHash) ? {
             connectOrCreate: {
-              where: { imageSha256: normalizedImageSha256 },
+              where: { pixelDataHash: normalizedPixelDataHash },
               create: {
-                imageSha256: normalizedImageSha256,
+                pixelDataHash: normalizedPixelDataHash,
                 imageBytes: normalizedSkinPng
               }
             }
@@ -97,10 +96,7 @@ export default class SkinPersister {
     });
   }
 
-  private computeSha256(buffer: Buffer): Buffer {
-    return Crypto
-      .createHash('sha256')
-      .update(buffer)
-      .digest();
+  private async computePixelDataHash(buffer: Buffer): Promise<Buffer> {
+    return (await ImageManipulator.createByImage(buffer)).calculatePixelDataHashXXH128();
   }
 }

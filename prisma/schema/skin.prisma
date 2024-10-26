@@ -1,6 +1,6 @@
 model Skin {
   id               BigInt   @id @default(dbgenerated("generate_snowflake('skin_images_id_seq'::text)"))
-  imageSha256      Bytes    @unique @map("image_sha256")
+  pixelDataHash    Bytes    @unique @map("pixel_data_hash")
   imageBytes       Bytes    @map("image_bytes")
   normalizedSkinId BigInt?  @map("normalized_skin_id")
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz()

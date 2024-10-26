@@ -3,6 +3,7 @@ import * as PrismaClient from '@prisma/client';
 import { DeepMockProxy } from 'jest-mock-extended';
 import DatabaseClient from '../../../../../src/database/DatabaseClient.js';
 import SkinPersister from '../../../../../src/minecraft/persistance/base/SkinPersister.js';
+import { readTestResource } from '../../../../resources/resources.js';
 import { createStrictDeepMock } from '../../../../test-helpers.js';
 
 let databaseClient: DeepMockProxy<DatabaseClient>;
@@ -20,20 +21,20 @@ beforeEach(() => {
 
 describe('#persist', () => {
   const originalSkinUrl = 'https://textures.minecraft.net/texture/cc69184e66d39fc1f5ed11a5e19e250a0561c289bf8bdb69362b11bc7fc659c1';
-  const originalSkinPng = Buffer.from('original png');
-  const normalizedSkinPng = Buffer.from('normalized png');
-  const originalSkinPngSha256 = Buffer.from('221a3846999ede62036834268242f9d8a4e5a950edb55aaf3116d1d9ce9538a9', 'hex');
-  const normalizedSkinPngSha256 = Buffer.from('26ce966193b11bbae74479ddc43db0462c77962d2235fdaa6a7fb0a1a912f34c', 'hex');
+  const originalSkinPng = readTestResource('skins/legacy.png');
+  const normalizedSkinPng = readTestResource('skins/legacy-normalized.png');
+  const originalSkinPixelDataHash = Buffer.from('d0b586cacb630a4c3810ac1846bf773a', 'hex');
+  const normalizedSkinPixelDataHash = Buffer.from('4d5436e9063bc9a4fcc5cb022ef3271b', 'hex');
 
   test('Throw when trying to persist with an unofficial skin URL', async () => {
-    await expect(skinPersister.persist(originalSkinPng, normalizedSkinPng, 'https://minecraft.example.com/skin.png')).rejects.toThrow('Expecting an official skin URL');
+    await expect(skinPersister.persist(await originalSkinPng, await normalizedSkinPng, 'https://minecraft.example.com/skin.png')).rejects.toThrow('Expecting an official skin URL');
     expect(databaseClient.$transaction).toHaveBeenCalledTimes(0);
   });
 
   test('Persisting an skin image with known URL does not write to the database', async () => {
     databaseTransaction.skinUrl.findUnique.mockResolvedValue({ skinId: 123n } satisfies Pick<PrismaClient.SkinUrl, 'skinId'> as any);
 
-    await expect(skinPersister.persist(originalSkinPng, normalizedSkinPng, originalSkinUrl)).resolves.toBe(123n);
+    await expect(skinPersister.persist(await originalSkinPng, await normalizedSkinPng, originalSkinUrl)).resolves.toBe(123n);
 
     expect(databaseClient.$transaction).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skinUrl.findUnique).toHaveBeenCalledTimes(1);
@@ -49,14 +50,14 @@ describe('#persist', () => {
     databaseTransaction.skin.findUnique.mockResolvedValue(null);
     databaseTransaction.skin.create.mockResolvedValue({ id: 123n } satisfies Pick<PrismaClient.Skin, 'id'> as any);
 
-    await expect(skinPersister.persist(originalSkinPng, normalizedSkinPng, null)).resolves.toBe(123n);
+    await expect(skinPersister.persist(await originalSkinPng, await normalizedSkinPng, null)).resolves.toBe(123n);
 
     expect(databaseClient.$transaction).toHaveBeenCalledTimes(1);
 
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledWith({
       where: {
-        imageSha256: originalSkinPngSha256
+        pixelDataHash: originalSkinPixelDataHash
       },
       select: { id: true }
     } satisfies PrismaClient.Prisma.SkinFindUniqueArgs);
@@ -64,14 +65,14 @@ describe('#persist', () => {
     expect(databaseTransaction.skin.create).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.create).toHaveBeenCalledWith({
       data: {
-        imageSha256: originalSkinPngSha256,
-        imageBytes: originalSkinPng,
+        pixelDataHash: originalSkinPixelDataHash,
+        imageBytes: await originalSkinPng,
         normalizedSkin: {
           connectOrCreate: {
-            where: { imageSha256: normalizedSkinPngSha256 },
+            where: { pixelDataHash: normalizedSkinPixelDataHash },
             create: {
-              imageSha256: normalizedSkinPngSha256,
-              imageBytes: normalizedSkinPng
+              pixelDataHash: normalizedSkinPixelDataHash,
+              imageBytes: await normalizedSkinPng
             }
           }
         },
@@ -86,14 +87,14 @@ describe('#persist', () => {
     databaseTransaction.skinUrl.findUnique.mockResolvedValue(null);
     databaseTransaction.skin.create.mockResolvedValue({ id: 123n } satisfies Pick<PrismaClient.Skin, 'id'> as any);
 
-    await expect(skinPersister.persist(originalSkinPng, normalizedSkinPng, originalSkinUrl)).resolves.toBe(123n);
+    await expect(skinPersister.persist(await originalSkinPng, await normalizedSkinPng, originalSkinUrl)).resolves.toBe(123n);
 
     expect(databaseClient.$transaction).toHaveBeenCalledTimes(1);
 
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledWith({
       where: {
-        imageSha256: originalSkinPngSha256
+        pixelDataHash: originalSkinPixelDataHash
       },
       select: { id: true }
     } satisfies PrismaClient.Prisma.SkinFindUniqueArgs);
@@ -101,14 +102,14 @@ describe('#persist', () => {
     expect(databaseTransaction.skin.create).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.create).toHaveBeenCalledWith({
       data: {
-        imageSha256: originalSkinPngSha256,
-        imageBytes: originalSkinPng,
+        pixelDataHash: originalSkinPixelDataHash,
+        imageBytes: await originalSkinPng,
         normalizedSkin: {
           connectOrCreate: {
-            where: { imageSha256: normalizedSkinPngSha256 },
+            where: { pixelDataHash: normalizedSkinPixelDataHash },
             create: {
-              imageSha256: normalizedSkinPngSha256,
-              imageBytes: normalizedSkinPng
+              pixelDataHash: normalizedSkinPixelDataHash,
+              imageBytes: await normalizedSkinPng
             }
           }
         },
@@ -147,14 +148,14 @@ describe('#persist', () => {
     databaseTransaction.skinUrl.findUnique.mockResolvedValue(null);
     databaseTransaction.skin.create.mockResolvedValue({ id: 123n } satisfies Pick<PrismaClient.Skin, 'id'> as any);
 
-    await expect(skinPersister.persist(originalSkinPng, normalizedSkinPng, textureProperty)).resolves.toBe(123n);
+    await expect(skinPersister.persist(await originalSkinPng, await normalizedSkinPng, textureProperty)).resolves.toBe(123n);
 
     expect(databaseClient.$transaction).toHaveBeenCalledTimes(1);
 
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledWith({
       where: {
-        imageSha256: originalSkinPngSha256
+        pixelDataHash: originalSkinPixelDataHash
       },
       select: { id: true }
     } satisfies PrismaClient.Prisma.SkinFindUniqueArgs);
@@ -162,14 +163,14 @@ describe('#persist', () => {
     expect(databaseTransaction.skin.create).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.create).toHaveBeenCalledWith({
       data: {
-        imageSha256: originalSkinPngSha256,
-        imageBytes: originalSkinPng,
+        pixelDataHash: originalSkinPixelDataHash,
+        imageBytes: await originalSkinPng,
         normalizedSkin: {
           connectOrCreate: {
-            where: { imageSha256: normalizedSkinPngSha256 },
+            where: { pixelDataHash: normalizedSkinPixelDataHash },
             create: {
-              imageSha256: normalizedSkinPngSha256,
-              imageBytes: normalizedSkinPng
+              pixelDataHash: normalizedSkinPixelDataHash,
+              imageBytes: await normalizedSkinPng
             }
           }
         },
@@ -204,14 +205,14 @@ describe('#persist', () => {
     databaseTransaction.skinUrl.findUnique.mockResolvedValue(null);
     databaseTransaction.skin.create.mockResolvedValue({ id: 123n } satisfies Pick<PrismaClient.Skin, 'id'> as any);
 
-    await expect(skinPersister.persist(originalSkinPng, normalizedSkinPng, textureProperty)).resolves.toBe(123n);
+    await expect(skinPersister.persist(await originalSkinPng, await normalizedSkinPng, textureProperty)).resolves.toBe(123n);
 
     expect(databaseClient.$transaction).toHaveBeenCalledTimes(1);
 
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledWith({
       where: {
-        imageSha256: originalSkinPngSha256
+        pixelDataHash: originalSkinPixelDataHash
       },
       select: { id: true }
     } satisfies PrismaClient.Prisma.SkinFindUniqueArgs);
@@ -219,14 +220,14 @@ describe('#persist', () => {
     expect(databaseTransaction.skin.create).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.create).toHaveBeenCalledWith({
       data: {
-        imageSha256: originalSkinPngSha256,
-        imageBytes: originalSkinPng,
+        pixelDataHash: originalSkinPixelDataHash,
+        imageBytes: await originalSkinPng,
         normalizedSkin: {
           connectOrCreate: {
-            where: { imageSha256: normalizedSkinPngSha256 },
+            where: { pixelDataHash: normalizedSkinPixelDataHash },
             create: {
-              imageSha256: normalizedSkinPngSha256,
-              imageBytes: normalizedSkinPng
+              pixelDataHash: normalizedSkinPixelDataHash,
+              imageBytes: await normalizedSkinPng
             }
           }
         },
@@ -241,14 +242,14 @@ describe('#persist', () => {
     databaseTransaction.skinUrl.findUnique.mockResolvedValue(null);
     databaseTransaction.skinUrl.create.mockResolvedValue({ skinId: 123n } satisfies Pick<PrismaClient.SkinUrl, 'skinId'> as any);
 
-    await expect(skinPersister.persist(originalSkinPng, normalizedSkinPng, originalSkinUrl)).resolves.toBe(123n);
+    await expect(skinPersister.persist(await originalSkinPng, await normalizedSkinPng, originalSkinUrl)).resolves.toBe(123n);
 
     expect(databaseClient.$transaction).toHaveBeenCalledTimes(1);
 
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledWith({
       where: {
-        imageSha256: originalSkinPngSha256
+        pixelDataHash: originalSkinPixelDataHash
       },
       select: { id: true }
     } satisfies PrismaClient.Prisma.SkinFindUniqueArgs);
@@ -270,14 +271,14 @@ describe('#persist', () => {
     databaseTransaction.skin.findUnique.mockResolvedValue(null);
     databaseTransaction.skin.create.mockResolvedValue({ id: 123n } satisfies Pick<PrismaClient.Skin, 'id'> as any);
 
-    await expect(skinPersister.persist(normalizedSkinPng, normalizedSkinPng, null)).resolves.toBe(123n);
+    await expect(skinPersister.persist(await normalizedSkinPng, await normalizedSkinPng, null)).resolves.toBe(123n);
 
     expect(databaseClient.$transaction).toHaveBeenCalledTimes(1);
 
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledWith({
       where: {
-        imageSha256: normalizedSkinPngSha256
+        pixelDataHash: normalizedSkinPixelDataHash
       },
       select: { id: true }
     } satisfies PrismaClient.Prisma.SkinFindUniqueArgs);
@@ -285,8 +286,8 @@ describe('#persist', () => {
     expect(databaseTransaction.skin.create).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.create).toHaveBeenCalledWith({
       data: {
-        imageSha256: normalizedSkinPngSha256,
-        imageBytes: normalizedSkinPng,
+        pixelDataHash: normalizedSkinPixelDataHash,
+        imageBytes: await normalizedSkinPng,
         normalizedSkin: undefined,
         skinUrls: undefined
       },
