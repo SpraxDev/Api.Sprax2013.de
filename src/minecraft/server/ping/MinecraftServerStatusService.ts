@@ -1,8 +1,8 @@
-import Crypto from 'node:crypto';
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../../../database/DatabaseClient.js';
 import ResolvedToNonUnicastIpError from '../../../http/dns/errors/ResolvedToNonUnicastIpError.js';
 import SentrySdk from '../../../util/SentrySdk.js';
+import ImageManipulator from '../../image/ImageManipulator.js';
 import SetWithTtl from '../../SetWithTtl.js';
 import { PingResult } from './AbstractMinecraftServerPing.js';
 import ServerStatusPingError from './error/ServerStatusPingError.js';
@@ -44,7 +44,7 @@ export default class MinecraftServerStatusService {
       return {
         ageInSeconds: 0,
         serverStatus: null
-      }
+      };
     }
 
     await this.persistServerStatusInDatabase(serverStatus, host, port);
@@ -91,7 +91,7 @@ export default class MinecraftServerStatusService {
   }
 
   private async persistServerStatusInDatabase(serverStatus: PingResult, host: string, port: number): Promise<void> {
-    const parsedFavicon = serverStatus.status.favicon != null ? this.parseFavicon(serverStatus.status.favicon) : null;
+    const parsedFavicon = serverStatus.status.favicon != null ? await this.parseFavicon(serverStatus.status.favicon) : null;
 
     await this.databaseClient.serverStatusHistory.create({
       data: {
@@ -107,9 +107,9 @@ export default class MinecraftServerStatusService {
 
         favicon: parsedFavicon != null ? {
           connectOrCreate: {
-            where: { sha256: parsedFavicon.dataSha256 },
+            where: { pixelDataHash: parsedFavicon.pixelDataSha256 },
             create: {
-              sha256: parsedFavicon.dataSha256,
+              pixelDataHash: parsedFavicon.pixelDataSha256,
               image: parsedFavicon.data
             }
           }
@@ -118,16 +118,16 @@ export default class MinecraftServerStatusService {
     });
   }
 
-  private parseFavicon(favicon: string): { dataSha256: Buffer, data: Buffer } | null {
+  private async parseFavicon(favicon: string): Promise<{ pixelDataSha256: Buffer, data: Buffer } | null> {
     const prefix = 'data:image/png;base64,';
     if (!favicon.startsWith(prefix)) {
-      SentrySdk.logAndCaptureWarning(`Persisted favicon does not start with expected prefix: ${prefix}`, { favicon });
+      SentrySdk.logAndCaptureWarning(`Tried persisting a favicon that does not start with the expected prefix: ${prefix}`, { favicon });
       return null;
     }
 
     const data = Buffer.from(favicon.substring(prefix.length), 'base64');
-    const dataSha256 = Crypto.createHash('sha256').update(data).digest();
-    return { dataSha256, data };
+    const pixelDataSha256 = (await ImageManipulator.createByImage(data)).calculatePixelDataHashXXH128();
+    return { pixelDataSha256, data };
   }
 
   private createCacheKey(host: string, port: number): string {
