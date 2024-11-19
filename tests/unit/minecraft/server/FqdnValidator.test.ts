@@ -7,7 +7,8 @@ describe('valid FQDNs', () => {
     ['foobar.example.com'],
     ['foobar.example.com.'],
     ['foo.bar'],
-    ['a.b']
+    ['a.b'],
+    ['foo_bar.example.com']
   ])('%s', (input) => {
     expect(new FqdnValidator().validateFqdn(input)).toBe(true);
   });
