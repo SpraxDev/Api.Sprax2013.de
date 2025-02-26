@@ -40,7 +40,7 @@ export default class WebApp implements App {
   }
 
   private printReadyMessage(appConfig: AppConfiguration): void {
-    let suffix = '';
+    let suffix = ` on port ${appConfig.config.serverPort}`;
     if (!IS_PRODUCTION) {
       suffix = ` (http://127.0.0.1:${appConfig.config.serverPort}/)`;
     }
