@@ -119,7 +119,8 @@ export default class BulkQueueImporter {
             totalParsedPayloads: totalPayloadsProcessed,
             erroredImports: { increment: result.error },
             duplicateImports: { increment: result.duplicate }
-          }
+          },
+          select: { id: true }
         });
       }, { timeout: 60 * 60 * 1000 /* 1h */ });
 

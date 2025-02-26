@@ -58,6 +58,7 @@ export default class ContinuousQueueWorker {
     }, delay);
   }
 
+  // TODO: print progress/status-report every minute
   private async tick(): Promise<void> {
     const task = await this.fetchNextTask();
     if (task == null) {
@@ -151,7 +152,8 @@ export default class ContinuousQueueWorker {
 
         await transaction.importGroup.update({
           where: { id: task.importGroupId },
-          data: importGroupUpdateData
+          data: importGroupUpdateData,
+          select: { id: true }
         });
       }
     });
