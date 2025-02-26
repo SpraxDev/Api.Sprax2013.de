@@ -1,10 +1,16 @@
 import { container } from 'tsyringe';
 import CliArgumentProvider from '../cli/CliArgumentProvider.js';
 import CommandExecutor from '../cli/CommandExecutor.js';
+import TaskScheduler from '../task_queue/TaskScheduler.js';
 import App from './App.js';
 
 export default class CommandLineApp implements App {
+  private taskScheduler: TaskScheduler | undefined;
+
   async boot(): Promise<void> {
+    this.taskScheduler = container.resolve(TaskScheduler);
+    this.taskScheduler.start(false);
+
     const commandResult = await container
       .resolve(CommandExecutor)
       .run(CliArgumentProvider.determineLeftoverArgs());
@@ -17,6 +23,7 @@ export default class CommandLineApp implements App {
   }
 
   async shutdown(): Promise<void> {
-    // nothing to explicitly shut down here
+    this.taskScheduler?.dispose();
+    this.taskScheduler = undefined;
   }
 }
