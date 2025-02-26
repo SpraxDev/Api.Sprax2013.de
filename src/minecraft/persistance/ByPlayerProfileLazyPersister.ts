@@ -16,6 +16,7 @@ export default class ByPlayerProfileLazyPersister {
 
   async persist(profile: UuidToProfileResponse): Promise<void> {
     await this.profilePersister.persist(profile);
+    this.lazyImportTaskCreator.lazyQueueThirdPartyCapeUpdate(profile.id);
 
     const textureProperty = new MinecraftProfile(profile).getTexturesProperty();
     if (textureProperty != null) {

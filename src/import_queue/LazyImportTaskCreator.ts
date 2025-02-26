@@ -1,8 +1,6 @@
 import { Disposable, singleton } from 'tsyringe';
 import DatabaseClient from '../database/DatabaseClient.js';
 import { UuidToProfileResponse } from '../minecraft/MinecraftApiClient.js';
-import MinecraftSkinCache from '../minecraft/skin/MinecraftSkinCache.js';
-import MinecraftProfile from '../minecraft/value-objects/MinecraftProfile.js';
 import SentrySdk from '../util/SentrySdk.js';
 import UUID from '../util/UUID.js';
 
@@ -11,13 +9,16 @@ export default class LazyImportTaskCreator implements Disposable {
   private readonly danglingPromises = new Set<Promise<void>>();
 
   constructor(
-    private readonly databaseClient: DatabaseClient,
-    private readonly minecraftSkinCache: MinecraftSkinCache
+    private readonly databaseClient: DatabaseClient
   ) {
   }
 
   lazyQueueTextureProperty(textureProperty: UuidToProfileResponse['properties'][0]): void {
     this.trackPromise(this.queueTextureProperty(textureProperty));
+  }
+
+  lazyQueueThirdPartyCapeUpdate(uuid: string): void {
+    this.trackPromise(this.queueThirdPartyCapeUpdate(uuid));
   }
 
   //
@@ -28,13 +29,6 @@ export default class LazyImportTaskCreator implements Disposable {
 
   queueUsernameUpdate(username: string): void {
     this.trackPromise(this.queueUsername(username));
-  }
-
-  queueProfileUpdate(uuidToProfile: UuidToProfileResponse): void {
-    const profile = new MinecraftProfile(uuidToProfile);
-
-    this.trackPromise(this.queueSkinUpdate(profile));
-    this.trackPromise(this.queueThirdPartyCapeUpdate(profile));
   }
 
   async waitForDanglingPromises(): Promise<void> {
@@ -88,27 +82,9 @@ export default class LazyImportTaskCreator implements Disposable {
     });
   }
 
-  private async queueSkinUpdate(profile: MinecraftProfile): Promise<void> {
-    const skinUrl = profile.parseTextures()?.getSecureSkinUrl();
-    if (skinUrl == null || (await this.minecraftSkinCache.existsSkinUrlWithNonNullTextureValue(skinUrl))) {
-      return;
-    }
-
-    await this.databaseClient.importTask.createMany({
-      data: [{
-        payload: Buffer.from(JSON.stringify({
-          value: profile.getTexturesProperty()!['value'],
-          signature: profile.getTexturesProperty()!['signature']
-        })),
-        payloadType: 'PROFILE_TEXTURE_VALUE'
-      }],
-      skipDuplicates: true
-    });
-  }
-
-  private async queueThirdPartyCapeUpdate(profile: MinecraftProfile): Promise<void> {
+  private async queueThirdPartyCapeUpdate(uuid: string): Promise<void> {
     const payloadType = 'UUID_UPDATE_THIRD_PARTY_CAPES';
-    const payload = Buffer.from(UUID.normalize(profile.id));
+    const payload = Buffer.from(UUID.normalize(uuid));
 
 
     await this.databaseClient.$transaction(async (transaction) => {
