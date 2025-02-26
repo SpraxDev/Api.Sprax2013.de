@@ -10,6 +10,7 @@ model Profile {
   capesSeenWith ProfileSeenCape[]
   apiKeys       ApiKey[]
 
+  @@index([updatedAt(sort: Asc)], type: BTree)
   @@map("profiles")
 }
 

@@ -25,6 +25,10 @@ model ImportTask {
   importGroup ImportGroup? @relation(fields: [importGroupId], references: [id])
 
   @@unique([payloadType, payload])
+  @@index([state], type: BTree)
+  @@index([payload], type: Hash)
+  @@index([payloadType], type: BTree)
+  @@index([createdAt(sort: Asc)], type: BTree)
   @@map("import_tasks")
 }
 
