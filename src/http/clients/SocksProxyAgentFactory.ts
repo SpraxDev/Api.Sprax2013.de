@@ -28,8 +28,12 @@ export default class SocksProxyAgentFactory {
       const destinationIp = options.hostname;
       const destinationPort = parseInt(options.port, 10) || SocksProxyAgentFactory.determineDefaultPort(options.protocol);
 
-      if (!(await this.unicastOnlyDnsResolver.resolvesToUnicastIp(destinationIp))) {
-        return callback(new ResolvedToNonUnicastIpError(destinationIp), null);
+      try {
+        if (!(await this.unicastOnlyDnsResolver.resolvesToUnicastIp(destinationIp))) {
+          return callback(new ResolvedToNonUnicastIpError(destinationIp), null);
+        }
+      } catch (err: any) {
+        return callback(err, null);
       }
 
       let socket: Net.Socket;
