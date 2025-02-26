@@ -2,6 +2,8 @@ import * as PrismaClient from '@prisma/client';
 import { singleton } from 'tsyringe';
 import AutoProxiedHttpClient from '../../http/clients/AutoProxiedHttpClient.js';
 import CapeCache from '../cape/CapeCache.js';
+import MinecraftProfileCache from '../profile/MinecraftProfileCache.js';
+import MinecraftProfileService from '../profile/MinecraftProfileService.js';
 import MinecraftSkinNormalizer from '../skin/manipulator/MinecraftSkinNormalizer.js';
 import SkinImageManipulator from '../skin/manipulator/SkinImageManipulator.js';
 import MinecraftSkinCache from '../skin/MinecraftSkinCache.js';
@@ -16,6 +18,8 @@ import SkinPersister from './base/SkinPersister.js';
 export default class ByTexturesPropertyPersister {
   constructor(
     private readonly httpClient: AutoProxiedHttpClient,
+    private readonly minecraftProfileService: MinecraftProfileService,
+    private readonly minecraftProfileCache: MinecraftProfileCache,
     private readonly skinCache: MinecraftSkinCache,
     private readonly capeCape: CapeCache,
     private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
@@ -29,6 +33,10 @@ export default class ByTexturesPropertyPersister {
 
   async persist(texturesProperty: { value: string, signature: string }): Promise<void> {
     const parsedTextures = MinecraftProfileTextures.fromPropertyValue(texturesProperty.value);
+
+    if ((await this.minecraftProfileCache.findByUuid(parsedTextures.profileId)) == null) {
+      await this.minecraftProfileService.provideProfileByUuid(parsedTextures.profileId);
+    }
 
     const promises: Promise<void>[] = [];
 
