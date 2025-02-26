@@ -52,15 +52,15 @@
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "@questdb/nodejs-client": "^3.0.0",
-    "@sentry/node": "^8.54.0",
-    "@sentry/profiling-node": "^8.54.0",
+    "@sentry/node": "^8.55.0",
+    "@sentry/profiling-node": "^8.55.0",
     "fastify": "^5.2.1",
     "gl": "^8.1.6",
     "ipaddr.js": "^2.2.0",
     "mri": "^1.2.0",
     "reflect-metadata": "^0.2.2",
     "sharp": "^0.33.5",
-    "socks": "^2.8.3",
+    "socks": "^2.8.4",
     "tsyringe": "^4.8.0",
     "undici": "^7.3.0",
     "xxhash-addon": "^2.0.3"
@@ -69,12 +69,12 @@
     "@tsconfig/node22": "^22.0.0",
     "@types/gl": "^6.0.5",
     "@types/jest": "^29.5.14",
-    "@types/node": "^22.13.1",
+    "@types/node": "^22.13.5",
     "@types/webgl-ext": "^0.0.37",
     "jest": "^29.7.0",
     "jest-mock-extended": "^3.0.7",
     "prisma": "^5.22.0",
-    "ts-jest": "^29.2.5",
+    "ts-jest": "^29.2.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   }
