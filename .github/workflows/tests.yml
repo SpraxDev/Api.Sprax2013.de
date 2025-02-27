@@ -45,7 +45,7 @@ jobs:
 
       - name: Run SonarCloud analysis
         if: '!cancelled()'
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v5
         with:
           args: >
             -Dsonar.organization=spraxdev
