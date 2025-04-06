@@ -3,6 +3,7 @@ import { injectAll, singleton } from 'tsyringe';
 import SentrySdk from '../util/SentrySdk.js';
 import { HttpError, NotFoundError } from './errors/HttpErrors.js';
 import Router from './routes/Router.js';
+import * as Sentry from '@sentry/node';
 
 @singleton()
 export default class FastifyWebServer {
@@ -15,6 +16,7 @@ export default class FastifyWebServer {
 
       trustProxy: false // TODO
     });
+    Sentry.setupFastifyErrorHandler(this.fastify);
 
     this.fastify.setNotFoundHandler((): void => {
       throw new NotFoundError('Requested resource not found');
