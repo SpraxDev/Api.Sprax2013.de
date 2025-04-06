@@ -14,7 +14,7 @@ export default class SimpleHttpClient extends HttpClient {
 
   constructor() {
     super();
-    this.userAgent = UserAgentGenerator.generateDefault();
+    this.userAgent = process.env.SPRAXAPI_USER_AGENT || UserAgentGenerator.generateDefault();
   }
 
   get(url: string, options?: GetRequestOptions): Promise<HttpResponse> {

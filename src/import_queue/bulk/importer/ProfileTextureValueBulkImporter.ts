@@ -45,7 +45,7 @@ export default class ProfileTextureValueBulkImporter implements BulkImporter {
       });
     }
 
-    const uuidTask = this.uuidBulkImporter.isValidPayload(parsedTextures.profileId);
+    const uuidTask = parsedTextures.profileId != null ? this.uuidBulkImporter.isValidPayload(parsedTextures.profileId) : 'No UUID';
     if (uuidTask === true) {
       tasks.push(...this.uuidBulkImporter.createTasks(parsedTextures.profileId, importGroupId));
     }

@@ -30,7 +30,7 @@ export default class ServerBlocklistService {
     return this.databaseClient.serverBlocklist.findMany({ where: { host: { not: null } } });
   }
 
-  async checkBlocklist(host: string): Promise<Map<string, boolean>> {
+  async checkBlocklist(host: string, dateSeenAt?: Date): Promise<Map<string, boolean>> {
     host = this.normalizeHost(host);
 
     let hashesToCheck: Map<string, string>;
@@ -51,11 +51,12 @@ export default class ServerBlocklistService {
 
     const effectiveHostsToCheck = new Map([...hashesToCheck, ...(additionalHostsToCheck ?? [])]);
 
-    const blocklist = await this.provideBlocklist();
+    // FIXME: Die effectiveHostsToCheck-loop ist recht langsam :| – Wie bekommen wir die geiler hin? Ist new Set vllt. einfach teuer oder so?
+    const blocklist = new Set(await this.provideBlocklist());
     const result = new Map<string, boolean>();
     let atLeastOneHostIsBlocked = false;
     for (const [hostToCheck, hash] of effectiveHostsToCheck) {
-      const hostBlocked = blocklist.includes(hash);
+      const hostBlocked = blocklist.has(hash);
       if (hostBlocked) {
         atLeastOneHostIsBlocked = true;
       }
@@ -65,7 +66,7 @@ export default class ServerBlocklistService {
       }
     }
 
-    const newHostHashesPersisted = await this.persistHostHashes(effectiveHostsToCheck);
+    const newHostHashesPersisted = await this.persistHostHashes(effectiveHostsToCheck, dateSeenAt);
     if (newHostHashesPersisted && atLeastOneHostIsBlocked) {
       await this.serverBlocklistPersister.updateMaterializedView();
     }
@@ -73,27 +74,17 @@ export default class ServerBlocklistService {
     return result;
   }
 
-  private async persistHostHashes(hostHashes: Map<string, string>): Promise<boolean> {
-    return this.databaseClient.$transaction(async (transaction) => {
-      const persistedHosts = (await transaction.serverBlocklistHostHashes.findMany({
-        where: { sha1: { in: Array.from(hostHashes.values()).map(v => Buffer.from(v, 'hex')) } },
-        select: { host: true }
-      }))
-        .map(hostHash => hostHash.host);
-
-      const hostsToPersist = Array.from(hostHashes.keys()).filter(host => !persistedHosts.includes(host));
-      if (hostsToPersist.length <= 0) {
-        return false;
-      }
-
-      await transaction.serverBlocklistHostHashes.createMany({
-        data: hostsToPersist.map(host => ({
-          sha1: Buffer.from(hostHashes.get(host)!, 'hex'),
-          host
-        }))
-      });
-      return true;
+  private async persistHostHashes(hostHashes: Map<string, string>, dateSeenAt?: Date): Promise<boolean> {
+    const createResult = await this.databaseClient.serverBlocklistHostHashes.createMany({
+      data: Array.from(hostHashes.entries())
+        .map(([host, hash]) => ({
+          host,
+          sha1: Buffer.from(hash, 'hex'),
+          createdAt: dateSeenAt
+        })),
+      skipDuplicates: true
     });
+    return createResult.count > 0;
   }
 
   private determineHostHashesForIp4(host: string): Map<string, string> {
@@ -127,13 +118,15 @@ export default class ServerBlocklistService {
   }
 
   private determineAdditionalHostHashesForFqdn(fqdn: string): Map<string, string> {
+    const fqdnDotCount = fqdn.split('.').length - 1;
+    if (fqdnDotCount > 3) {
+      return new Map();
+    }
+
     const hosts = [
-      `www.${fqdn}`,
       `play.${fqdn}`,
-      `mc.${fqdn}`,
-      `minecraft.${fqdn}`,
-      `eu.${fqdn}`,
-      `us.${fqdn}`
+      `join.${fqdn}`,
+      `mc.${fqdn}`
     ];
 
     const result = new Map<string, string>();

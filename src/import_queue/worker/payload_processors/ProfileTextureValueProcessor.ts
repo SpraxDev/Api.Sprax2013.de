@@ -23,19 +23,21 @@ export default class ProfileTextureValueProcessor implements PayloadProcessor {
   ) {
   }
 
+  // TODO: Improve on "new" detection (return value)
   async process(task: PrismaClient.ImportTask): Promise<boolean> {
     const payload = this.parsePayload(task);
     const parsedTextures = MinecraftProfileTextures.fromPropertyValue(payload.value);
 
     const skinUrl = parsedTextures.getSecureSkinUrl()!;
-    if (await this.minecraftSkinCache.existsSkinUrlWithNonNullTextureValue(skinUrl)) {
-      return false;
-    }
 
     const texturePropertiesAreValid = await this.shouldBePersistedWithTextureValue(skinUrl, payload.value, payload.signature);
     if (texturePropertiesAreValid) {
       await this.byTexturesPropertyPersister.persist({ value: payload.value, signature: payload.signature! });
       return true;
+    }
+
+    if (!(await this.minecraftSkinCache.existsSkinUrlWithNonNullTextureValue(skinUrl))) {
+      return false;
     }
 
     const skinImage = await this.httpClient.get(skinUrl);
