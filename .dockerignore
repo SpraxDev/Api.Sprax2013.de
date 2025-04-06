@@ -1,0 +1,10 @@
+*
+!package.json
+!package-lock.json
+!tsconfig.json
+!LICENSE
+!README.md
+
+!src/
+!resources/
+!prisma/

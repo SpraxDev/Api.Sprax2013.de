@@ -32,6 +32,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "build:docker": "docker build --file Containerfile --pull --rm --target prod --tag spraxdev/spraxapi:latest .",
+    "build:podman": "podman build --file Containerfile --pull --rm --target prod --tag spraxdev/spraxapi:latest .",
 
     "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" jest --coverage",
     "test:ci": "npm run test -- --ci --randomize --reporters github-actions --reporters summary",
