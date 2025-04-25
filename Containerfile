@@ -3,7 +3,8 @@ FROM docker.io/node:22-slim AS base
 LABEL maintainer="Christian Koop <contact@sprax2013.de>"
 LABEL org.opencontainers.image.source="https://github.com/SpraxDev/Api.Sprax2013.De"
 
-RUN apt-get update && \
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y \
     openssl \
@@ -46,7 +47,8 @@ WORKDIR /app/
 
 FROM base AS builder
 
-RUN apt-get update && \
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    apt-get update && \
     apt-get install -y \
     build-essential \
     python3
