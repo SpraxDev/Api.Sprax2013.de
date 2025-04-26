@@ -51,7 +51,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install -y \
     build-essential \
-    python3
+    python3 \
+    python-is-python3
 
 USER node
 
