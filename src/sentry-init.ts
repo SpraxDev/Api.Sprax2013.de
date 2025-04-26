@@ -1,5 +1,4 @@
 import * as Sentry from '@sentry/node';
-import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import Os from 'node:os';
 import { getAppInfo, IS_PRODUCTION } from './constants.js';
 
@@ -48,8 +47,6 @@ import { getAppInfo, IS_PRODUCTION } from './constants.js';
       Sentry.consoleIntegration(),
       Sentry.prismaIntegration(),
       Sentry.fastifyIntegration(),
-
-      nodeProfilingIntegration()
     ],
 
     beforeSend(event) {
