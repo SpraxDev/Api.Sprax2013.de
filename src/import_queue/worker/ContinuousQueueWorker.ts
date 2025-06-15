@@ -22,9 +22,10 @@ export default class ContinuousQueueWorker {
     'UUID_UPDATE_THIRD_PARTY_CAPES'
   ];
 
-  private tickRunning = false;
+  private ticksRunning = 0;
   private bufferedTasks: PrismaClient.ImportTask[] = [];
   private taskBufferSize = 30;
+  private inflightBufferedTaskUpdate: Promise<PrismaClient.ImportTask | null> | null = null;
   private nextPayloadTypeIndexToBuffer = 0;
   private ticksProcessedSinceLastReport = 0;
 
@@ -50,15 +51,20 @@ export default class ContinuousQueueWorker {
     const averageTicksPerMinute = Math.round(60000 / delay);
     this.taskBufferSize = Math.max(30, Math.min(averageTicksPerMinute / 3, 30));
 
+    let maxConcurrentTicks = 1;
+    if (this.appConfiguration.config.workerTickIntervalDynamic) {
+      maxConcurrentTicks = this.proxyServerConfigurationProvider.getProxyServers().length;
+    }
+
     this.taskScheduler.runRepeating(() => {
-      if (this.tickRunning) {
+      if (this.ticksRunning >= maxConcurrentTicks) {
         return;
       }
 
-      this.tickRunning = true;
+      ++this.ticksRunning;
       this.tick()
         .catch(SentrySdk.logAndCaptureError)
-        .finally(() => this.tickRunning = false);
+        .finally(() => --this.ticksRunning);
     }, delay);
 
     this.taskScheduler.runRepeating(() => {
@@ -131,6 +137,20 @@ export default class ContinuousQueueWorker {
   }
 
   private async fetchNextTask(): Promise<PrismaClient.ImportTask | null> {
+    if (this.inflightBufferedTaskUpdate != null) {
+      return await this.inflightBufferedTaskUpdate;
+    }
+
+    try {
+      const updatePromise = this._fetchNextTask();
+      this.inflightBufferedTaskUpdate = updatePromise;
+      return await updatePromise;
+    } finally {
+      this.inflightBufferedTaskUpdate = null;
+    }
+  }
+
+  private async _fetchNextTask(): Promise<PrismaClient.ImportTask | null> {
     if (this.bufferedTasks.length === 0) {
       this.bufferedTasks = await this.databaseClient.importTask.findMany({
         where: {
@@ -148,7 +168,7 @@ export default class ContinuousQueueWorker {
   }
 
   private async updateTaskStatus(task: PrismaClient.ImportTask, state: 'IMPORTED' | 'NO_CHANGES' | 'ERROR'): Promise<void> {
-    this.databaseClient.$transaction(async (transaction) => {
+    await this.databaseClient.$transaction(async (transaction) => {
       await transaction.importTask.update({
         where: { id: task.id },
         data: { state },
