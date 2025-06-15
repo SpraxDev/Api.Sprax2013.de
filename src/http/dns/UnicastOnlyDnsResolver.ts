@@ -1,7 +1,9 @@
 import IpAddrJs from 'ipaddr.js';
 import Dns from 'node:dns';
+import { singleton } from 'tsyringe';
 import ResolvedToNonUnicastIpError from './errors/ResolvedToNonUnicastIpError.js';
 
+@singleton()
 export default class UnicastOnlyDnsResolver {
   lookup(
     hostname: string,

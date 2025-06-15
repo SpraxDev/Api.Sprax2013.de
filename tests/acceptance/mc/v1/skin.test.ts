@@ -1,9 +1,13 @@
 import '../../../../src/container-init.js';
 import { FastifyInstance, type LightMyRequestResponse } from 'fastify';
+import type * as Dns from 'node:dns';
 import Sharp from 'sharp';
 import { container } from 'tsyringe';
+import ResolvedToNonUnicastIpError from '../../../../src/http/dns/errors/ResolvedToNonUnicastIpError.js';
+import UnicastOnlyDnsResolver from '../../../../src/http/dns/UnicastOnlyDnsResolver.js';
 import FastifyWebServer from '../../../../src/webserver/FastifyWebServer.js';
 import { EXISTING_MC_ID, EXISTING_MC_ID_WITH_HYPHENS, EXISTING_MC_NAME } from '../../../test-constants.js';
+import { createStrictDeepMock } from '../../../test-helpers.js';
 
 const LEGACY_SKIN_URL = 'https://textures.minecraft.net/texture/292009a4925b58f02c77dadc3ecef07ea4c7472f64e0fdc32ce5522489362680';
 
@@ -228,8 +232,6 @@ describe.each([
     ['https://[fc00::1]'],
     ['https://[fe80::1]'],
     ['https://[ff00::1]'],
-    ['https://spraxapi-automated-test-private-ipv4.sprax.me'],
-    ['https://spraxapi-automated-test-private-ipv6.sprax.me']
   ])('Expect 400 for non-unicast URL %j', async (url: string) => {
     const response = await executeSkinRequest('?url=' + url);
 
@@ -237,7 +239,37 @@ describe.each([
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid query parameters',
-      details: [{ param: 'url', condition: 'url needs to point to a public IP address' }]
+      details: [{ param: 'url', condition: 'url needs to point to a public IP address' }],
+    });
+  });
+
+  test.each([
+    ['https://mock-linklocal-ipv4.sprax.dev'],
+    ['https://mock-linklocal-ipv6.sprax.dev'],
+  ])('Expect 400 for Domains that resolve to an non-unicast IP %j', async (url: string) => {
+    let mockLookupCalled = false;
+
+    const unicastOnlyDnsResolver = createStrictDeepMock<UnicastOnlyDnsResolver>({
+      lookup(hostname: string, _options: Dns.LookupOptions, callback: (err: (NodeJS.ErrnoException | null), address: (string | Dns.LookupAddress[]), family?: number) => void): void {
+        if (['mock-linklocal-ipv4.sprax.dev', 'mock-linklocal-ipv6.sprax.dev'].includes(hostname)) {
+          mockLookupCalled = true;
+          callback(new ResolvedToNonUnicastIpError('linkLocal'), []);
+          return;
+        }
+
+        callback(new Error('Call with an unexpected hostname: ' + hostname), []);
+      },
+    });
+    container.registerInstance<UnicastOnlyDnsResolver>(UnicastOnlyDnsResolver, unicastOnlyDnsResolver);
+
+    const response = await executeSkinRequest('?url=' + url);
+
+    expect(mockLookupCalled).toBe(true);
+    expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
+    expect(response.json()).toEqual({
+      error: 'Bad Request',
+      message: 'Missing or invalid query parameters',
+      details: [{ param: 'url', condition: 'url needs to point to a public IP address' }],
     });
   });
 

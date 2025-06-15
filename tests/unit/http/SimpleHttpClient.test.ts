@@ -1,13 +1,28 @@
 import { jest } from '@jest/globals';
+import type Dns from 'node:dns';
+import { container } from 'tsyringe';
 import * as Undici from 'undici';
 import ResolvedToNonUnicastIpError from '../../../src/http/dns/errors/ResolvedToNonUnicastIpError.js';
-import SimpleHttpClient from '../../../src/http/clients/SimpleHttpClient.js';
+import UnicastOnlyDnsResolver from '../../../src/http/dns/UnicastOnlyDnsResolver.js';
+import { createStrictDeepMock } from '../../test-helpers.js';
 
 let originalAgent: Undici.Agent;
 let mockAgent: Undici.MockAgent;
 let httpClient: SimpleHttpClient;
 
 beforeEach(() => {
+  const unicastOnlyDnsResolver = createStrictDeepMock<UnicastOnlyDnsResolver>({
+    lookup(hostname: string, _options: Dns.LookupOptions, callback: (err: (NodeJS.ErrnoException | null), address: (string | Dns.LookupAddress[]), family?: number) => void): void {
+      if (['mock-linklocal-ipv4.sprax.dev', 'mock-linklocal-ipv6.sprax.dev'].includes(hostname)) {
+        callback(new ResolvedToNonUnicastIpError('linkLocal'), []);
+        return;
+      }
+
+      callback(new Error('Call with an unexpected hostname: ' + hostname), []);
+    },
+  });
+  container.registerInstance<UnicastOnlyDnsResolver>(UnicastOnlyDnsResolver, unicastOnlyDnsResolver);
+
   (SimpleHttpClient as any).DEBUG_LOGGING = false;
 
   mockAgent = new Undici.MockAgent();
@@ -119,8 +134,8 @@ describe('SimpleHttpClient GET requests', () => {
     ['[ff00::1]'],
     ['[::1]'],
 
-    ['spraxapi-automated-test-private-ipv4.sprax.me'],
-    ['spraxapi-automated-test-private-ipv6.sprax.me']
+    ['mock-linklocal-ipv4.sprax.dev'],
+    ['mock-linklocal-ipv6.sprax.dev'],
   ])('Throws error when connecting to non-public IP: %s', async (hostname: string) => {
     (httpClient as any).agent = originalAgent;
 

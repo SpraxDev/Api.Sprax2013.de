@@ -1,3 +1,4 @@
+import { container } from 'tsyringe';
 import * as Undici from 'undici';
 import { IS_PRODUCTION } from '../../constants.js';
 import UnicastOnlyDnsResolver from '../dns/UnicastOnlyDnsResolver.js';
@@ -66,7 +67,7 @@ export default class SimpleHttpClient extends HttpClient {
     return {
       ...super.getDefaultAgentOptions(),
       connect: {
-        lookup: new UnicastOnlyDnsResolver().lookup,
+        lookup: container.resolve(UnicastOnlyDnsResolver).lookup,
       },
     };
   }
