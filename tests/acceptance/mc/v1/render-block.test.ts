@@ -10,8 +10,8 @@ describe('/mc/v1/render/block', () => {
       width: 128,
       height: 128,
       channels: 4,
-      background: { r: 125, g: 125, b: 125 }
-    }
+      background: { r: 125, g: 125, b: 125 },
+    },
   })
     .png()
     .toBuffer();
@@ -23,7 +23,7 @@ describe('/mc/v1/render/block', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid body',
-      details: [{ param: 'Content-Type', condition: 'image/png' }]
+      details: [{ param: 'Content-Type', condition: 'image/png' }],
     });
     expect(response.statusCode).toBe(400);
   });
@@ -35,7 +35,7 @@ describe('/mc/v1/render/block', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid body',
-      details: [{ param: 'Content-Type', condition: 'image/png' }]
+      details: [{ param: 'Content-Type', condition: 'image/png' }],
     });
     expect(response.statusCode).toBe(400);
   });
@@ -47,7 +47,7 @@ describe('/mc/v1/render/block', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid body',
-      details: [{ param: 'Content-Type', condition: 'image/png' }]
+      details: [{ param: 'Content-Type', condition: 'image/png' }],
     });
     expect(response.statusCode).toBe(400);
   });
@@ -59,7 +59,7 @@ describe('/mc/v1/render/block', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid body',
-      details: [{ param: 'body', condition: 'Valid PNG' }]
+      details: [{ param: 'body', condition: 'Valid PNG' }],
     });
     expect(response.statusCode).toBe(400);
   });
@@ -71,7 +71,7 @@ describe('/mc/v1/render/block', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid body',
-      details: [{ param: 'body', condition: 'body under 3 MiB' }]
+      details: [{ param: 'body', condition: 'body under 3 MiB' }],
     });
     expect(response.statusCode).toBe(400);
   });
@@ -80,7 +80,7 @@ describe('/mc/v1/render/block', () => {
     [0],
     [4],
     [1025],
-    [2000]
+    [2000],
   ])('Expect 400 for invalid size: %d', async (size: number) => {
     const fastifyWebServer = container.resolve(FastifyWebServer);
     const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
@@ -88,14 +88,14 @@ describe('/mc/v1/render/block', () => {
       method: 'GET',
       url: `/mc/v1/render/block?size=${size}`,
       headers: { 'Content-Type': 'image/png' },
-      body: await blockTexture
+      body: await blockTexture,
     });
 
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid query parameters',
-      details: [{ param: 'size', condition: 'size >= 8 and size <= 1024' }]
+      details: [{ param: 'size', condition: 'size >= 8 and size <= 1024' }],
     });
     expect(response.statusCode).toBe(400);
   });
@@ -125,7 +125,7 @@ describe('/mc/v1/render/block', () => {
       method: 'GET',
       url: '/mc/v1/render/block?size=1024',
       headers: { 'Content-Type': 'image/png' },
-      body: await blockTexture
+      body: await blockTexture,
     });
 
     expect(response.headers['content-type']).toBe('image/png');
@@ -148,7 +148,7 @@ describe('/mc/v1/render/block', () => {
     const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
     const response = await fastify.inject({
       method: 'POST',
-      url: '/mc/v1/render/block'
+      url: '/mc/v1/render/block',
     });
 
     expect(response.statusCode).toBe(405);
@@ -165,6 +165,6 @@ async function executeRenderBlockRequest(body: Buffer | undefined, contentType: 
     method: 'GET',
     url: '/mc/v1/render/block',
     headers: contentType != null ? { 'Content-Type': contentType } : undefined,
-    body
+    body,
   });
 }

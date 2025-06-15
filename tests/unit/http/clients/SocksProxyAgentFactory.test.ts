@@ -15,8 +15,8 @@ const proxyServer: SocksProxyServer = {
   socksProxyOptions: {
     version: 5,
     host: '127.0.0.1',
-    port: 1080
-  }
+    port: 1080,
+  },
 };
 
 describe('SocksProxyAgentFactory', () => {
@@ -26,7 +26,7 @@ describe('SocksProxyAgentFactory', () => {
 
   beforeEach(() => {
     unicastOnlyDnsResolver = mockDeep<UnicastOnlyDnsResolver>({
-      resolvesToUnicastIp: jest.fn<any>().mockResolvedValue(true)
+      resolvesToUnicastIp: jest.fn<any>().mockResolvedValue(true),
     });
 
     socksProxyServerConnector = mockDeep<SocksProxyServerConnector>();
@@ -45,7 +45,7 @@ describe('SocksProxyAgentFactory', () => {
 
   test.each([
     ['http:'],
-    ['https:']
+    ['https:'],
   ])('Connecting to a domain that resolves to a non-unicast IP throws an error (%j)', async (protocol: string) => {
     unicastOnlyDnsResolver.resolvesToUnicastIp.mockResolvedValue(false);
 

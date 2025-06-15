@@ -13,7 +13,7 @@ describe('RoundRobinProxyPool', () => {
     const proxyServers = [
       createProxyServerConfig('proxy1'),
       createProxyServerConfig('proxy2'),
-      createProxyServerConfig('proxy3')
+      createProxyServerConfig('proxy3'),
     ];
     const proxyPool = new RoundRobinProxyPool(proxyServers);
 
@@ -31,6 +31,6 @@ function createProxyServerConfig(name: string): ProxyServer {
     displayName: name,
     simplifiedUri: 'socks5://' + name,
     username: '',
-    password: ''
+    password: '',
   };
 }

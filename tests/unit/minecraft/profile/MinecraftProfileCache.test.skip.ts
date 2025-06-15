@@ -12,12 +12,12 @@ beforeEach(() => {
   databaseClient = mockDeep<DatabaseClient>({
     fallbackMockImplementation: () => {
       throw new Error('Not implemented');
-    }
+    },
   });
   minecraftSkinCache = mockDeep<MinecraftSkinCache>({
     fallbackMockImplementation: () => {
       throw new Error('Not implemented');
-    }
+    },
   });
   minecraftProfileCache = new MinecraftProfileCache(databaseClient, minecraftSkinCache);
 });
@@ -31,7 +31,7 @@ describe('#findByUuid', () => {
   test('returns a cached profile', async () => {
     const cachedProfile = {
       raw: EXISTING_MC_PROFILE_RESPONSE,
-      ageInSeconds: 100 * 60
+      ageInSeconds: 100 * 60,
     };
     databaseClient.profileCache.findUnique.mockResolvedValue(cachedProfile as any);
 
@@ -39,7 +39,7 @@ describe('#findByUuid', () => {
       .resolves
       .toEqual({
         profile: EXISTING_MC_PROFILE_RESPONSE,
-        ageInSeconds: 100 * 60
+        ageInSeconds: 100 * 60,
       });
 
     expect(databaseClient.profileCache.findUnique).toHaveBeenCalledTimes(1);
@@ -55,7 +55,7 @@ describe('#findByUsername', () => {
   test('returns a cached profile', async () => {
     const cachedProfile = {
       raw: EXISTING_MC_PROFILE_RESPONSE,
-      ageInSeconds: 100 * 60
+      ageInSeconds: 100 * 60,
     };
     databaseClient.profileCache.findFirst.mockResolvedValue(cachedProfile as any);
 
@@ -63,7 +63,7 @@ describe('#findByUsername', () => {
       .resolves
       .toEqual({
         profile: EXISTING_MC_PROFILE_RESPONSE,
-        ageInSeconds: 100 * 60
+        ageInSeconds: 100 * 60,
       });
 
     expect(databaseClient.profileCache.findFirst).toHaveBeenCalledTimes(1);

@@ -11,20 +11,20 @@ describe('/mc/v1/uuid/*', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid url parameters',
-      details: [{ param: 'name', condition: 'name.length > 0' }]
+      details: [{ param: 'name', condition: 'name.length > 0' }],
     });
     expect(response.statusCode).toBe(400);
   });
 
   test.each([
     [EXISTING_MC_NAME],
-    [EXISTING_MC_NAME.toUpperCase()]
+    [EXISTING_MC_NAME.toUpperCase()],
   ])('Expect 200: %j', async (username: string) => {
     const response = await executeUuidRequest(username);
 
     expect(response.json()).toEqual({
       id: EXISTING_MC_ID,
-      name: EXISTING_MC_NAME
+      name: EXISTING_MC_NAME,
     });
     expect(response.statusCode).toBe(200);
   });
@@ -34,13 +34,13 @@ describe('/mc/v1/uuid/*', () => {
     ['a'.repeat(30)],
     [EXISTING_MC_ID],
     [EXISTING_MC_ID_WITH_HYPHENS],
-    [EXISTING_MC_ID_WITH_HYPHENS.toUpperCase()]
+    [EXISTING_MC_ID_WITH_HYPHENS.toUpperCase()],
   ])('Expect 404: %j', async (username: string) => {
     const response = await executeUuidRequest(username);
 
     expect(response.json()).toEqual({
       error: 'Not Found',
-      message: 'UUID for given username'
+      message: 'UUID for given username',
     });
     expect(response.statusCode).toBe(404);
   });
@@ -50,7 +50,7 @@ describe('/mc/v1/uuid/*', () => {
     const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
     const response = await fastify.inject({
       method: 'POST',
-      url: '/mc/v1/uuid/' + EXISTING_MC_NAME
+      url: '/mc/v1/uuid/' + EXISTING_MC_NAME,
     });
 
     expect(response.statusCode).toBe(405);
@@ -65,7 +65,7 @@ async function executeUuidRequest(username: string, method: 'GET' | 'POST' = 'GE
 
   const response = await fastify.inject({
     method,
-    url: '/mc/v1/uuid/' + username
+    url: '/mc/v1/uuid/' + username,
   });
 
   expect(response.headers['content-type']).toBe('application/json; charset=utf-8');

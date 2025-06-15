@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 import type Dns from 'node:dns';
 import { container } from 'tsyringe';
 import * as Undici from 'undici';
+import SimpleHttpClient from '../../../src/http/clients/SimpleHttpClient.js';
 import ResolvedToNonUnicastIpError from '../../../src/http/dns/errors/ResolvedToNonUnicastIpError.js';
 import UnicastOnlyDnsResolver from '../../../src/http/dns/UnicastOnlyDnsResolver.js';
 import { createStrictDeepMock } from '../../test-helpers.js';
@@ -36,13 +37,13 @@ beforeEach(() => {
   mockPool
     .intercept({
       path: '/',
-      method: 'GET'
+      method: 'GET',
     })
     .reply(200, 'OK', { headers: { 'content-type': 'text/plain', 'x-test-header': 'test-value' } });
   mockPool
     .intercept({
       path: '/json',
-      method: 'GET'
+      method: 'GET',
     })
     .reply(200, { ok: true });
   mockPool
@@ -51,8 +52,8 @@ beforeEach(() => {
       method: 'GET',
       headers: {
         authorization: 'Basic dXNlcm5hbWU6cGFzc3dvcmQ=',
-        'user-agent': 'Test-User-Agent'
-      }
+        'user-agent': 'Test-User-Agent',
+      },
     })
     .reply(200, 'OK');
   mockPool
@@ -60,8 +61,8 @@ beforeEach(() => {
       path: '/with-query',
       method: 'GET',
       query: {
-        param: 'value'
-      }
+        param: 'value',
+      },
     })
     .reply(200, 'OK');
 });
@@ -104,8 +105,8 @@ describe('SimpleHttpClient GET requests', () => {
     const response = await httpClient.get('https://test-hostname/with-headers', {
       headers: {
         'Authorization': 'Basic dXNlcm5hbWU6cGFzc3dvcmQ=',
-        'User-Agent': 'Test-User-Agent'
-      }
+        'User-Agent': 'Test-User-Agent',
+      },
     });
 
     expect(response.statusCode).toBe(200);
@@ -114,8 +115,8 @@ describe('SimpleHttpClient GET requests', () => {
   test('Sending request with headers can overwrite default headers', async () => {
     const response = await httpClient.get('https://test-hostname/with-query', {
       query: {
-        param: 'value'
-      }
+        param: 'value',
+      },
     });
 
     expect(response.statusCode).toBe(200);

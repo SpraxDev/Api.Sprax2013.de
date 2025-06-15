@@ -21,7 +21,7 @@ describe('static methods', () => {
 
   test.each([
     [32, 64],
-    [100, 100]
+    [100, 100],
   ])('#createByImage fails for images with wrong dimensions (%jx%j px)', async (width: number, height: number) => {
     const image = await ImageManipulator.createEmpty(width, height);
     const imageBytes = await image.toPngBuffer();
@@ -31,7 +31,7 @@ describe('static methods', () => {
 
   test.each([
     [64, 32],
-    [64, 64]
+    [64, 64],
   ])('#createByImage succeeds for images with correct dimensions (%jx%j px)', async (width: number, height: number) => {
     const image = await ImageManipulator.createEmpty(width, height);
     const imageBytes = await image.toPngBuffer();

@@ -17,7 +17,7 @@ class TestRouter implements Router {
     server.all('/restful', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
         get: (): FastifyReply => reply.send('GET'),
-        post: (): FastifyReply => reply.send('POST')
+        post: (): FastifyReply => reply.send('POST'),
       });
     });
   }
@@ -34,7 +34,7 @@ describe('FastifyWebServer', () => {
   test('Requesting an unknown endpoint should return 404', async () => {
     const response = await fastify.inject({
       method: 'GET',
-      url: '/non-existing-endpoint'
+      url: '/non-existing-endpoint',
     });
 
     expect(response.statusCode).toBe(404);
@@ -44,7 +44,7 @@ describe('FastifyWebServer', () => {
   test('A request throwing an uncaught error should return 500', async () => {
     const response = await fastify.inject({
       method: 'GET',
-      url: '/uncaught-error'
+      url: '/uncaught-error',
     });
 
     expect(response.statusCode).toBe(500);
@@ -71,11 +71,11 @@ describe('FastifyWebServer', () => {
 describe('static #handleRestfully', () => {
   test.each([
     'GET',
-    'POST'
+    'POST',
   ] satisfies ('GET' | 'POST')[])('Expect 200 for existing method handler: %s', async (method: 'GET' | 'POST') => {
     const response = await fastify.inject({
       method,
-      url: '/restful'
+      url: '/restful',
     });
 
     expect(response.statusCode).toBe(200);
@@ -85,7 +85,7 @@ describe('static #handleRestfully', () => {
   test('Expect 405 for non-existing method handler', async () => {
     const response = await fastify.inject({
       method: 'PUT',
-      url: '/restful'
+      url: '/restful',
     });
 
     expect(response.statusCode).toBe(405);
@@ -96,7 +96,7 @@ describe('static #handleRestfully', () => {
   test('Expect HEAD requests to properly return 200', async () => {
     const response = await fastify.inject({
       method: 'HEAD',
-      url: '/restful'
+      url: '/restful',
     });
 
     expect(response.statusCode).toBe(200);

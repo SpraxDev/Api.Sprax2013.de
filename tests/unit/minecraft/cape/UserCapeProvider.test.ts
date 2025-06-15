@@ -8,7 +8,7 @@ class TestCapeProvider implements CapeProvider {
   public readonly provideResponse: CapeResponse = {
     image: Buffer.from('A PNG'),
     mimeType: 'image/png',
-    ageInSeconds: 0
+    ageInSeconds: 0,
   };
 
   get capeType() {

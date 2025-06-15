@@ -24,9 +24,9 @@ const profileWithCape = new MinecraftProfile({
       '    }\n' +
       '  }\n' +
       '}').toString('base64'),
-    signature: 'some-signature'
+    signature: 'some-signature',
   }],
-  profileActions: []
+  profileActions: [],
 });
 
 describe('MojangCapeProvider', () => {
@@ -39,7 +39,7 @@ describe('MojangCapeProvider', () => {
     capeCache = mockDeep<CapeCache>({
       fallbackMockImplementation: () => {
         throw new Error('Not implemented');
-      }
+      },
     });
     capeProvider = new MojangCapeProvider(httpClient, capeCache);
   });
@@ -65,7 +65,7 @@ describe('MojangCapeProvider', () => {
 
   test.each([
     'text/html',
-    ''
+    '',
   ])('Throws an exception on success response with wrong Content-Type: %j', async (responseType: string) => {
     capeCache.findByTypeAndUrl.mockResolvedValue(null);
     httpClient.get.mockResolvedValue(new HttpResponse(200, new Map(responseType ? [['content-type', responseType]] : []), Buffer.from('Not a PNG')));
@@ -76,7 +76,7 @@ describe('MojangCapeProvider', () => {
 
   test.each([
     'image/png',
-    'application/octet-stream'
+    'application/octet-stream',
   ])('Returns the response body when a user has a cape (Response is %j)', async (responseType: string) => {
     capeCache.findByTypeAndUrl.mockResolvedValue(null);
     httpClient.get.mockResolvedValue(new HttpResponse(200, new Map([['content-type', responseType]]), Buffer.from('A PNG')));
@@ -84,7 +84,7 @@ describe('MojangCapeProvider', () => {
     await expect(capeProvider.provide(profileWithCape)).resolves.toEqual<CapeResponse>({
       image: Buffer.from('A PNG'),
       mimeType: 'image/png',
-      ageInSeconds: 0
+      ageInSeconds: 0,
     });
     expect(httpClient.get).toHaveBeenCalledWith(`https://textures.minecraft.net/texture/cd9d82ab17fd92022dbd4a86cde4c382a7540e117fae7b9a2853658505a80625`);
   });
@@ -96,13 +96,13 @@ describe('MojangCapeProvider', () => {
       pixelDataHash: Buffer.from('20de1b0d249a9ee22e857b379e1eb623', 'hex'),
       imageBytes: Buffer.from('A PNG'),
       mimeType: 'image/png',
-      createdAt: new Date()
+      createdAt: new Date(),
     } satisfies PrismaClient.Cape);
 
     await expect(capeProvider.provide(profileWithCape)).resolves.toEqual<CapeResponse>({
       image: Buffer.from('A PNG'),
       mimeType: 'image/png',
-      ageInSeconds: 0
+      ageInSeconds: 0,
     });
     expect(httpClient.get).not.toHaveBeenCalled();
   });

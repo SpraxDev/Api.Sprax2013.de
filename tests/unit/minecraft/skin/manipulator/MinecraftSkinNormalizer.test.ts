@@ -17,7 +17,7 @@ describe('MinecraftSkinNormalizer', () => {
   test.each([
     ['legacy-normalized.png'],
     ['modern-2nd-layer-normalized.png'],
-    ['modern-red-transparent-overlay.png']
+    ['modern-red-transparent-overlay.png'],
   ])('normalizing an already normalized skin changes nothing', async (fileName: string) => {
     const skinBytes = await readTestResource(`skins/${fileName}`);
     const expectedImage = await (await ImageManipulator.createByImage(skinBytes)).toRaw();
@@ -110,7 +110,7 @@ describe('MinecraftSkinNormalizer', () => {
     [100, 100],
     [32, 32],
     [32, 64],
-    [65, 65]
+    [65, 65],
   ])('Expect error for invalid skin dimensions: (%j|%j)', async (width: number, height: number) => {
     const inputImage = await (await ImageManipulator.createEmpty(width, height)).toPngBuffer();
     await expect(SkinImageManipulator.createByImage(inputImage)).rejects.toThrow('Image does not have valid skin dimensions');

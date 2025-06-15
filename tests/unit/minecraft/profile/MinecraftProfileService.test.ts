@@ -18,22 +18,22 @@ beforeEach(() => {
   profileCache = mockDeep<MinecraftProfileCache>({
     fallbackMockImplementation: () => {
       throw new Error('Not implemented');
-    }
+    },
   });
   minecraftApiClient = mockDeep<MinecraftApiClient>({
     fallbackMockImplementation: () => {
       throw new Error('Not implemented');
-    }
+    },
   });
   profilePersister = mockDeep<ProfilePersister>({
     fallbackMockImplementation: () => {
       throw new Error('Not implemented');
-    }
+    },
   });
   byPlayerProfileLazyPersister = mockDeep<ByPlayerProfileLazyPersister>({
     fallbackMockImplementation: () => {
       throw new Error('Not implemented');
-    }
+    },
   });
   minecraftProfileService = new MinecraftProfileService(profileCache, minecraftApiClient, profilePersister, byPlayerProfileLazyPersister);
 });
@@ -44,7 +44,7 @@ describe('#provideProfileByUuid', () => {
   test('Profile is resolved from cache', async () => {
     const expectedProfile = {
       profile: EXISTING_MC_PROFILE_RESPONSE,
-      ageInSeconds: 0
+      ageInSeconds: 0,
     } satisfies Profile;
 
     profileCache.findByUuid.mockResolvedValue(expectedProfile);
@@ -74,7 +74,7 @@ describe('#provideProfileByUuid', () => {
   test('Multiple profile requests at the same time are not processed individually', async () => {
     const expectedProfile = {
       profile: EXISTING_MC_PROFILE_RESPONSE,
-      ageInSeconds: 0
+      ageInSeconds: 0,
     } satisfies Profile;
 
     profileCache.findByUuid.mockResolvedValue(null);
@@ -88,7 +88,7 @@ describe('#provideProfileByUuid', () => {
     const promises: Promise<Profile | null>[] = [
       minecraftProfileService.provideProfileByUuid(EXISTING_MC_ID),
       minecraftProfileService.provideProfileByUuid(EXISTING_MC_ID),
-      minecraftProfileService.provideProfileByUuid(EXISTING_MC_ID)
+      minecraftProfileService.provideProfileByUuid(EXISTING_MC_ID),
     ];
 
     await expect(promises[0]).resolves.toEqual(expectedProfile);
@@ -108,7 +108,7 @@ describe('#provideProfileByUuid', () => {
   test('On Mojang API troubles, a recent but outdated cached profile is returned', async () => {
     const expectedProfile = {
       profile: EXISTING_MC_PROFILE_RESPONSE,
-      ageInSeconds: 3 * 60
+      ageInSeconds: 3 * 60,
     } satisfies Profile;
 
     jest.spyOn(SentrySdk, 'captureError').mockReturnValue(undefined);
@@ -132,7 +132,7 @@ describe('#provideProfileByUuid', () => {
   test('On Mojang API troubles, a very old cached profile is not returned', async () => {
     const expectedProfile = {
       profile: EXISTING_MC_PROFILE_RESPONSE,
-      ageInSeconds: 25 * 60
+      ageInSeconds: 25 * 60,
     } satisfies Profile;
 
     profileCache.findByUuid.mockResolvedValue(expectedProfile);
@@ -170,7 +170,7 @@ describe('#provideProfileByUsername', () => {
   test('Multiple requests at the same time are not processed individually', async () => {
     const expectedProfile = {
       profile: EXISTING_MC_PROFILE_RESPONSE,
-      ageInSeconds: 0
+      ageInSeconds: 0,
     } satisfies Profile;
 
     profileCache.findByUsername.mockResolvedValue(null);
@@ -186,7 +186,7 @@ describe('#provideProfileByUsername', () => {
     const promises: Promise<Profile | null>[] = [
       minecraftProfileService.provideProfileByUsername(EXISTING_MC_NAME),
       minecraftProfileService.provideProfileByUsername(EXISTING_MC_NAME),
-      minecraftProfileService.provideProfileByUsername(EXISTING_MC_NAME)
+      minecraftProfileService.provideProfileByUsername(EXISTING_MC_NAME),
     ];
 
     await expect(promises[0]).resolves.toEqual(expectedProfile);
@@ -212,7 +212,7 @@ describe('#provideProfileByUsername', () => {
   test('Return a cached profile if it is very recent', async () => {
     const expectedProfile = {
       profile: EXISTING_MC_PROFILE_RESPONSE,
-      ageInSeconds: 60
+      ageInSeconds: 60,
     } satisfies Profile;
 
     profileCache.findByUsername.mockResolvedValue(expectedProfile);
@@ -225,7 +225,7 @@ describe('#provideProfileByUsername', () => {
   test('On Mojang API troubles (cached uuid->profile), a very old cached profile is not returned', async () => {
     const expectedProfile = {
       profile: EXISTING_MC_PROFILE_RESPONSE,
-      ageInSeconds: 25 * 60
+      ageInSeconds: 25 * 60,
     } satisfies Profile;
 
     profileCache.findByUsername.mockResolvedValue(expectedProfile);
@@ -263,7 +263,7 @@ describe('#provideProfileByUsername', () => {
   test('On Mojang API troubles (username->uuid), a recent but outdated cached profile is returned', async () => {
     const expectedProfile = {
       profile: EXISTING_MC_PROFILE_RESPONSE,
-      ageInSeconds: 8 * 60
+      ageInSeconds: 8 * 60,
     } satisfies Profile;
 
     jest.spyOn(SentrySdk, 'captureError').mockReturnValue(undefined);
@@ -290,7 +290,7 @@ describe('#provideProfileByUsername', () => {
   test('On Mojang API troubles (cached uuid->profile), a recent but outdated cached profile is returned', async () => {
     const expectedProfile = {
       profile: EXISTING_MC_PROFILE_RESPONSE,
-      ageInSeconds: 8 * 60
+      ageInSeconds: 8 * 60,
     } satisfies Profile;
 
     jest.spyOn(SentrySdk, 'captureError').mockReturnValue(undefined);
@@ -317,7 +317,7 @@ describe('#provideProfileByUsername', () => {
   test('If the cached username profile is not recent, try refreshing it and return on identical name', async () => {
     const cachedProfile = {
       profile: EXISTING_MC_PROFILE_RESPONSE,
-      ageInSeconds: 61
+      ageInSeconds: 61,
     } satisfies Profile;
 
     profileCache.findByUsername.mockResolvedValue(cachedProfile);
@@ -329,7 +329,7 @@ describe('#provideProfileByUsername', () => {
       .resolves
       .toEqual({
         profile: EXISTING_MC_PROFILE_RESPONSE,
-        ageInSeconds: 0
+        ageInSeconds: 0,
       });
 
     expect(minecraftApiClient.fetchProfileForUuid).toHaveBeenCalledTimes(1);
@@ -348,7 +348,7 @@ describe('#provideProfileByUsername', () => {
   test('If the cached username profile is not recent, try refreshing it but resolve UUID if not the same name', async () => {
     const outdatedCachedProfileForUsernameThatNowBelongsToAnotherUuid = {
       profile: { ...EXISTING_MC_PROFILE_RESPONSE, id: 'some-other-user' },
-      ageInSeconds: 90
+      ageInSeconds: 90,
     } satisfies Profile;
 
     profileCache.findByUsername.mockResolvedValue(outdatedCachedProfileForUsernameThatNowBelongsToAnotherUuid);
@@ -365,7 +365,7 @@ describe('#provideProfileByUsername', () => {
       .resolves
       .toEqual({
         profile: EXISTING_MC_PROFILE_RESPONSE,
-        ageInSeconds: 0
+        ageInSeconds: 0,
       });
 
     expect(minecraftApiClient.fetchUuidForUsername).toHaveBeenCalledTimes(1);
@@ -386,7 +386,7 @@ describe('#provideProfileByUsername', () => {
     expect(byPlayerProfileLazyPersister.persist).toHaveBeenNthCalledWith(1, {
       ...EXISTING_MC_PROFILE_RESPONSE,
       id: 'some-other-user',
-      name: 'new_username'
+      name: 'new_username',
     });
     expect(byPlayerProfileLazyPersister.persist).toHaveBeenNthCalledWith(2, EXISTING_MC_PROFILE_RESPONSE);
   });

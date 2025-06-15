@@ -13,7 +13,7 @@ let skinPersister: SkinPersister;
 beforeEach(() => {
   databaseTransaction = createStrictDeepMock<PrismaClient.PrismaClient>({});
   databaseClient = createStrictDeepMock<DatabaseClient>({
-    $transaction: jest.fn<any>().mockImplementation((fn: any) => fn(databaseTransaction))
+    $transaction: jest.fn<any>().mockImplementation((fn: any) => fn(databaseTransaction)),
   });
 
   skinPersister = new SkinPersister(databaseClient);
@@ -40,9 +40,9 @@ describe('#persist', () => {
     expect(databaseTransaction.skinUrl.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skinUrl.findUnique).toHaveBeenCalledWith({
       where: {
-        url: originalSkinUrl
+        url: originalSkinUrl,
       },
-      select: { skinId: true }
+      select: { skinId: true },
     } satisfies PrismaClient.Prisma.SkinUrlFindUniqueArgs);
   });
 
@@ -57,9 +57,9 @@ describe('#persist', () => {
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledWith({
       where: {
-        pixelDataHash: originalSkinPixelDataHash
+        pixelDataHash: originalSkinPixelDataHash,
       },
-      select: { id: true }
+      select: { id: true },
     } satisfies PrismaClient.Prisma.SkinFindUniqueArgs);
 
     expect(databaseTransaction.skin.create).toHaveBeenCalledTimes(1);
@@ -72,13 +72,13 @@ describe('#persist', () => {
             where: { pixelDataHash: normalizedSkinPixelDataHash },
             create: {
               pixelDataHash: normalizedSkinPixelDataHash,
-              imageBytes: await normalizedSkinPng
-            }
-          }
+              imageBytes: await normalizedSkinPng,
+            },
+          },
         },
-        skinUrls: undefined
+        skinUrls: undefined,
       },
-      select: { id: true }
+      select: { id: true },
     } satisfies PrismaClient.Prisma.SkinCreateArgs);
   });
 
@@ -94,9 +94,9 @@ describe('#persist', () => {
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledWith({
       where: {
-        pixelDataHash: originalSkinPixelDataHash
+        pixelDataHash: originalSkinPixelDataHash,
       },
-      select: { id: true }
+      select: { id: true },
     } satisfies PrismaClient.Prisma.SkinFindUniqueArgs);
 
     expect(databaseTransaction.skin.create).toHaveBeenCalledTimes(1);
@@ -109,20 +109,20 @@ describe('#persist', () => {
             where: { pixelDataHash: normalizedSkinPixelDataHash },
             create: {
               pixelDataHash: normalizedSkinPixelDataHash,
-              imageBytes: await normalizedSkinPng
-            }
-          }
+              imageBytes: await normalizedSkinPng,
+            },
+          },
         },
         skinUrls: {
           create: {
             url: originalSkinUrl,
             textureValue: undefined,
             textureSignature: undefined,
-            createdAt: undefined
-          }
-        }
+            createdAt: undefined,
+          },
+        },
       },
-      select: { id: true }
+      select: { id: true },
     } satisfies PrismaClient.Prisma.SkinCreateArgs);
   });
 
@@ -155,9 +155,9 @@ describe('#persist', () => {
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledWith({
       where: {
-        pixelDataHash: originalSkinPixelDataHash
+        pixelDataHash: originalSkinPixelDataHash,
       },
-      select: { id: true }
+      select: { id: true },
     } satisfies PrismaClient.Prisma.SkinFindUniqueArgs);
 
     expect(databaseTransaction.skin.create).toHaveBeenCalledTimes(1);
@@ -170,20 +170,20 @@ describe('#persist', () => {
             where: { pixelDataHash: normalizedSkinPixelDataHash },
             create: {
               pixelDataHash: normalizedSkinPixelDataHash,
-              imageBytes: await normalizedSkinPng
-            }
-          }
+              imageBytes: await normalizedSkinPng,
+            },
+          },
         },
         skinUrls: {
           create: {
             url: originalSkinUrl,
             textureValue: textureValue,
             textureSignature: textureSignature,
-            createdAt: new Date('2024-08-28T15:29:10.646Z')
-          }
-        }
+            createdAt: new Date('2024-08-28T15:29:10.646Z'),
+          },
+        },
       },
-      select: { id: true }
+      select: { id: true },
     } satisfies PrismaClient.Prisma.SkinCreateArgs);
   });
 
@@ -212,9 +212,9 @@ describe('#persist', () => {
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledWith({
       where: {
-        pixelDataHash: originalSkinPixelDataHash
+        pixelDataHash: originalSkinPixelDataHash,
       },
-      select: { id: true }
+      select: { id: true },
     } satisfies PrismaClient.Prisma.SkinFindUniqueArgs);
 
     expect(databaseTransaction.skin.create).toHaveBeenCalledTimes(1);
@@ -227,13 +227,13 @@ describe('#persist', () => {
             where: { pixelDataHash: normalizedSkinPixelDataHash },
             create: {
               pixelDataHash: normalizedSkinPixelDataHash,
-              imageBytes: await normalizedSkinPng
-            }
-          }
+              imageBytes: await normalizedSkinPng,
+            },
+          },
         },
-        skinUrls: undefined
+        skinUrls: undefined,
       },
-      select: { id: true }
+      select: { id: true },
     } satisfies PrismaClient.Prisma.SkinCreateArgs);
   });
 
@@ -249,9 +249,9 @@ describe('#persist', () => {
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledWith({
       where: {
-        pixelDataHash: originalSkinPixelDataHash
+        pixelDataHash: originalSkinPixelDataHash,
       },
-      select: { id: true }
+      select: { id: true },
     } satisfies PrismaClient.Prisma.SkinFindUniqueArgs);
 
     expect(databaseTransaction.skinUrl.create).toHaveBeenCalledTimes(1);
@@ -261,9 +261,9 @@ describe('#persist', () => {
         textureValue: undefined,
         textureSignature: undefined,
         skinId: 123n,
-        createdAt: undefined
+        createdAt: undefined,
       },
-      select: { skinId: true }
+      select: { skinId: true },
     } satisfies PrismaClient.Prisma.SkinUrlCreateArgs);
   });
 
@@ -278,9 +278,9 @@ describe('#persist', () => {
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.skin.findUnique).toHaveBeenCalledWith({
       where: {
-        pixelDataHash: normalizedSkinPixelDataHash
+        pixelDataHash: normalizedSkinPixelDataHash,
       },
-      select: { id: true }
+      select: { id: true },
     } satisfies PrismaClient.Prisma.SkinFindUniqueArgs);
 
     expect(databaseTransaction.skin.create).toHaveBeenCalledTimes(1);
@@ -289,9 +289,9 @@ describe('#persist', () => {
         pixelDataHash: normalizedSkinPixelDataHash,
         imageBytes: await normalizedSkinPng,
         normalizedSkin: undefined,
-        skinUrls: undefined
+        skinUrls: undefined,
       },
-      select: { id: true }
+      select: { id: true },
     } satisfies PrismaClient.Prisma.SkinCreateArgs);
   });
 });

@@ -45,7 +45,7 @@ describe('LabymodCapeProvider', () => {
     await expect(capeProvider.provide(EXISTING_MC_PROFILE)).resolves.toEqual<CapeResponse>({
       image: Buffer.from('A PNG'),
       mimeType: 'image/png',
-      ageInSeconds: 0
+      ageInSeconds: 0,
     });
     expect(httpClient.get).toHaveBeenCalledWith(`https://dl.labymod.net/capes/${EXISTING_MC_ID_WITH_HYPHENS}`);
   });

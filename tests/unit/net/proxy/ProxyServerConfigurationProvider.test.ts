@@ -18,8 +18,8 @@ describe('ProxyServerConfigurationProvider', () => {
         simplifiedUri: 'https://proxy.example.com/',
         displayName: 'test',
         username: '',
-        password: ''
-      }
+        password: '',
+      },
     ]);
     expect(configProvider.getSocksProxyServers()).toEqual([]);
   });
@@ -32,8 +32,8 @@ describe('ProxyServerConfigurationProvider', () => {
         simplifiedUri: `${protocol}://proxy.example.com/`,
         displayName: `${protocol}://proxy.example.com/`,
         username: '',
-        password: ''
-      }
+        password: '',
+      },
     ]);
     expect(configProvider.getSocksProxyServers()).toEqual([]);
   });
@@ -51,9 +51,9 @@ describe('ProxyServerConfigurationProvider', () => {
           version: socksVersion,
           host: 'proxy.example.com',
           port: 8899,
-          timeout: 3000
-        }
-      }
+          timeout: 3000,
+        },
+      },
     ];
     expect(configProvider.getProxyServers()).toEqual(expectedProxies);
     expect(configProvider.getSocksProxyServers()).toEqual(expectedProxies);
@@ -64,7 +64,7 @@ describe('ProxyServerConfigurationProvider', () => {
       'http://proxy0.example.com:8080',
       'https://proxy1.example.com',
       'socks5://[::1]:1234',
-      'socks4://user:pass@proxy2.example.com:8899'
+      'socks4://user:pass@proxy2.example.com:8899',
     ]);
 
     const expectedHttpProxies = [
@@ -72,14 +72,14 @@ describe('ProxyServerConfigurationProvider', () => {
         simplifiedUri: 'http://proxy0.example.com:8080/',
         displayName: 'http://proxy0.example.com:8080/',
         username: '',
-        password: ''
+        password: '',
       },
       {
         simplifiedUri: 'https://proxy1.example.com/',
         displayName: 'https://proxy1.example.com/',
         username: '',
-        password: ''
-      }
+        password: '',
+      },
     ];
     const expectedSocksProxies = [
       {
@@ -91,8 +91,8 @@ describe('ProxyServerConfigurationProvider', () => {
           version: 5,
           host: '::1',
           port: 1234,
-          timeout: 3000
-        }
+          timeout: 3000,
+        },
       },
       {
         simplifiedUri: 'socks4://proxy2.example.com:8899/',
@@ -103,9 +103,9 @@ describe('ProxyServerConfigurationProvider', () => {
           version: 4,
           host: 'proxy2.example.com',
           port: 8899,
-          timeout: 3000
-        }
-      }
+          timeout: 3000,
+        },
+      },
     ];
 
     expect(configProvider.getProxyServers().length).toBe(4);
@@ -150,7 +150,7 @@ describe('ProxyServerConfigurationProvider', () => {
       'https://proxy1.example.com',
       'https://proxy2.example.com',
       'https://user1:pass1@proxy1.example.com',
-      'https://proxy1.example.com'
+      'https://proxy1.example.com',
     ]);
     expect(configProvider.getProxyServers().length).toBe(4);
 
@@ -166,7 +166,7 @@ describe('ProxyServerConfigurationProvider', () => {
       'https://proxy1.example.com?name=test',
       'https://proxy2.example.com?name=proxy2',
       'https://user1:pass1@proxy3.example.com?name=test',
-      'https://proxy4.example.com?name=test'
+      'https://proxy4.example.com?name=test',
     ]);
     expect(configProvider.getProxyServers().length).toBe(4);
 

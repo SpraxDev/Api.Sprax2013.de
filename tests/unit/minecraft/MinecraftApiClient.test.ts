@@ -64,7 +64,7 @@ describe('#fetchListOfBlockedServers', () => {
     const expectedList = [
       'a'.repeat(40),
       'b'.repeat(40),
-      'c'.repeat(40)
+      'c'.repeat(40),
     ];
     httpClient.get.mockResolvedValue(new HttpResponse(200, new Map(), Buffer.from(expectedList.join('\n') + '\n')));
 
@@ -76,7 +76,7 @@ describe('#fetchListOfBlockedServers', () => {
     const expectedList = [
       'a'.repeat(40),
       'b'.repeat(41),
-      'c'.repeat(40)
+      'c'.repeat(40),
     ];
     httpClient.get.mockResolvedValue(new HttpResponse(200, new Map(), Buffer.from(expectedList.join('\n') + '\n')));
 

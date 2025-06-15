@@ -12,7 +12,7 @@ describe('SetWithTtl', () => {
   beforeEach(() => {
     const clearExpiredEntriesInSetsWithTtlTaskResolveSpy = jest.fn();
     const containerResolveSpy = jest.spyOn(container, 'resolve').mockReturnValue({
-      registerSet: clearExpiredEntriesInSetsWithTtlTaskResolveSpy
+      registerSet: clearExpiredEntriesInSetsWithTtlTaskResolveSpy,
     });
 
     setWithTtl = SetWithTtl.create(5);

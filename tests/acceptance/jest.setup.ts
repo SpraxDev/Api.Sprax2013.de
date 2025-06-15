@@ -19,7 +19,7 @@ beforeEach(async () => {
   container.registerInstance<AppConfiguration>(AppConfiguration, mockDeep<AppConfiguration>({
     config: {
       serverPort: 8087,
-      proxyServerUris: ''
-    }
+      proxyServerUris: '',
+    },
   }));
 });

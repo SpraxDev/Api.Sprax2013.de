@@ -13,11 +13,11 @@ let profileSeenNamesPersister: ProfileSeenNamePersister;
 beforeEach(() => {
   databaseTransaction = createStrictDeepMock<PrismaClient.PrismaClient>({
     profileSeenName: {
-      upsert: jest.fn<any>().mockResolvedValue(undefined)
-    }
+      upsert: jest.fn<any>().mockResolvedValue(undefined),
+    },
   });
   databaseClient = createStrictDeepMock<DatabaseClient>({
-    $transaction: jest.fn<any>().mockImplementation((fn: any) => fn(databaseTransaction))
+    $transaction: jest.fn<any>().mockImplementation((fn: any) => fn(databaseTransaction)),
   });
 
   profileSeenNamesPersister = new ProfileSeenNamePersister(databaseClient);
@@ -31,7 +31,7 @@ describe('#persist', () => {
   test('Does nothing, when provided timestamp does not change the already persisted data', async () => {
     databaseTransaction.profileSeenName.findUnique.mockResolvedValue({
       firstSeenUsing: lastWeek,
-      lastSeenUsing: today
+      lastSeenUsing: today,
     } satisfies Partial<PrismaClient.ProfileSeenName> as any);
 
     await expect(profileSeenNamesPersister.persist(EXISTING_MC_ID, EXISTING_MC_NAME, today)).resolves.toBeUndefined();
@@ -58,12 +58,12 @@ describe('#persist', () => {
         profileId: EXISTING_MC_ID,
         nameLowercase: EXISTING_MC_NAME.toLowerCase(),
         firstSeenUsing: today,
-        lastSeenUsing: today
+        lastSeenUsing: today,
       },
       update: {
         firstSeenUsing: today,
-        lastSeenUsing: today
-      }
+        lastSeenUsing: today,
+      },
     } satisfies PrismaClient.Prisma.ProfileSeenNameUpsertArgs));
 
     expect(databaseClient.fetchNow).toHaveBeenCalledTimes(seenAt == null ? 1 : 0);
@@ -75,7 +75,7 @@ describe('#persist', () => {
   test('Updating a name seen last week to seen today', async () => {
     databaseTransaction.profileSeenName.findUnique.mockResolvedValue({
       firstSeenUsing: lastWeek,
-      lastSeenUsing: lastWeek
+      lastSeenUsing: lastWeek,
     } satisfies Partial<PrismaClient.ProfileSeenName> as any);
 
     await expect(profileSeenNamesPersister.persist(EXISTING_MC_ID, EXISTING_MC_NAME, today)).resolves.toBeUndefined();
@@ -90,19 +90,19 @@ describe('#persist', () => {
         profileId: EXISTING_MC_ID,
         nameLowercase: EXISTING_MC_NAME.toLowerCase(),
         firstSeenUsing: today,
-        lastSeenUsing: today
+        lastSeenUsing: today,
       },
       update: {
         firstSeenUsing: undefined,
-        lastSeenUsing: today
-      }
+        lastSeenUsing: today,
+      },
     } satisfies PrismaClient.Prisma.ProfileSeenNameUpsertArgs));
   });
 
   test('Updating a name seen last week to first seen last month', async () => {
     databaseTransaction.profileSeenName.findUnique.mockResolvedValue({
       firstSeenUsing: lastWeek,
-      lastSeenUsing: lastWeek
+      lastSeenUsing: lastWeek,
     } satisfies Partial<PrismaClient.ProfileSeenName> as any);
 
     await expect(profileSeenNamesPersister.persist(EXISTING_MC_ID, EXISTING_MC_NAME, lastMonth)).resolves.toBeUndefined();
@@ -117,12 +117,12 @@ describe('#persist', () => {
         profileId: EXISTING_MC_ID,
         nameLowercase: EXISTING_MC_NAME.toLowerCase(),
         firstSeenUsing: lastMonth,
-        lastSeenUsing: lastMonth
+        lastSeenUsing: lastMonth,
       },
       update: {
         firstSeenUsing: lastMonth,
-        lastSeenUsing: undefined
-      }
+        lastSeenUsing: undefined,
+      },
     } satisfies PrismaClient.Prisma.ProfileSeenNameUpsertArgs));
   });
 });
@@ -130,6 +130,6 @@ describe('#persist', () => {
 function expectFindUniqueCalled(): void {
   expect(databaseTransaction.profileSeenName.findUnique).toHaveBeenCalledTimes(1);
   expect(databaseTransaction.profileSeenName.findUnique).toHaveBeenCalledWith(expect.objectContaining({
-    where: { profileId_nameLowercase: { profileId: EXISTING_MC_ID, nameLowercase: EXISTING_MC_NAME.toLowerCase() } }
+    where: { profileId_nameLowercase: { profileId: EXISTING_MC_ID, nameLowercase: EXISTING_MC_NAME.toLowerCase() } },
   } satisfies PrismaClient.Prisma.ProfileSeenNameFindUniqueArgs));
 }

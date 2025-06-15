@@ -13,11 +13,11 @@ let capePersister: CapePersister;
 beforeEach(() => {
   databaseTransaction = createStrictDeepMock<PrismaClient.PrismaClient>({
     profileSeenCape: {
-      upsert: jest.fn<any>().mockResolvedValue(undefined)
-    }
+      upsert: jest.fn<any>().mockResolvedValue(undefined),
+    },
   });
   databaseClient = createStrictDeepMock<DatabaseClient>({
-    $transaction: jest.fn<any>().mockImplementation((fn: any) => fn(databaseTransaction))
+    $transaction: jest.fn<any>().mockImplementation((fn: any) => fn(databaseTransaction)),
   });
 
   capePersister = new CapePersister(databaseClient);
@@ -43,16 +43,16 @@ describe('#persistGenericCape', () => {
       where: {
         type_pixelDataHash: {
           type: 'OPTIFINE',
-          pixelDataHash: capePixelDataHash
-        }
+          pixelDataHash: capePixelDataHash,
+        },
       },
-      select: { id: true }
+      select: { id: true },
     } satisfies PrismaClient.Prisma.CapeFindUniqueArgs);
   });
 
   test.each([
     'OPTIFINE',
-    'LABYMOD'
+    'LABYMOD',
   ] satisfies PrismaClient.CapeType[])('Persisting a new cape', async (capeType: PrismaClient.CapeType) => {
     databaseTransaction.cape.findUnique.mockResolvedValue(null);
     databaseTransaction.cape.create.mockResolvedValue({ id: 123n } satisfies Pick<PrismaClient.Cape, 'id'> as any);
@@ -66,10 +66,10 @@ describe('#persistGenericCape', () => {
       where: {
         type_pixelDataHash: {
           type: capeType,
-          pixelDataHash: capePixelDataHash
-        }
+          pixelDataHash: capePixelDataHash,
+        },
       },
-      select: { id: true }
+      select: { id: true },
     } satisfies PrismaClient.Prisma.CapeFindUniqueArgs);
 
     expect(databaseTransaction.cape.create).toHaveBeenCalledTimes(1);
@@ -78,9 +78,9 @@ describe('#persistGenericCape', () => {
         type: capeType,
         pixelDataHash: capePixelDataHash,
         imageBytes: await capeImage,
-        mimeType: 'image/jpeg'
+        mimeType: 'image/jpeg',
       },
-      select: { id: true }
+      select: { id: true },
     } satisfies PrismaClient.Prisma.CapeCreateArgs);
   });
 });
@@ -145,7 +145,7 @@ describe('#persistMojangCape', () => {
     expect(databaseTransaction.capeUrl.findUnique).toHaveBeenCalledTimes(1);
     expect(databaseTransaction.capeUrl.findUnique).toHaveBeenCalledWith({
       where: { url: 'https://textures.minecraft.net/texture/cd9d82ab17fd92022dbd4a86cde4c382a7540e117fae7b9a2853658505a80625' },
-      select: { capeId: true }
+      select: { capeId: true },
     } satisfies PrismaClient.Prisma.CapeUrlFindUniqueArgs);
   });
 
@@ -169,11 +169,11 @@ describe('#persistMojangCape', () => {
         mimeType: 'image/png',
         capeUrls: {
           create: {
-            url: 'https://textures.minecraft.net/texture/cd9d82ab17fd92022dbd4a86cde4c382a7540e117fae7b9a2853658505a80625'
-          }
-        }
+            url: 'https://textures.minecraft.net/texture/cd9d82ab17fd92022dbd4a86cde4c382a7540e117fae7b9a2853658505a80625',
+          },
+        },
       },
-      select: { id: true }
+      select: { id: true },
     } satisfies PrismaClient.Prisma.CapeCreateArgs);
   });
 
@@ -192,9 +192,9 @@ describe('#persistMojangCape', () => {
     expect(databaseTransaction.capeUrl.create).toHaveBeenCalledWith({
       data: {
         url: 'https://textures.minecraft.net/texture/cd9d82ab17fd92022dbd4a86cde4c382a7540e117fae7b9a2853658505a80625',
-        capeId: 123n
+        capeId: 123n,
       },
-      select: { capeId: true }
+      select: { capeId: true },
     } satisfies PrismaClient.Prisma.CapeUrlCreateArgs);
   });
 });

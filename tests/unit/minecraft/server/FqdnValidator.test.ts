@@ -8,7 +8,7 @@ describe('valid FQDNs', () => {
     ['foobar.example.com.'],
     ['foo.bar'],
     ['a.b'],
-    ['foo_bar.example.com']
+    ['foo_bar.example.com'],
   ])('%s', (input) => {
     expect(new FqdnValidator().validateFqdn(input)).toBe(true);
   });
@@ -20,7 +20,7 @@ describe('invalid FQDNs', () => {
     ['localhost'],
     ['127.0.0.1'],
     ['::1'],
-    ['example.com:80']
+    ['example.com:80'],
   ])('%s', (input) => {
     expect(new FqdnValidator().validateFqdn(input)).toBe(false);
   });

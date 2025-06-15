@@ -6,7 +6,7 @@ describe('static methods', () => {
   test.each([
     [{ r: 0, g: 0, b: 0, alpha: 0 }, { r: 0, g: 0, b: 0, alpha: 0 }, { r: 0, g: 0, b: 0, alpha: 0 }],
     [{ r: 0, g: 0, b: 0, alpha: 0 }, { r: 255, g: 255, b: 255, alpha: 255 }, { r: 255, g: 255, b: 255, alpha: 255 }],
-    [{ r: 255, g: 255, b: 255, alpha: 255 }, { r: 0, g: 0, b: 0, alpha: 0 }, { r: 255, g: 255, b: 255, alpha: 255 }]
+    [{ r: 255, g: 255, b: 255, alpha: 255 }, { r: 0, g: 0, b: 0, alpha: 0 }, { r: 255, g: 255, b: 255, alpha: 255 }],
   ])('#mergeColors', async (a: Color, b: Color, expected: Color) => {
     expect(ImageManipulator.mergeColors(a, b)).toEqual(expected);
   });
@@ -49,7 +49,7 @@ describe('static methods', () => {
       0x00, 0x00, 0x00, 0xff,
       0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x00, 0xff,
-      0x00, 0x00, 0xff, 0xff
+      0x00, 0x00, 0xff, 0xff,
     ]));
   });
 });
@@ -82,7 +82,7 @@ describe('accessing individual pixels', () => {
       0x00, 0x00, 0x00, 0xff,
       0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x00, 0xff,
-      0x00, 0x00, 0xff, 0xff
+      0x00, 0x00, 0xff, 0xff,
     ]));
   });
 
@@ -122,7 +122,7 @@ describe('drawing rectangles', () => {
       0xff, 0x00, 0x00, 0xff,
       0xff, 0x00, 0x00, 0xff,
       0x00, 0x00, 0xff, 0xff,
-      0x00, 0x00, 0xff, 0xff
+      0x00, 0x00, 0xff, 0xff,
     ]));
   });
 
@@ -149,7 +149,7 @@ describe('drawing with images', () => {
       0x00, 0x00, 0x00, 0xff,
       0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x00, 0xff,
-      0x00, 0x00, 0xff, 0xff
+      0x00, 0x00, 0xff, 0xff,
     ]));
   });
 
@@ -172,8 +172,8 @@ describe('drawing with images', () => {
       ['add', undefined],
       [undefined, true],
       [undefined, false],
-      [undefined, undefined]
-    ] satisfies (['replace' | 'add' | undefined, boolean | undefined])[]
+      [undefined, undefined],
+    ] satisfies (['replace' | 'add' | undefined, boolean | undefined])[],
   )('#drawSubImg with mode=%j and ignoreAlpha=%j', async (mode: 'replace' | 'add' | undefined, ignoreAlpha: boolean | undefined) => {
     const image = await ImageManipulator.createEmpty(2, 2);
 
@@ -188,7 +188,7 @@ describe('drawing with images', () => {
       0xff, 0xff, 0x00, 0xff,
       0x00, 0x00, 0xff, 0xff,
       0x00, 0x00, 0x00, 0xff,
-      0xff, 0xff, 0xff, 0xff
+      0xff, 0xff, 0xff, 0xff,
     ]));
   });
 
@@ -206,7 +206,7 @@ describe('drawing with images', () => {
       0x00, 0x00, 0xff, 0xff,
       0xff, 0xff, 0x00, 0xff,
       0xff, 0xff, 0xff, 0xff,
-      0x00, 0x00, 0x00, 0xff
+      0x00, 0x00, 0x00, 0xff,
     ]));
   });
 });

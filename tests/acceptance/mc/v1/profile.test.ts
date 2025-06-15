@@ -11,7 +11,7 @@ describe('/mc/v1/profile/*', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid url parameters',
-      details: [{ param: 'user', condition: 'user.length > 0' }]
+      details: [{ param: 'user', condition: 'user.length > 0' }],
     });
     expect(response.statusCode).toBe(400);
   });
@@ -23,7 +23,7 @@ describe('/mc/v1/profile/*', () => {
     [EXISTING_MC_NAME.toUpperCase()],
     [EXISTING_MC_ID + '?raw=true'],
     [EXISTING_MC_ID + '?full=false'],
-    [EXISTING_MC_ID + '?raw=true&full=false']
+    [EXISTING_MC_ID + '?raw=true&full=false'],
   ])('Expect 200: %j', async (user: string) => {
     const response = await executeProfileRequest(user);
     const responseBody = response.json();
@@ -34,10 +34,10 @@ describe('/mc/v1/profile/*', () => {
       properties: [{
         name: 'textures',
         value: expect.anything(),
-        signature: expect.anything()
+        signature: expect.anything(),
       }],
       profileActions: [],
-      legacy: false
+      legacy: false,
     });
     expect(typeof responseBody.properties[0].value).toBe('string');
     expect(responseBody.properties[0].value.length).toBeGreaterThan(0);
@@ -50,7 +50,7 @@ describe('/mc/v1/profile/*', () => {
   test.each([
     ['?raw=false'],
     ['?full=true'],
-    ['?full=false&raw=false']
+    ['?full=false&raw=false'],
   ])('Expect 200 and different response with %j', async (urlSuffix: string) => {
     const response = await executeProfileRequest(EXISTING_MC_ID + urlSuffix);
     const responseBody = response.json();
@@ -64,11 +64,11 @@ describe('/mc/v1/profile/*', () => {
       textures: expect.objectContaining({
         skinUrl: expect.anything(),
         texture_value: expect.anything(),
-        texture_signature: expect.anything()
+        texture_signature: expect.anything(),
       }),
 
       profile_actions: [],
-      name_history: []
+      name_history: [],
     });
     expect(typeof responseBody.textures.skinUrl).toBe('string');
     expect(responseBody.textures.skinUrl).toMatch(/^https?:\/\/textures\.minecraft\.net\//i);
@@ -87,13 +87,13 @@ describe('/mc/v1/profile/*', () => {
 
   test.each([
     ['non-existing-$'],
-    ['fdddfd0c-21ed-385b-a01a-ec96f6e0ffbe'] // UUIDv3
+    ['fdddfd0c-21ed-385b-a01a-ec96f6e0ffbe'], // UUIDv3
   ])('Expect 404: %j', async (username: string) => {
     const response = await executeProfileRequest(username);
 
     expect(response.json()).toEqual({
       error: 'Not Found',
-      message: 'Profile for given user'
+      message: 'Profile for given user',
     });
     expect(response.statusCode).toBe(404);
   });
@@ -104,7 +104,7 @@ describe('/mc/v1/profile/*', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid url parameters',
-      details: [{ param: 'user', condition: 'Is valid uuid string or user.length <= 16' }]
+      details: [{ param: 'user', condition: 'Is valid uuid string or user.length <= 16' }],
     });
     expect(response.statusCode).toBe(400);
   });
@@ -114,7 +114,7 @@ describe('/mc/v1/profile/*', () => {
     const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
     const response = await fastify.inject({
       method: 'POST',
-      url: '/mc/v1/profile/' + EXISTING_MC_ID
+      url: '/mc/v1/profile/' + EXISTING_MC_ID,
     });
 
     expect(response.statusCode).toBe(405);
@@ -129,7 +129,7 @@ async function executeProfileRequest(user: string, method: 'GET' | 'POST' = 'GET
 
   const response = await fastify.inject({
     method,
-    url: '/mc/v1/profile/' + user
+    url: '/mc/v1/profile/' + user,
   });
 
   expect(response.headers['content-type']).toBe('application/json; charset=utf-8');

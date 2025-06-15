@@ -9,14 +9,14 @@ describe('/mc/v1/capes/all', () => {
   test.each([
     [''],
     [EXISTING_MC_NAME],
-    [EXISTING_MC_ID]
+    [EXISTING_MC_ID],
   ])('Expect 410 Gone: %j', async (user: string) => {
     const fastifyWebServer = container.resolve(FastifyWebServer);
     const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
 
     const response = await fastify.inject({
       method: 'GET',
-      url: '/mc/v1/capes/all/' + user
+      url: '/mc/v1/capes/all/' + user,
     });
 
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
@@ -24,7 +24,7 @@ describe('/mc/v1/capes/all', () => {
 
     expect(response.json()).toEqual({
       error: 'Gone',
-      message: 'This endpoint was never intended for the general public and only returned the internal IDs used by this API to identify the skins (or null) – Please use one of the other cape endpoints instead'
+      message: 'This endpoint was never intended for the general public and only returned the internal IDs used by this API to identify the skins (or null) – Please use one of the other cape endpoints instead',
     });
     expect(response.statusCode).toBe(410);
   });
@@ -34,7 +34,7 @@ describe('/mc/v1/capes/all', () => {
     const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
     const response = await fastify.inject({
       method: 'POST',
-      url: '/mc/v1/capes/all/' + EXISTING_MC_NAME
+      url: '/mc/v1/capes/all/' + EXISTING_MC_NAME,
     });
 
     expect(response.statusCode).toBe(405);
@@ -50,7 +50,7 @@ describe('/mc/v1/capes/:capeType/:user?', () => {
 
     const response = await fastify.inject({
       method: 'GET',
-      url: `/mc/v1/capes/${capeType}/${user}`
+      url: `/mc/v1/capes/${capeType}/${user}`,
     });
 
     if (response.statusCode === 200 || response.statusCode === 404) {
@@ -66,7 +66,7 @@ describe('/mc/v1/capes/:capeType/:user?', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid url parameters',
-      details: [{ param: 'capeType', condition: `capeType in [MOJANG, OPTIFINE, LABYMOD]` }]
+      details: [{ param: 'capeType', condition: `capeType in [MOJANG, OPTIFINE, LABYMOD]` }],
     });
     expect(response.statusCode).toBe(400);
   });
@@ -77,7 +77,7 @@ describe('/mc/v1/capes/:capeType/:user?', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid url parameters',
-      details: [{ param: 'user', condition: 'user.length > 0' }]
+      details: [{ param: 'user', condition: 'user.length > 0' }],
     });
     expect(response.statusCode).toBe(400);
   });
@@ -89,7 +89,7 @@ describe('/mc/v1/capes/:capeType/:user?', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid url parameters',
-      details: [{ param: 'user', condition: 'Is valid uuid string or user.length <= 16' }]
+      details: [{ param: 'user', condition: 'Is valid uuid string or user.length <= 16' }],
     });
     expect(response.statusCode).toBe(400);
   });
@@ -100,7 +100,7 @@ describe('/mc/v1/capes/:capeType/:user?', () => {
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Not Found',
-      message: 'Profile for given user'
+      message: 'Profile for given user',
     });
     expect(response.statusCode).toBe(404);
   });
@@ -113,7 +113,7 @@ describe('/mc/v1/capes/:capeType/:user?', () => {
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Not Found',
-      message: 'User does not have a cape for that type'
+      message: 'User does not have a cape for that type',
     });
 
     expect(response.statusCode).toBe(404);
@@ -123,7 +123,7 @@ describe('/mc/v1/capes/:capeType/:user?', () => {
     [EXISTING_MC_ID_WITH_HYPHENS],
     [EXISTING_MC_NAME],
     [EXISTING_MC_NAME + '?download=0'],
-    [EXISTING_MC_NAME + '?download=false']
+    [EXISTING_MC_NAME + '?download=false'],
   ])('Expect OptiFine cape PNG for: %j', async (user: string) => {
     const response = await executeCapeRequest('optifine', user);
 
@@ -143,7 +143,7 @@ describe('/mc/v1/capes/:capeType/:user?', () => {
 
   test.each([
     [EXISTING_MC_ID + '?download=1'],
-    [EXISTING_MC_NAME + '?download=true']
+    [EXISTING_MC_NAME + '?download=true'],
   ])('Expect OptiFine cape PNG with forced-download headers for: %j', async (user: string) => {
     const response = await executeCapeRequest('optifine', user);
 
@@ -184,7 +184,7 @@ describe('/mc/v1/capes/:capeType/:user?', () => {
     const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
     const response = await fastify.inject({
       method: 'POST',
-      url: `/mc/v1/capes/mojang/${EXISTING_MC_ID}`
+      url: `/mc/v1/capes/mojang/${EXISTING_MC_ID}`,
     });
 
     expect(response.statusCode).toBe(405);
@@ -200,7 +200,7 @@ describe('/mc/v1/capes/:capeType/:user/render', () => {
 
     const response = await fastify.inject({
       method: 'GET',
-      url: `/mc/v1/capes/${capeType}/${user}/render` + (downloadParam != null ? `?download=${downloadParam}` : '')
+      url: `/mc/v1/capes/${capeType}/${user}/render` + (downloadParam != null ? `?download=${downloadParam}` : ''),
     });
 
     if (response.statusCode === 200 || response.statusCode === 404) {
@@ -216,7 +216,7 @@ describe('/mc/v1/capes/:capeType/:user/render', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid url parameters',
-      details: [{ param: 'capeType', condition: `capeType in [MOJANG, OPTIFINE, LABYMOD]` }]
+      details: [{ param: 'capeType', condition: `capeType in [MOJANG, OPTIFINE, LABYMOD]` }],
     });
     expect(response.statusCode).toBe(400);
   });
@@ -228,7 +228,7 @@ describe('/mc/v1/capes/:capeType/:user/render', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid url parameters',
-      details: [{ param: 'user', condition: 'Is valid uuid string or user.length <= 16' }]
+      details: [{ param: 'user', condition: 'Is valid uuid string or user.length <= 16' }],
     });
     expect(response.statusCode).toBe(400);
   });
@@ -239,7 +239,7 @@ describe('/mc/v1/capes/:capeType/:user/render', () => {
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Not Found',
-      message: 'Profile for given user'
+      message: 'Profile for given user',
     });
     expect(response.statusCode).toBe(404);
   });
@@ -250,7 +250,7 @@ describe('/mc/v1/capes/:capeType/:user/render', () => {
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Not Found',
-      message: 'User does not have a cape for that type'
+      message: 'User does not have a cape for that type',
     });
 
     expect(response.statusCode).toBe(404);
@@ -260,7 +260,7 @@ describe('/mc/v1/capes/:capeType/:user/render', () => {
     [EXISTING_MC_ID_WITH_HYPHENS, undefined],
     [EXISTING_MC_NAME, undefined],
     [EXISTING_MC_NAME, '0'],
-    [EXISTING_MC_NAME, 'false']
+    [EXISTING_MC_NAME, 'false'],
   ])('Expect renderer OptiFine cape PNG for {user=%j, download=%j}', async (user: string, download: string | undefined) => {
     const response = await executeCapeRenderRequest('optifine', user, download);
 
@@ -276,20 +276,20 @@ describe('/mc/v1/capes/:capeType/:user/render', () => {
   test.each([
     ['0'],
     ['6'],
-    ['1025']
+    ['1025'],
   ])('Expect 400 for invalid size: %j', async (size: string) => {
     const fastifyWebServer = container.resolve(FastifyWebServer);
     const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
     const response = await fastify.inject({
       method: 'GET',
-      url: `/mc/v1/capes/optifine/${EXISTING_MC_ID}/render?size=${size}`
+      url: `/mc/v1/capes/optifine/${EXISTING_MC_ID}/render?size=${size}`,
     });
 
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid query parameters',
-      details: [{ param: 'size', condition: `size >= 8 and size <= 1024` }]
+      details: [{ param: 'size', condition: `size >= 8 and size <= 1024` }],
     });
 
     expect(response.statusCode).toBe(400);
@@ -300,7 +300,7 @@ describe('/mc/v1/capes/:capeType/:user/render', () => {
     const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
     const response = await fastify.inject({
       method: 'GET',
-      url: `/mc/v1/capes/optifine/${EXISTING_MC_ID}/render?size=1024`
+      url: `/mc/v1/capes/optifine/${EXISTING_MC_ID}/render?size=1024`,
     });
 
     expect(response.headers['content-type']).toBe('image/png');
@@ -314,7 +314,7 @@ describe('/mc/v1/capes/:capeType/:user/render', () => {
 
   test.each([
     [EXISTING_MC_ID, '1'],
-    [EXISTING_MC_NAME, 'true']
+    [EXISTING_MC_NAME, 'true'],
   ])('Expect renderer OptiFine cape PNG with forced-download headers for: %j', async (user: string, download: string) => {
     const response = await executeCapeRenderRequest('optifine', user, download);
 
@@ -345,7 +345,7 @@ describe('/mc/v1/capes/:capeType/:user/render', () => {
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Service Unavailable',
-      message: 'Rendering LabyMod-Capes is currently not supported'
+      message: 'Rendering LabyMod-Capes is currently not supported',
     });
 
     expect(response.statusCode).toBe(503);
@@ -356,7 +356,7 @@ describe('/mc/v1/capes/:capeType/:user/render', () => {
     const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
     const response = await fastify.inject({
       method: 'POST',
-      url: `/mc/v1/capes/mojang/${EXISTING_MC_ID}/render`
+      url: `/mc/v1/capes/mojang/${EXISTING_MC_ID}/render`,
     });
 
     expect(response.statusCode).toBe(405);

@@ -18,7 +18,7 @@ describe('/mc/v1/skin/:user', () => {
 
     const response = await fastify.inject({
       method: 'GET',
-      url: `/mc/v1/skin/${user}${urlSuffix}`
+      url: `/mc/v1/skin/${user}${urlSuffix}`,
     });
 
     if (response.statusCode === 200 || response.statusCode === 404) {
@@ -35,7 +35,7 @@ describe('/mc/v1/skin/:user', () => {
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid url parameters',
-      details: [{ param: 'user', condition: 'user.length > 0' }]
+      details: [{ param: 'user', condition: 'user.length > 0' }],
     });
     expect(response.statusCode).toBe(400);
   });
@@ -46,7 +46,7 @@ describe('/mc/v1/skin/:user', () => {
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Not Found',
-      message: 'Profile for given user'
+      message: 'Profile for given user',
     });
     expect(response.statusCode).toBe(404);
   });
@@ -61,7 +61,7 @@ describe('/mc/v1/skin/:user', () => {
     [EXISTING_MC_NAME, '?raw=false&download=false'],
     [EXISTING_MC_NAME, '?raw=0&download=0'],
     ['x-url', `?url=${LEGACY_SKIN_URL}`],
-    ['x-url', `?url=${LEGACY_SKIN_URL}&raw=0`]
+    ['x-url', `?url=${LEGACY_SKIN_URL}&raw=0`],
   ])('Expect skin PNG for: %j', async (user: string, urlSuffix: string) => {
     const response = await executeSkinRequest(user, urlSuffix);
 
@@ -80,7 +80,7 @@ describe('/mc/v1/skin/:user', () => {
     [EXISTING_MC_NAME, '?download=true'],
     [EXISTING_MC_NAME, '?download=true&raw=false'],
     [EXISTING_MC_NAME, '?download=1&raw=0'],
-    ['x-url', `?url=${LEGACY_SKIN_URL}&download=1`]
+    ['x-url', `?url=${LEGACY_SKIN_URL}&download=1`],
   ])('Expect skin PNG with forced-download headers for: %j', async (user: string, urlSuffix: string) => {
     const response = await executeSkinRequest(user, urlSuffix);
 
@@ -97,7 +97,7 @@ describe('/mc/v1/skin/:user', () => {
   test.each([
     ['069a79f444e94726a5befca90e38aaf5'],
     ['069a79f444e94726a5befca90e38aaf5?raw=0'],
-    ['069a79f444e94726a5befca90e38aaf5?raw=false']
+    ['069a79f444e94726a5befca90e38aaf5?raw=false'],
   ])('User with legacy skin (Notch) returns upgraded skin: %j', async (user: string) => {
     const response = await executeSkinRequest(user);
 
@@ -112,7 +112,7 @@ describe('/mc/v1/skin/:user', () => {
 
   test.each([
     ['069a79f444e94726a5befca90e38aaf5?raw=1'],
-    ['069a79f444e94726a5befca90e38aaf5?raw=true']
+    ['069a79f444e94726a5befca90e38aaf5?raw=true'],
   ])('User with legacy skin (Notch) can be requested raw: %j', async (user: string) => {
     const response = await executeSkinRequest(user);
 
@@ -131,7 +131,7 @@ describe('/mc/v1/skin/:user', () => {
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Bad Request',
-      message: 'Cannot use "overlay" when just requesting the skin file (without "skinArea" or "3d")'
+      message: 'Cannot use "overlay" when just requesting the skin file (without "skinArea" or "3d")',
     });
     expect(response.statusCode).toBe(400);
   });
@@ -142,7 +142,7 @@ describe('/mc/v1/skin/:user', () => {
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Bad Request',
-      message: 'Cannot use "size" when just requesting the skin file (without "skinArea" or "3d")'
+      message: 'Cannot use "size" when just requesting the skin file (without "skinArea" or "3d")',
     });
     expect(response.statusCode).toBe(400);
   });
@@ -153,7 +153,7 @@ describe('/mc/v1/skin/:user', () => {
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Bad Request',
-      message: 'Cannot use "slim" when just requesting the skin file (without "skinArea" or "3d")'
+      message: 'Cannot use "slim" when just requesting the skin file (without "skinArea" or "3d")',
     });
     expect(response.statusCode).toBe(400);
   });
@@ -163,7 +163,7 @@ describe('/mc/v1/skin/:user', () => {
     const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
     const response = await fastify.inject({
       method: 'POST',
-      url: `/mc/v1/skin/${EXISTING_MC_ID}`
+      url: `/mc/v1/skin/${EXISTING_MC_ID}`,
     });
 
     expect(response.statusCode).toBe(405);
@@ -174,7 +174,7 @@ describe('/mc/v1/skin/:user', () => {
 
 describe.each([
   [false],
-  [true]
+  [true],
 ])('/mc/v1/skin/x-url/* error cases (request3D=%j)', (request3D: boolean) => {
   async function executeSkinRequest(urlSuffix: string): Promise<LightMyRequestResponse> {
     const fastifyWebServer = container.resolve(FastifyWebServer);
@@ -182,13 +182,13 @@ describe.each([
 
     return fastify.inject({
       method: 'GET',
-      url: `/mc/v1/skin/x-url/head${request3D ? '/3d' : ''}${urlSuffix}`
+      url: `/mc/v1/skin/x-url/head${request3D ? '/3d' : ''}${urlSuffix}`,
     });
   }
 
   test.each([
     [''],
-    ['?url=']
+    ['?url='],
   ])('Expect 400 for empty skin URL parameter: %j', async (urlSuffix: string) => {
     const response = await executeSkinRequest(urlSuffix);
 
@@ -196,7 +196,7 @@ describe.each([
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid query parameters',
-      details: [{ param: 'url', condition: 'url.length > 0' }]
+      details: [{ param: 'url', condition: 'url.length > 0' }],
     });
   });
 
@@ -207,7 +207,7 @@ describe.each([
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid query parameters',
-      details: [{ param: 'url', condition: 'url needs to be a valid URL (e.g. start with https://)' }]
+      details: [{ param: 'url', condition: 'url needs to be a valid URL (e.g. start with https://)' }],
     });
   });
 
@@ -218,7 +218,7 @@ describe.each([
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid query parameters',
-      details: [{ param: 'url', condition: 'url needs to be an https URL' }]
+      details: [{ param: 'url', condition: 'url needs to be an https URL' }],
     });
   });
 
@@ -279,7 +279,7 @@ describe.each([
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Bad Request',
-      message: 'Provided URL returned 404 (Not Found)'
+      message: 'Provided URL returned 404 (Not Found)',
     });
   });
 
@@ -289,7 +289,7 @@ describe.each([
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Bad Request',
-      message: 'Cannot use "raw" when requesting a rendered skin (3d or skinArea)'
+      message: 'Cannot use "raw" when requesting a rendered skin (3d or skinArea)',
     });
     expect(response.statusCode).toBe(400);
   });
@@ -300,7 +300,7 @@ describe.each([
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Bad Request',
-      message: 'Cannot use "slim" when requesting the rendered head'
+      message: 'Cannot use "slim" when requesting the rendered head',
     });
     expect(response.statusCode).toBe(400);
   });
@@ -311,7 +311,7 @@ describe.each([
   [true, EXISTING_MC_NAME, null],
 
   [false, 'x-url', LEGACY_SKIN_URL],
-  [true, 'x-url', LEGACY_SKIN_URL]
+  [true, 'x-url', LEGACY_SKIN_URL],
 ])('/mc/v1/skin/:user/:skinArea(/3d) (3D: %j, user: %j)', (request3D: boolean, user: string, skinUrl: string | null) => {
   async function executeSkinRequest(skinArea: 'head' | 'body', suffix = '', method: 'GET' | 'POST' = 'GET'): Promise<LightMyRequestResponse> {
     const fastifyWebServer = container.resolve(FastifyWebServer);
@@ -328,7 +328,7 @@ describe.each([
 
     const response = await fastify.inject({
       method,
-      url: `/mc/v1/skin/${user}/${skinArea}${request3D ? '/3d' : ''}${suffix}`
+      url: `/mc/v1/skin/${user}/${skinArea}${request3D ? '/3d' : ''}${suffix}`,
     });
 
     if (response.statusCode === 200 || response.statusCode === 404) {
@@ -341,7 +341,7 @@ describe.each([
   test.each([
     [''],
     ['head'],
-    ['body']
+    ['body'],
   ])('Expect 404 for non-existing user with skinArea: %j', async (skinArea: string) => {
     if (user === 'x-url') {
       return;
@@ -352,13 +352,13 @@ describe.each([
 
     const response = await fastify.inject({
       method: 'GET',
-      url: `/mc/v1/skin/9073926b-929f-31c2-abc9-fad77ae3e8eb/${skinArea}${request3D ? '/3d' : ''}`
+      url: `/mc/v1/skin/9073926b-929f-31c2-abc9-fad77ae3e8eb/${skinArea}${request3D ? '/3d' : ''}`,
     });
 
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
     expect(response.json()).toEqual({
       error: 'Not Found',
-      message: 'Profile for given user'
+      message: 'Profile for given user',
     });
     expect(response.statusCode).toBe(404);
 
@@ -373,7 +373,7 @@ describe.each([
     ['?raw=0'],
     ['?raw=false'],
     ['?raw=false&download=false'],
-    ['?raw=0&download=0']
+    ['?raw=0&download=0'],
   ])('Expect rendered head for: %j', async (urlSuffix: string) => {
     const response = await executeSkinRequest('head', urlSuffix);
 
@@ -417,7 +417,7 @@ describe.each([
     ['?download=1'],
     ['?download=true'],
     ['?download=true&raw=false'],
-    ['?download=1&raw=0']
+    ['?download=1&raw=0'],
   ])('Expect rendered head PNG with forced-download headers for: %j', async (urlSuffix: string) => {
     const response = await executeSkinRequest('head', urlSuffix);
 
@@ -439,7 +439,7 @@ describe.each([
 
   test.each([
     [''],
-    ['?size=512']
+    ['?size=512'],
   ])('Expect rendered body PNG for %j', async (urlSuffix: string) => {
     const response = await executeSkinRequest('body', urlSuffix);
 
@@ -482,7 +482,7 @@ describe.each([
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid query parameters',
-      details: [{ param: 'size', condition: 'size >= 8 and size <= 1024' }]
+      details: [{ param: 'size', condition: 'size >= 8 and size <= 1024' }],
     });
   });
 
@@ -492,7 +492,7 @@ describe.each([
     expect(response.json()).toEqual({
       error: 'Bad Request',
       message: 'Missing or invalid url parameters',
-      details: [{ param: 'skinArea', condition: 'Equal (ignore case) one of the following: "HEAD", "BODY"' }]
+      details: [{ param: 'skinArea', condition: 'Equal (ignore case) one of the following: "HEAD", "BODY"' }],
     });
     expect(response.statusCode).toBe(400);
   });
@@ -502,7 +502,7 @@ describe.each([
 
     expect(response.json()).toEqual({
       error: 'Bad Request',
-      message: 'Expected a "1", "0", "true" or "false" but got "invalid"'
+      message: 'Expected a "1", "0", "true" or "false" but got "invalid"',
     });
     expect(response.statusCode).toBe(400);
   });

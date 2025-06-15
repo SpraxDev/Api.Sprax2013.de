@@ -17,7 +17,7 @@ describe('AppConfiguration', () => {
       serverPort: 8087,
       proxyServerUris: '',
       questDbMetricsConfig: '',
-      workerTickIntervalDynamic: false
+      workerTickIntervalDynamic: false,
     });
   });
 
@@ -37,14 +37,14 @@ describe('AppConfiguration', () => {
       serverPort: 8087,
       proxyServerUris: '',
       questDbMetricsConfig: '',
-      workerTickIntervalDynamic: false
+      workerTickIntervalDynamic: false,
     });
   });
 
   test.each([
     '',
     'socks5://[::1]:1080',
-    'https://localhost?name=test,socks5://[::1]:1081'
+    'https://localhost?name=test,socks5://[::1]:1081',
   ])('Configured valid proxy server uris: %s', (proxyServerUris: string) => {
     process.env.PROXY_SERVER_URIS = proxyServerUris;
 
@@ -53,13 +53,13 @@ describe('AppConfiguration', () => {
       serverPort: 8087,
       proxyServerUris,
       questDbMetricsConfig: '',
-      workerTickIntervalDynamic: false
+      workerTickIntervalDynamic: false,
     });
   });
 
   test.each([
     '',
-    'http::addr=localhost:9000'
+    'http::addr=localhost:9000',
   ])('Configured QuestDB-Metrics-Config: %s', (questDbMetricsConfig: string) => {
     process.env.QUESTDB_METRICS_CONFIG = questDbMetricsConfig;
 
@@ -68,7 +68,7 @@ describe('AppConfiguration', () => {
       serverPort: 8087,
       proxyServerUris: '',
       questDbMetricsConfig,
-      workerTickIntervalDynamic: false
+      workerTickIntervalDynamic: false,
     });
   });
 
@@ -77,7 +77,7 @@ describe('AppConfiguration', () => {
     ['0', false],
     ['false', false],
     ['true', false],
-    ['1', true]
+    ['1', true],
   ])('Configured workerTickIntervalDynamic: %s', (value: string, expectedValue: boolean) => {
     process.env.WORKER_TICK_INTERVAL_DYNAMIC = value;
 
@@ -86,7 +86,7 @@ describe('AppConfiguration', () => {
       serverPort: 8087,
       proxyServerUris: '',
       questDbMetricsConfig: '',
-      workerTickIntervalDynamic: expectedValue
+      workerTickIntervalDynamic: expectedValue,
     });
   });
 
