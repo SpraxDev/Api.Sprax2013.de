@@ -4,11 +4,6 @@ import { IS_PRODUCTION } from '../constants.js';
 export default class SentrySdk {
   static logAndCaptureError(error: unknown): void {
     Sentry.captureException(error);
-
-    if (error instanceof Error && IS_PRODUCTION) {
-      console.error('An unexpected error occurred:', error.message);
-      return;
-    }
     console.error(error);
   }
 
