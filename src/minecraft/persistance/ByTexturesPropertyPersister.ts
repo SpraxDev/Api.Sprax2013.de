@@ -1,5 +1,6 @@
 import * as PrismaClient from '@prisma/client';
 import { singleton } from 'tsyringe';
+import DatabaseClient from '../../database/DatabaseClient.js';
 import AutoProxiedHttpClient from '../../http/clients/AutoProxiedHttpClient.js';
 import CapeCache from '../cape/CapeCache.js';
 import MinecraftProfileCache from '../profile/MinecraftProfileCache.js';
@@ -19,6 +20,7 @@ export default class ByTexturesPropertyPersister {
   constructor(
     private readonly httpClient: AutoProxiedHttpClient,
     private readonly minecraftProfileService: MinecraftProfileService,
+    private readonly databaseClient: DatabaseClient,
     private readonly minecraftProfileCache: MinecraftProfileCache,
     private readonly skinCache: MinecraftSkinCache,
     private readonly capeCape: CapeCache,
@@ -27,16 +29,14 @@ export default class ByTexturesPropertyPersister {
     private readonly capePersister: CapePersister,
     private readonly profileSeenNamesPersister: ProfileSeenNamePersister,
     private readonly profileSeenSkinPersister: ProfileSeenSkinPersister,
-    private readonly profileSeenCapePersister: ProfileSeenCapePersister
+    private readonly profileSeenCapePersister: ProfileSeenCapePersister,
   ) {
   }
 
   async persist(texturesProperty: { value: string, signature: string }): Promise<void> {
     const parsedTextures = MinecraftProfileTextures.fromPropertyValue(texturesProperty.value);
 
-    if ((await this.minecraftProfileCache.findByUuid(parsedTextures.profileId)) == null) {
-      await this.minecraftProfileService.provideProfileByUuid(parsedTextures.profileId);
-    }
+    await this.ensureProfileIdIsKnown(parsedTextures);
 
     const promises: Promise<void>[] = [];
 
@@ -81,5 +81,47 @@ export default class ByTexturesPropertyPersister {
       throw new Error(`Fetching '${url}' failed with HTTP status code ${downloadedCape.statusCode}`);
     }
     return downloadedCape.body;
+  }
+
+  private async ensureProfileIdIsKnown(profileTextures: MinecraftProfileTextures): Promise<void> {
+    const knownProfile = await this.databaseClient.profile.findUnique({
+      where: {
+        id: profileTextures.profileId,
+      },
+    });
+
+    if (knownProfile == null) {
+      await this.createEmptyDeletedProfile(profileTextures);
+      return;
+    }
+
+    const isADeletedAndEmptyProfile = knownProfile.deleted &&
+      knownProfile.firstSeen === knownProfile.updatedAt &&
+      knownProfile.firstSeen < profileTextures.timestamp &&
+      JSON.stringify(knownProfile.raw) === '{}';
+    if (isADeletedAndEmptyProfile) {
+      await this.databaseClient.profile.update({
+        where: { id: profileTextures.profileId },
+        data: {
+          nameLowercase: profileTextures.profileName.toLowerCase(),
+          firstSeen: profileTextures.timestamp,
+          updatedAt: profileTextures.timestamp,
+        },
+      });
+    }
+  }
+
+  private async createEmptyDeletedProfile(profileTextures: MinecraftProfileTextures): Promise<void> {
+    await this.databaseClient.profile.createMany({
+      data: [{
+        id: profileTextures.profileId,
+        nameLowercase: profileTextures.profileName.toLowerCase(),
+        raw: {},
+        deleted: true,
+        firstSeen: profileTextures.timestamp,
+        updatedAt: profileTextures.timestamp,
+      }],
+      skipDuplicates: true,
+    });
   }
 }
