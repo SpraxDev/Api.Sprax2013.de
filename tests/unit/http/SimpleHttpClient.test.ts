@@ -4,7 +4,7 @@ import { container } from 'tsyringe';
 import * as Undici from 'undici';
 import SimpleHttpClient from '../../../src/http/clients/SimpleHttpClient.js';
 import ResolvedToNonUnicastIpError from '../../../src/http/dns/errors/ResolvedToNonUnicastIpError.js';
-import UnicastOnlyDnsResolver from '../../../src/http/dns/UnicastOnlyDnsResolver.js';
+import UnicastOnlyDnsResolver from '../../../src/http/dns/resolver/UnicastOnlyDnsResolver.js';
 import { createStrictDeepMock } from '../../test-helpers.js';
 
 let originalAgent: Undici.Agent;

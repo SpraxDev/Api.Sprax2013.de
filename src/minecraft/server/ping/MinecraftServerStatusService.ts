@@ -16,7 +16,7 @@ export type CachedServerStatus = {
 
 @singleton()
 export default class MinecraftServerStatusService {
-  private readonly offlineServerCache = SetWithTtl.create<string>(60);
+  private readonly offlineServerCache = new SetWithTtl<string>(60);
 
   constructor(
     private readonly minecraftServerStatusPinger: MinecraftServerStatusPinger,

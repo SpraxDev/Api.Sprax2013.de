@@ -4,7 +4,7 @@ import * as Undici from 'undici';
 import { SocksProxyServer } from '../../net/proxy/ProxyServerConfigurationProvider.js';
 import SocksProxyServerConnector from '../../net/proxy/SocksProxyServerConnector.js';
 import ResolvedToNonUnicastIpError from '../dns/errors/ResolvedToNonUnicastIpError.js';
-import UnicastOnlyDnsResolver from '../dns/UnicastOnlyDnsResolver.js';
+import UnicastOnlyDnsResolver from '../dns/resolver/UnicastOnlyDnsResolver.js';
 
 @singleton()
 export default class SocksProxyAgentFactory {

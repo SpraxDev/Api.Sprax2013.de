@@ -2,7 +2,7 @@ import { clearInterval } from 'node:timers';
 import { Disposable, injectable } from 'tsyringe';
 import SentrySdk from '../util/SentrySdk.js';
 import TaskExecutingQueue from './TaskExecutingQueue.js';
-import ClearExpiredEntriesInSetsWithTtlTask from './tasks/ClearExpiredEntriesInSetsWithTtlTask.js';
+import ClearExpiredEntriesInMapsWithTtlTask from './tasks/ClearExpiredEntriesInMapsWithTtlTask.js';
 import ProxyPoolHttpClientHealthcheckTask from './tasks/ProxyPoolHttpClientHealthcheckTask.js';
 import Task from './tasks/Task.js';
 import UpdateMinecraftServerBlocklistTask from './tasks/UpdateMinecraftServerBlocklistTask.js';
@@ -15,7 +15,7 @@ export default class TaskScheduler implements Disposable {
   constructor(
     private readonly taskQueue: TaskExecutingQueue,
     private readonly updateMinecraftServerBlocklistTask: UpdateMinecraftServerBlocklistTask,
-    private readonly clearExpiredEntriesInSetsWithTtlTask: ClearExpiredEntriesInSetsWithTtlTask,
+    private readonly clearExpiredEntriesInSetsWithTtlTask: ClearExpiredEntriesInMapsWithTtlTask,
     private readonly proxyPoolHttpClientHealthcheckTask: ProxyPoolHttpClientHealthcheckTask,
     private readonly writeImportQueueSizeToQuestDBTask: WriteImportQueueSizeToQuestDBTask,
   ) {

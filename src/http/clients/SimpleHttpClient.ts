@@ -1,7 +1,7 @@
 import { container } from 'tsyringe';
 import * as Undici from 'undici';
 import { IS_PRODUCTION } from '../../constants.js';
-import UnicastOnlyDnsResolver from '../dns/UnicastOnlyDnsResolver.js';
+import UnicastOnlyDnsResolver from '../dns/resolver/UnicastOnlyDnsResolver.js';
 import HttpResponse from '../HttpResponse.js';
 import UserAgentGenerator from '../UserAgentGenerator.js';
 import HttpClient, { FullRequestOptions, GetRequestOptions, PostRequestOptions } from './HttpClient.js';
@@ -64,10 +64,11 @@ export default class SimpleHttpClient extends HttpClient {
   }
 
   protected getDefaultAgentOptions(): Undici.Agent.Options {
+    const dnsResolver = container.resolve(UnicastOnlyDnsResolver);
     return {
       ...super.getDefaultAgentOptions(),
       connect: {
-        lookup: container.resolve(UnicastOnlyDnsResolver).lookup,
+        lookup: (hostname, options, callback) => dnsResolver.lookup(hostname, options, callback),
       },
     };
   }

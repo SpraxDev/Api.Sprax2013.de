@@ -4,7 +4,7 @@ import type * as Dns from 'node:dns';
 import Sharp from 'sharp';
 import { container } from 'tsyringe';
 import ResolvedToNonUnicastIpError from '../../../../src/http/dns/errors/ResolvedToNonUnicastIpError.js';
-import UnicastOnlyDnsResolver from '../../../../src/http/dns/UnicastOnlyDnsResolver.js';
+import UnicastOnlyDnsResolver from '../../../../src/http/dns/resolver/UnicastOnlyDnsResolver.js';
 import FastifyWebServer from '../../../../src/webserver/FastifyWebServer.js';
 import { EXISTING_MC_ID, EXISTING_MC_ID_WITH_HYPHENS, EXISTING_MC_NAME } from '../../../test-constants.js';
 import { createStrictDeepMock } from '../../../test-helpers.js';

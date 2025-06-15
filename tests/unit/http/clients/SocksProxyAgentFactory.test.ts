@@ -3,7 +3,7 @@ import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import * as Undici from 'undici';
 import SocksProxyAgentFactory from '../../../../src/http/clients/SocksProxyAgentFactory.js';
 import ResolvedToNonUnicastIpError from '../../../../src/http/dns/errors/ResolvedToNonUnicastIpError.js';
-import UnicastOnlyDnsResolver from '../../../../src/http/dns/UnicastOnlyDnsResolver.js';
+import UnicastOnlyDnsResolver from '../../../../src/http/dns/resolver/UnicastOnlyDnsResolver.js';
 import { SocksProxyServer } from '../../../../src/net/proxy/ProxyServerConfigurationProvider.js';
 import SocksProxyServerConnector from '../../../../src/net/proxy/SocksProxyServerConnector.js';
 

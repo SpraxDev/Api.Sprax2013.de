@@ -14,7 +14,7 @@ export type Profile = {
 
 @singleton()
 export default class MinecraftProfileService {
-  private readonly nullProfileCache = SetWithTtl.create<string>(60);
+  private readonly nullProfileCache = new SetWithTtl<string>(60);
   private readonly inFlightRequests = new Map<string, Promise<Profile | null>>();
 
   constructor(

@@ -1,8 +1,9 @@
 import { jest } from '@jest/globals';
 import { container } from 'tsyringe';
 import SetWithTtl from '../../../src/minecraft/SetWithTtl.js';
-import ClearExpiredEntriesInSetsWithTtlTask
-  from '../../../src/task_queue/tasks/ClearExpiredEntriesInSetsWithTtlTask.js';
+import ClearExpiredEntriesInMapsWithTtlTask
+  from '../../../src/task_queue/tasks/ClearExpiredEntriesInMapsWithTtlTask.js';
+import MapWithTtl from '../../../src/util/MapWithTtl.js';
 
 jest.useFakeTimers();
 jest.setSystemTime(new Date('2024-01-01'));
@@ -10,17 +11,17 @@ jest.setSystemTime(new Date('2024-01-01'));
 describe('SetWithTtl', () => {
   let setWithTtl: SetWithTtl<string>;
   beforeEach(() => {
-    const clearExpiredEntriesInSetsWithTtlTaskResolveSpy = jest.fn();
+    const clearExpiredEntriesInMapsWithTtlTaskResolveSpy = jest.fn();
     const containerResolveSpy = jest.spyOn(container, 'resolve').mockReturnValue({
-      registerSet: clearExpiredEntriesInSetsWithTtlTaskResolveSpy,
+      registerSet: clearExpiredEntriesInMapsWithTtlTaskResolveSpy,
     });
 
-    setWithTtl = SetWithTtl.create(5);
+    setWithTtl = new SetWithTtl(5);
 
     expect(containerResolveSpy).toHaveBeenCalledTimes(1);
-    expect(containerResolveSpy).toHaveBeenCalledWith(ClearExpiredEntriesInSetsWithTtlTask);
-    expect(clearExpiredEntriesInSetsWithTtlTaskResolveSpy).toHaveBeenCalledTimes(1);
-    expect(clearExpiredEntriesInSetsWithTtlTaskResolveSpy).toHaveBeenCalledWith(setWithTtl);
+    expect(containerResolveSpy).toHaveBeenCalledWith(ClearExpiredEntriesInMapsWithTtlTask);
+    expect(clearExpiredEntriesInMapsWithTtlTaskResolveSpy).toHaveBeenCalledTimes(1);
+    expect(clearExpiredEntriesInMapsWithTtlTaskResolveSpy).toHaveBeenCalledWith(expect.any(MapWithTtl));
   });
 
   test('Adding a value, makes #has return true for it', () => {

@@ -1,31 +1,22 @@
-import { container } from 'tsyringe';
-import ClearExpiredEntriesInSetsWithTtlTask from '../task_queue/tasks/ClearExpiredEntriesInSetsWithTtlTask.js';
+import MapWithTtl from '../util/MapWithTtl.js';
 
 export default class SetWithTtl<T> {
-  private readonly values = new Map<T, number>();
-  private readonly ttlInMilliseconds: number;
+  private readonly values: MapWithTtl<T, null>;
 
-  private constructor(ttlInSeconds: number) {
-    this.ttlInMilliseconds = ttlInSeconds * 1000;
+  constructor(ttlInSeconds: number) {
+    this.values = MapWithTtl.create(ttlInSeconds);
   }
 
   add(key: T): void {
-    this.values.set(key, Date.now() + this.ttlInMilliseconds);
+    this.values.set(key, null);
   }
 
   has(key: T): boolean {
-    const expiration = this.values.get(key);
-    return expiration != null && !this.isExpired(expiration);
+    return this.values.has(key);
   }
 
   getAgeInSeconds(key: T): number {
-    const expiration = this.values.get(key);
-    if (expiration == null || this.isExpired(expiration)) {
-      return 0;
-    }
-
-    const creationTime = expiration - this.ttlInMilliseconds;
-    return Math.floor((Date.now() - creationTime) / 1000);
+    return this.values.getAgeInSeconds(key);
   }
 
   clear(): void {
@@ -33,20 +24,6 @@ export default class SetWithTtl<T> {
   }
 
   clearExpired(): void {
-    for (const [value, expiration] of this.values.entries()) {
-      if (this.isExpired(expiration)) {
-        this.values.delete(value);
-      }
-    }
-  }
-
-  private isExpired(expiration: number): boolean {
-    return expiration < Date.now();
-  }
-
-  static create<T>(ttlInSeconds: number): SetWithTtl<T> {
-    const setWithTTL = new SetWithTtl<T>(ttlInSeconds);
-    container.resolve(ClearExpiredEntriesInSetsWithTtlTask).registerSet(setWithTTL);
-    return setWithTTL;
+    this.values.clearExpired();
   }
 }
