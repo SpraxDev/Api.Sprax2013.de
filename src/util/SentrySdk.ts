@@ -1,5 +1,4 @@
 import * as Sentry from '@sentry/node';
-import { IS_PRODUCTION } from '../constants.js';
 
 export default class SentrySdk {
   static logAndCaptureError(error: unknown): void {
