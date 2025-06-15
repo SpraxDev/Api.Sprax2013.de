@@ -97,7 +97,7 @@ export default abstract class AbstractMinecraftServerPing {
     }
 
     if (this.socksProxyPool.proxyCount > 0) {
-      const proxy = this.socksProxyPool.selectNextProxy();
+      const proxy = this.socksProxyPool.selectNextProxy(Net.isIPv4(ip));
       const socket = await this.socksProxyConnector.createConnection(proxy, ip, port);
       return socket.setNoDelay();
     }

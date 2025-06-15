@@ -18,6 +18,7 @@ describe('SocksProxyServerConnector', () => {
       simplifiedUri: 'socks5://127.0.0.1:1080',
       username: 'user1',
       password: 'pass1',
+      ipv6Only: false,
       socksProxyOptions: {
         version: 5,
         host: '127.0.0.1',

@@ -13,6 +13,7 @@ export type ProxyServer = {
 
   username: string,
   password: string,
+  ipv6Only: boolean,
 
   socksProxyOptions?: SocksProxyOptions
 };
@@ -74,6 +75,7 @@ export default class ProxyServerConfigurationProvider {
         displayName: parsedUri.searchParams.get('name')?.trim() || simplifiedUri,
         username: decodeURIComponent(parsedUri.username),
         password: decodeURIComponent(parsedUri.password),
+        ipv6Only: parsedUri.searchParams.get('ipv6only') === '1',
         socksProxyOptions,
       });
     }

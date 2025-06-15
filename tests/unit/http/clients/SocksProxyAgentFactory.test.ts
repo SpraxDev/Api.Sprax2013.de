@@ -12,6 +12,7 @@ const proxyServer: SocksProxyServer = {
   simplifiedUri: 'socks5://127.0.0.1:1080',
   username: '',
   password: '',
+  ipv6Only: false,
   socksProxyOptions: {
     version: 5,
     host: '127.0.0.1',

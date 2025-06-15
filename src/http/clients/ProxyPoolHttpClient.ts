@@ -1,3 +1,4 @@
+import Net from 'node:net';
 import { SocksClientError } from 'socks';
 import { container, singleton } from 'tsyringe';
 import * as Undici from 'undici';
@@ -9,6 +10,7 @@ import RoundRobinProxyPool from '../../net/proxy/RoundRobinProxyPool.js';
 import ProxyPoolHttpClientHealthcheckTask from '../../task_queue/tasks/ProxyPoolHttpClientHealthcheckTask.js';
 import SentrySdk from '../../util/SentrySdk.js';
 import ResolvedToNonUnicastIpError from '../dns/errors/ResolvedToNonUnicastIpError.js';
+import CachedDnsResolver from '../dns/resolver/CachedDnsResolver.js';
 import HttpResponse from '../HttpResponse.js';
 import { FullRequestOptions } from './HttpClient.js';
 import SimpleHttpClient from './SimpleHttpClient.js';
@@ -32,6 +34,7 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
   constructor(
     proxyServerConfigurationProvider: ProxyServerConfigurationProvider,
     socksProxyAgentFactory: SocksProxyAgentFactory,
+    private readonly dnsResolver: CachedDnsResolver,
   ) {
     super();
 
@@ -50,7 +53,9 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
   protected async request(url: string, options: FullRequestOptions, triesLeft = this.retriesOnProxyError): Promise<HttpResponse> {
     this.ensureUrlLooksLikePublicServer(url);
 
-    const proxy = this.selectNextProxy();
+    const skipIpv6Only = await this.determineSkipIpv6OnlyProxies(url);
+
+    const proxy = this.selectNextProxy(skipIpv6Only);
     let response: Undici.Dispatcher.ResponseData;
 
     if (SimpleHttpClient.DEBUG_LOGGING) {
@@ -94,21 +99,43 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
     return httpResponse;
   }
 
-  protected selectDispatcher(): Undici.Dispatcher {
-    const proxy = this.proxyPool.selectNextProxy();
+  protected selectDispatcher(skipIpv6Only = false): Undici.Dispatcher {
+    const proxy = this.proxyPool.selectNextProxy(skipIpv6Only);
     return proxy.undiciDispatcher;
   }
 
-  private selectNextProxy(): UndiciProxyServer {
-    const firstProxySelected = this.proxyPool.selectNextProxy();
+  private selectNextProxy(skipIpv6Only: boolean): UndiciProxyServer {
+    const firstProxySelected = this.proxyPool.selectNextProxy(skipIpv6Only);
     let proxy = firstProxySelected;
     while (proxy.health.unhealthy) {
-      proxy = this.proxyPool.selectNextProxy();
+      proxy = this.proxyPool.selectNextProxy(skipIpv6Only);
       if (proxy === firstProxySelected) {
         throw new Error('All configured proxies are unhealthy');
       }
     }
     return proxy;
+  }
+
+  private async determineSkipIpv6OnlyProxies(url: string): Promise<boolean> {
+    const hostname = new URL(url).hostname;
+    const hostnameIpVersion = Net.isIP(hostname);
+    if (hostnameIpVersion !== 0) {
+      return hostnameIpVersion !== 6;
+    }
+
+    const lookupResult = await this.dnsResolver.lookupAsync(hostname, { all: true });
+
+    if (typeof lookupResult.address === 'string') {
+      return !Net.isIPv6(lookupResult.address);
+    }
+
+    for (const address of lookupResult.address) {
+      if (address.family === 6) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   private isSocketError(err: unknown): boolean {
