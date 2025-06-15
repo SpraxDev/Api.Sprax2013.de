@@ -25,6 +25,7 @@ export default class ContinuousQueueWorker {
   private tickRunning = false;
   private bufferedTasks: PrismaClient.ImportTask[] = [];
   private nextPayloadTypeIndexToBuffer = 0;
+  private ticksProcessedSinceLastReport = 0;
 
   constructor(
     private readonly taskScheduler: TaskScheduler,
@@ -45,6 +46,7 @@ export default class ContinuousQueueWorker {
     if (this.appConfiguration.config.workerTickIntervalDynamic) {
       delay = 3000 / Math.max(this.proxyServerConfigurationProvider.getProxyServers().length, 1);
     }
+    const averageTicksPerMinute = Math.round(60000 / delay);
 
     this.taskScheduler.runRepeating(() => {
       if (this.tickRunning) {
@@ -56,12 +58,20 @@ export default class ContinuousQueueWorker {
         .catch(SentrySdk.logAndCaptureError)
         .finally(() => this.tickRunning = false);
     }, delay);
+
+    this.taskScheduler.runRepeating(() => {
+      console.log(`Current worker speed: ${this.ticksProcessedSinceLastReport}/min`);
+      this.ticksProcessedSinceLastReport = 0;
+    }, 60 * 1000);
+
+    console.log(`Estimating ${averageTicksPerMinute} ticks/minute for the queue worker (delay=${delay}ms)`);
   }
 
   // TODO: print progress/status-report every minute
   private async tick(): Promise<void> {
     const task = await this.fetchNextTask();
     if (task == null) {
+      console.debug('No tasks in the queue, waiting for new tasks...');
       await this.tickForEmptyQueue();
       return;
     }
@@ -86,9 +96,11 @@ export default class ContinuousQueueWorker {
       const taskWasDuplicate = await this.processTask(task);
       await this.updateTaskStatus(task, taskWasDuplicate ? 'IMPORTED' : 'NO_CHANGES');
     } catch (err: any) {
-      SentrySdk.logAndCaptureError(err);
+      SentrySdk.logAndCaptureError(new Error(`Error processing task ${task.id} (${task.payloadType})`, { cause: err }));
       await this.updateTaskStatus(task, 'ERROR');
     }
+
+    ++this.ticksProcessedSinceLastReport;
   }
 
   private async tickForEmptyQueue(): Promise<void> {
