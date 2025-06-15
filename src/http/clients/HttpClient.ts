@@ -27,7 +27,7 @@ export default abstract class HttpClient {
 
   protected abstract request(url: string, options: FullRequestOptions): Promise<HttpResponse>;
 
-  protected abstract selectDispatcher(): Undici.Dispatcher;
+  protected abstract selectDispatcher(skipIpv6Only?: boolean): Undici.Dispatcher;
 
   protected getDefaultAgentOptions(): Undici.Agent.Options {
     return {

@@ -1,5 +1,8 @@
 import { jest } from '@jest/globals';
-import ProxyServerConfigurationProvider from '../../../../src/net/proxy/ProxyServerConfigurationProvider.js';
+import ProxyServerConfigurationProvider, {
+  ProxyServer,
+  SocksProxyServer,
+} from '../../../../src/net/proxy/ProxyServerConfigurationProvider.js';
 import SentrySdk from '../../../../src/util/SentrySdk.js';
 
 describe('ProxyServerConfigurationProvider', () => {
@@ -19,8 +22,24 @@ describe('ProxyServerConfigurationProvider', () => {
         displayName: 'test',
         username: '',
         password: '',
+        ipv6Only: false,
       },
-    ]);
+    ] satisfies ProxyServer[]);
+    expect(configProvider.getSocksProxyServers()).toEqual([]);
+  });
+
+  test('Provide for proxy with ipv6only', () => {
+    const configProvider = new ProxyServerConfigurationProvider(['https://proxy.example.com/?name=test&ipv6only=1']);
+
+    expect(configProvider.getProxyServers()).toEqual([
+      {
+        simplifiedUri: 'https://proxy.example.com/',
+        displayName: 'test',
+        username: '',
+        password: '',
+        ipv6Only: true,
+      },
+    ] satisfies ProxyServer[]);
     expect(configProvider.getSocksProxyServers()).toEqual([]);
   });
 
@@ -33,20 +52,22 @@ describe('ProxyServerConfigurationProvider', () => {
         displayName: `${protocol}://proxy.example.com/`,
         username: '',
         password: '',
+        ipv6Only: false,
       },
-    ]);
+    ] satisfies ProxyServer[]);
     expect(configProvider.getSocksProxyServers()).toEqual([]);
   });
 
-  test.each([5, 4])('Provide for one socks%d proxy server', (socksVersion: number) => {
+  test.each([5, 4] satisfies (4 | 5)[])('Provide for one socks%d proxy server', (socksVersion: 4 | 5) => {
     const configProvider = new ProxyServerConfigurationProvider([`socks${socksVersion}://user:pass@proxy.example.com:8899`]);
 
-    const expectedProxies = [
+    const expectedProxies: SocksProxyServer[] = [
       {
         simplifiedUri: `socks${socksVersion}://proxy.example.com:8899/`,
         displayName: `socks${socksVersion}://proxy.example.com:8899/`,
         username: 'user',
         password: 'pass',
+        ipv6Only: false,
         socksProxyOptions: {
           version: socksVersion,
           host: 'proxy.example.com',
@@ -67,26 +88,29 @@ describe('ProxyServerConfigurationProvider', () => {
       'socks4://user:pass@proxy2.example.com:8899',
     ]);
 
-    const expectedHttpProxies = [
+    const expectedHttpProxies: ProxyServer[] = [
       {
         simplifiedUri: 'http://proxy0.example.com:8080/',
         displayName: 'http://proxy0.example.com:8080/',
         username: '',
         password: '',
+        ipv6Only: false,
       },
       {
         simplifiedUri: 'https://proxy1.example.com/',
         displayName: 'https://proxy1.example.com/',
         username: '',
         password: '',
+        ipv6Only: false,
       },
     ];
-    const expectedSocksProxies = [
+    const expectedSocksProxies: SocksProxyServer[] = [
       {
         simplifiedUri: 'socks5://[::1]:1234/',
         displayName: 'socks5://[::1]:1234/',
         username: '',
         password: '',
+        ipv6Only: false,
         socksProxyOptions: {
           version: 5,
           host: '::1',
@@ -99,6 +123,7 @@ describe('ProxyServerConfigurationProvider', () => {
         displayName: 'socks4://proxy2.example.com:8899/',
         username: 'user',
         password: 'pass',
+        ipv6Only: false,
         socksProxyOptions: {
           version: 4,
           host: 'proxy2.example.com',
@@ -155,8 +180,10 @@ describe('ProxyServerConfigurationProvider', () => {
     expect(configProvider.getProxyServers().length).toBe(4);
 
     expect(SentrySdk.logAndCaptureWarning).toHaveBeenCalledTimes(2);
-    expect(SentrySdk.logAndCaptureWarning).toHaveBeenNthCalledWith(1, `Proxy server 'https://proxy1.example.com/' is configured multiple times`);
-    expect(SentrySdk.logAndCaptureWarning).toHaveBeenNthCalledWith(2, `Proxy server 'https://proxy1.example.com/' is configured multiple times`);
+    expect(SentrySdk.logAndCaptureWarning)
+      .toHaveBeenNthCalledWith(1, `Proxy server 'https://proxy1.example.com/' is configured multiple times`);
+    expect(SentrySdk.logAndCaptureWarning)
+      .toHaveBeenNthCalledWith(2, `Proxy server 'https://proxy1.example.com/' is configured multiple times`);
   });
 
   test('Warning is logged for duplicate proxy server names', () => {
@@ -171,7 +198,9 @@ describe('ProxyServerConfigurationProvider', () => {
     expect(configProvider.getProxyServers().length).toBe(4);
 
     expect(SentrySdk.logAndCaptureWarning).toHaveBeenCalledTimes(2);
-    expect(SentrySdk.logAndCaptureWarning).toHaveBeenNthCalledWith(1, `Proxy server name 'test' is configured multiple times`);
-    expect(SentrySdk.logAndCaptureWarning).toHaveBeenNthCalledWith(2, `Proxy server name 'test' is configured multiple times`);
+    expect(SentrySdk.logAndCaptureWarning)
+      .toHaveBeenNthCalledWith(1, `Proxy server name 'test' is configured multiple times`);
+    expect(SentrySdk.logAndCaptureWarning)
+      .toHaveBeenNthCalledWith(2, `Proxy server name 'test' is configured multiple times`);
   });
 });

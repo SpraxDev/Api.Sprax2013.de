@@ -16,13 +16,20 @@ export default class RoundRobinProxyPool<T extends ProxyServer> {
     return this.proxies;
   }
 
-  selectNextProxy(): T {
+  selectNextProxy(skipIpv6Only: boolean): T {
     if (this.proxies.length === 0) {
       throw new Error('No proxies available');
     }
 
-    const proxy = this.proxies[this.nextProxyIndex];
-    this.nextProxyIndex = (this.nextProxyIndex + 1) % this.proxies.length;
-    return proxy;
+    let startIndex = this.nextProxyIndex;
+    do {
+      const proxy = this.proxies[this.nextProxyIndex];
+      this.nextProxyIndex = (this.nextProxyIndex + 1) % this.proxies.length;
+      if (!(skipIpv6Only && proxy.ipv6Only)) {
+        return proxy;
+      }
+    } while (skipIpv6Only && startIndex !== this.nextProxyIndex);
+
+    throw new Error(`No suitable proxy found (skipIpv6Only=${skipIpv6Only})`);
   }
 }
