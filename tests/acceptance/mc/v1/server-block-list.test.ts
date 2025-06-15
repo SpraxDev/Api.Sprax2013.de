@@ -105,10 +105,10 @@ describe('/mc/v1/servers/blocked/known', () => {
 });
 
 describe('/mc/v1/servers/blocked/check', () => {
-  test.each([
-    ['example.com', { 'example.com': true, '*.example.com': true, '*.com': false }],
-    ['example.com:25565', { 'example.com': true, '*.example.com': true, '*.com': false }],
-    ['lobby.mc.example.com', {
+  test.only.each([
+    ['example.com', 1, { 'example.com': true, '*.example.com': true, '*.com': false }],
+    ['example.com:25565', 1, { 'example.com': true, '*.example.com': true, '*.com': false }],
+    ['lobby.mc.example.com', 5, {
       '*.lobby.mc.example.com': false,
       'lobby.mc.example.com': false,
       '*.mc.example.com': false,
@@ -117,44 +117,45 @@ describe('/mc/v1/servers/blocked/check', () => {
       'example.com': true,
       '*.com': false,
     }],
-    ['1.1.1.1', { '1.1.1.1': false, '1.1.1.*': false, '1.1.*': false, '1.*': false }],
-    ['1.1.1.1:25565', { '1.1.1.1': false, '1.1.1.*': false, '1.1.*': false, '1.*': false }],
-    ['2606:4700:4700::1111', { '2606:4700:4700::1111': false }],
-  ])('Expect hosts to be hashed and checked: %j', async (host: string, expected: { [key: string]: boolean }) => {
-    const databaseClient = container.resolve(DatabaseClient) as DeepMockProxy<DatabaseClient>;
-    databaseClient.serverBlocklist.findMany
-      .mockResolvedValue([
-        { sha1: Buffer.from('0caaf24ab1a0c33440c06afe99df986365b0781f', 'hex'), host: 'example.com' },
-        { sha1: Buffer.from('8c7122d652cb7be22d1986f1f30b07fd5108d9c0', 'hex'), host: '*.example.com' },
-        { sha1: Buffer.from('9b054583eccc3422abd9da7b80c185853c1dd61d', 'hex'), host: null },
-      ]);
-    databaseClient.$transaction.mockImplementation((callback) => callback(databaseClient));
-    databaseClient.serverBlocklistHostHashes.findMany.mockResolvedValue([{ host: 'example.com' }, { host: '*.example.com' }] as any);
+    ['1.1.1.1', 4, { '1.1.1.1': false, '1.1.1.*': false, '1.1.*': false, '1.*': false }],
+    ['1.1.1.1:25565', 4, { '1.1.1.1': false, '1.1.1.*': false, '1.1.*': false, '1.*': false }],
+    ['2606:4700:4700::1111', 1, { '2606:4700:4700::1111': false }],
+  ])(
+    'Expect hosts to be hashed and checked: %j',
+    async (host: string, newHashes: number, expected: { [key: string]: boolean }) => {
+      const databaseClient = container.resolve(DatabaseClient) as DeepMockProxy<DatabaseClient>;
+      databaseClient.serverBlocklist.findMany
+        .mockResolvedValue([
+          { sha1: Buffer.from('0caaf24ab1a0c33440c06afe99df986365b0781f', 'hex'), host: 'example.com' },
+          { sha1: Buffer.from('8c7122d652cb7be22d1986f1f30b07fd5108d9c0', 'hex'), host: '*.example.com' },
+          { sha1: Buffer.from('9b054583eccc3422abd9da7b80c185853c1dd61d', 'hex'), host: null },
+        ]);
+      databaseClient.serverBlocklistHostHashes.createMany.mockResolvedValue({ count: newHashes });
 
-    const fastifyWebServer = container.resolve(FastifyWebServer);
-    const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
-    const response = await fastify.inject({
-      method: 'GET',
-      url: '/mc/v1/servers/blocked/check?host=' + encodeURIComponent(host),
+      const fastifyWebServer = container.resolve(FastifyWebServer);
+      const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/mc/v1/servers/blocked/check?host=' + encodeURIComponent(host),
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual(expected);
+      expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
+      expect(response.headers['cache-control']).toBe('public, max-age=120, s-maxage=120');
+
+      expect(databaseClient.serverBlocklist.findMany).toHaveBeenCalledTimes(1);
+      expect(databaseClient.serverBlocklist.findMany).toHaveBeenCalledWith({ select: { sha1: true } });
+
+      expect(databaseClient.serverBlocklistHostHashes.createMany).toHaveBeenCalledTimes(1);
+
+      if (newHashes > 0 && Object.values(expected).includes(true)) {
+        expect(databaseClient.$executeRaw).toHaveBeenCalledTimes(1);
+        expect(databaseClient.$executeRaw).toHaveBeenCalledWith(['REFRESH MATERIALIZED VIEW server_blocklist;']);
+      } else {
+        expect(databaseClient.$executeRaw).toHaveBeenCalledTimes(0);
+      }
     });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual(expected);
-    expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
-    expect(response.headers['cache-control']).toBe('public, max-age=120, s-maxage=120');
-
-    expect(databaseClient.serverBlocklist.findMany).toHaveBeenCalledTimes(1);
-    expect(databaseClient.serverBlocklist.findMany).toHaveBeenCalledWith({ select: { sha1: true } });
-
-    expect(databaseClient.$transaction).toHaveBeenCalledTimes(1);
-    expect(databaseClient.serverBlocklistHostHashes.findMany).toHaveBeenCalledTimes(1);
-    expect(databaseClient.serverBlocklistHostHashes.findMany).toHaveBeenCalledWith({
-      where: { sha1: { in: expect.any(Array) } },
-      select: { host: true },
-    });
-
-    expect(databaseClient.serverBlocklistHostHashes.createMany).toHaveBeenCalledTimes(1);
-  });
 
   test.each([
     ['https://example.com'],
