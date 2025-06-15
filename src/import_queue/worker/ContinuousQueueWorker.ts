@@ -24,6 +24,7 @@ export default class ContinuousQueueWorker {
 
   private tickRunning = false;
   private bufferedTasks: PrismaClient.ImportTask[] = [];
+  private taskBufferSize = 30;
   private nextPayloadTypeIndexToBuffer = 0;
   private ticksProcessedSinceLastReport = 0;
 
@@ -47,6 +48,7 @@ export default class ContinuousQueueWorker {
       delay = 3000 / Math.max(this.proxyServerConfigurationProvider.getProxyServers().length, 1);
     }
     const averageTicksPerMinute = Math.round(60000 / delay);
+    this.taskBufferSize = Math.max(30, Math.min(averageTicksPerMinute / 3, 30));
 
     this.taskScheduler.runRepeating(() => {
       if (this.tickRunning) {
@@ -136,7 +138,7 @@ export default class ContinuousQueueWorker {
           payloadType: ContinuousQueueWorker.PAYLOAD_TYPES_TO_PROCESS[this.nextPayloadTypeIndexToBuffer]
         },
         orderBy: { createdAt: 'asc' },
-        take: 15
+        take: this.taskBufferSize,
       });
 
       this.nextPayloadTypeIndexToBuffer = (this.nextPayloadTypeIndexToBuffer + 1) % ContinuousQueueWorker.PAYLOAD_TYPES_TO_PROCESS.length;
