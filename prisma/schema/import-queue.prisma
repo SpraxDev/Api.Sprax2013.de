@@ -27,7 +27,7 @@ model ImportTask {
   @@index([state], type: BTree)
   @@index([payload], type: Hash)
   @@index([payloadType], type: BTree)
-  @@index([createdAt(sort: Asc)], type: BTree)
+  @@index([state, payloadType, createdAt(sort: Asc)], type: BTree)
   @@map("import_tasks")
 }
 
