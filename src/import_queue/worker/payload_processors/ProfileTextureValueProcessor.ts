@@ -19,7 +19,7 @@ export default class ProfileTextureValueProcessor implements PayloadProcessor {
     private readonly httpClient: AutoProxiedHttpClient,
     private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
     private readonly skinPersister: SkinPersister,
-    private readonly byTexturesPropertyPersister: ByTexturesPropertyPersister
+    private readonly byTexturesPropertyPersister: ByTexturesPropertyPersister,
   ) {
   }
 
@@ -28,7 +28,7 @@ export default class ProfileTextureValueProcessor implements PayloadProcessor {
     const payload = this.parsePayload(task);
     const parsedTextures = MinecraftProfileTextures.fromPropertyValue(payload.value);
 
-    const skinUrl = parsedTextures.getSecureSkinUrl()!;
+    const skinUrl = parsedTextures.getSecureSkinUrl();
 
     const texturePropertiesAreValid = await this.shouldBePersistedWithTextureValue(skinUrl, payload.value, payload.signature);
     if (texturePropertiesAreValid) {
@@ -36,6 +36,15 @@ export default class ProfileTextureValueProcessor implements PayloadProcessor {
       return true;
     }
 
+    if (skinUrl != null) {
+      return await this.persistSkinByUrlIfNeeded(skinUrl);
+    }
+
+    // We don't manually import the Mojang Cape here because we only import them with a valid signature
+    return false;
+  }
+
+  private async persistSkinByUrlIfNeeded(skinUrl: string): Promise<boolean> {
     if (!(await this.minecraftSkinCache.existsSkinUrlWithNonNullTextureValue(skinUrl))) {
       return false;
     }
@@ -52,8 +61,8 @@ export default class ProfileTextureValueProcessor implements PayloadProcessor {
     return true;
   }
 
-  private async shouldBePersistedWithTextureValue(url: string, textureValue: string, textureSignature?: string): Promise<boolean> {
-    if (textureSignature == null || !MinecraftProfileTextures.isOfficialTextureUrl(url)) {
+  private async shouldBePersistedWithTextureValue(skinUrl: string | null, textureValue: string, textureSignature?: string): Promise<boolean> {
+    if (skinUrl == null || textureSignature == null || !MinecraftProfileTextures.isOfficialTextureUrl(skinUrl)) {
       return false;
     }
     return this.yggdrasilSignatureChecker.checkProfileProperty(textureValue, textureSignature);
@@ -70,7 +79,7 @@ export default class ProfileTextureValueProcessor implements PayloadProcessor {
 
     return {
       value: parsedPayload.value,
-      signature: parsedPayload.signature
+      signature: parsedPayload.signature,
     };
   }
 }
