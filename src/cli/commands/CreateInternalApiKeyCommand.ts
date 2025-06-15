@@ -9,7 +9,7 @@ export default class CreateInternalApiKeyCommand implements CliCommand {
 
   constructor(
     private readonly databaseClient: DatabaseClient,
-    private readonly minecraftProfileService: MinecraftProfileService
+    private readonly minecraftProfileService: MinecraftProfileService,
   ) {
   }
 
@@ -36,8 +36,8 @@ export default class CreateInternalApiKeyCommand implements CliCommand {
       data: {
         name: parsedArgs.name,
         ownerId: this.INTERNAL_API_KEY_OWNER,
-        internal: true
-      }
+        internal: true,
+      },
     });
     console.log(`Created new API key (id=${apiKey.id}) with name ${JSON.stringify(apiKey.name)}:`);
     console.log(`spraxapi.${apiKey.key.toString('hex')}`);
@@ -48,7 +48,7 @@ export default class CreateInternalApiKeyCommand implements CliCommand {
   private async ensureApiKeyOwnerExists(): Promise<void> {
     const cachedProfile = await this.databaseClient.profileCache.findUnique({
       where: { id: this.INTERNAL_API_KEY_OWNER },
-      select: { id: true }
+      select: { id: true },
     });
     if (cachedProfile == null) {
       await this.minecraftProfileService.provideProfileByUuid(this.INTERNAL_API_KEY_OWNER);
@@ -61,7 +61,7 @@ export default class CreateInternalApiKeyCommand implements CliCommand {
     }
 
     return {
-      name: args[0]
+      name: args[0],
     };
   }
 }

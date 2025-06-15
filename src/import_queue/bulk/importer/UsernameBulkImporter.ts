@@ -13,7 +13,7 @@ export default class UsernameBulkImporter implements BulkImporter {
     return [{
       payload: Buffer.from(payload.toLowerCase()),
       payloadType: 'USERNAME',
-      importGroupId
+      importGroupId,
     }];
   }
 }

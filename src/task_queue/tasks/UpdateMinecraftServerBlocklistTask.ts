@@ -10,7 +10,7 @@ export default class UpdateMinecraftServerBlocklistTask extends Task {
 
   constructor(
     private readonly minecraftApiClient: MinecraftApiClient,
-    private readonly serverBlocklistPersister: ServerBlocklistPersister
+    private readonly serverBlocklistPersister: ServerBlocklistPersister,
   ) {
     super('UpdateMinecraftServerBlocklist', TaskPriority.NORMAL);
   }

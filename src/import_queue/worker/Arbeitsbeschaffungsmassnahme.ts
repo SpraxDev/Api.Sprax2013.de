@@ -9,7 +9,7 @@ export default class Arbeitsbeschaffungsmassnahme {
   private uuidsToUpdate: string[] = [];
 
   constructor(
-    private readonly databaseClient: DatabaseClient
+    private readonly databaseClient: DatabaseClient,
   ) {
   }
 
@@ -33,13 +33,13 @@ export default class Arbeitsbeschaffungsmassnahme {
       where: {
         deleted: false,
         updatedAt: {
-          lt: new Date(now.getTime() - 24 * 60 * 60 * 1000 /* 1d */)
-        }
+          lt: new Date(now.getTime() - 24 * 60 * 60 * 1000 /* 1d */),
+        },
       },
       orderBy: {
-        updatedAt: 'asc'
+        updatedAt: 'asc',
       },
-      take: 10
+      take: 10,
     });
 
     if (uuidsToUpdate.length == 0) {

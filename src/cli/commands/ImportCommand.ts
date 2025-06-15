@@ -14,7 +14,7 @@ export default class ImportCommand implements CliCommand {
   private readonly VALID_IMPORT_TYPES: string[] = ['uuid', 'username', 'profile-texture-value'] satisfies ImportCommandArgs['type'][];
 
   constructor(
-    private readonly bulkQueueImporter: BulkQueueImporter
+    private readonly bulkQueueImporter: BulkQueueImporter,
   ) {
   }
 
@@ -58,7 +58,7 @@ export default class ImportCommand implements CliCommand {
     return {
       type: args[0] as ImportCommandArgs['type'],
       filePath: args[1],
-      apiKeyId: BigInt(args[2])
+      apiKeyId: BigInt(args[2]),
     };
   }
 }

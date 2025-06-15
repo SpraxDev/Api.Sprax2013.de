@@ -5,7 +5,7 @@ import type { UuidToProfileResponse } from '../../MinecraftApiClient.js';
 @singleton()
 export default class ProfilePersister {
   constructor(
-    private readonly databaseClient: DatabaseClient
+    private readonly databaseClient: DatabaseClient,
   ) {
   }
 
@@ -16,13 +16,13 @@ export default class ProfilePersister {
       create: {
         id: profile.id,
         nameLowercase: profile.name.toLowerCase(),
-        raw: profile
+        raw: profile,
       },
       update: {
         nameLowercase: profile.name.toLowerCase(),
         raw: profile,
-        deleted: false
-      }
+        deleted: false,
+      },
     });
   }
 
@@ -30,7 +30,7 @@ export default class ProfilePersister {
     await this.databaseClient.profile.update({
       where: { id: profileId },
       data: { deleted: true },
-      select: { id: true }
+      select: { id: true },
     });
   }
 }

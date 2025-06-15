@@ -20,14 +20,14 @@ export default class SimpleHttpClient extends HttpClient {
   get(url: string, options?: GetRequestOptions): Promise<HttpResponse> {
     return this.request(url, {
       ...options,
-      method: 'GET'
+      method: 'GET',
     });
   }
 
   post(url: string, options?: PostRequestOptions): Promise<HttpResponse> {
     return this.request(url, {
       ...options,
-      method: 'POST'
+      method: 'POST',
     });
   }
 
@@ -45,7 +45,7 @@ export default class SimpleHttpClient extends HttpClient {
       method: options.method,
       query: options?.query,
       body: options?.body,
-      headers: this.mergeWithDefaultHeaders(options?.headers)
+      headers: this.mergeWithDefaultHeaders(options?.headers),
     });
     const httpResponse = await HttpResponse.fromUndiciResponse(response);
 
@@ -66,8 +66,8 @@ export default class SimpleHttpClient extends HttpClient {
     return {
       ...super.getDefaultAgentOptions(),
       connect: {
-        lookup: new UnicastOnlyDnsResolver().lookup
-      }
+        lookup: new UnicastOnlyDnsResolver().lookup,
+      },
     };
   }
 

@@ -137,7 +137,7 @@ function multiplyMatrices(matrixA: number[], matrixB: number[]): number[] {
     result0[0], result0[1], result0[2], result0[3],
     result1[0], result1[1], result1[2], result1[3],
     result2[0], result2[1], result2[2], result2[3],
-    result3[0], result3[1], result3[2], result3[3]
+    result3[0], result3[1], result3[2], result3[3],
   ];
 }
 
@@ -289,49 +289,49 @@ export class Camera {
       cz, sz, 0, 0,
       -sz, cz, 0, 0,
       0, 0, 1, 0,
-      0, 0, 0, 1
+      0, 0, 0, 1,
     ];
     const rotateX = [
       1, 0, 0, 0,
       0, cx, sx, 0,
       0, -sx, cx, 0,
-      0, 0, 0, 1
+      0, 0, 0, 1,
     ];
     const rotateY = [
       cy, 0, -sy, 0,
       0, 1, 0, 0,
       sy, 0, cy, 0,
-      0, 0, 0, 1
+      0, 0, 0, 1,
     ];
     const translate = [
       1, 0, 0, 0,
       0, 1, 0, 0,
       0, 0, 1, 0,
-      tx, ty, tz, 1
+      tx, ty, tz, 1,
     ];
     const projection = [
       n / r, 0, 0, 0,
       0, -n / t, 0, 0,
       0, 0, (f + n) / (f - n), 1,
-      0, 0, -2 * f * n / (f - n), 0
+      0, 0, -2 * f * n / (f - n), 0,
     ];
     const scale = [
       this.scale.x, 0, 0, 0,
       0, this.scale.y, 0, 0,
       0, 0, 1, 0,
-      0, 0, 0, 1
+      0, 0, 0, 1,
     ];
     const postTranslate = [
       1, 0, 0, 0,
       0, 1, 0, 0,
       0, 0, 1, 0,
-      this.postPosition.x, this.postPosition.y, 0, 1
+      this.postPosition.x, this.postPosition.y, 0, 1,
     ];
     const flipX = [
       -1, 0, 0, 0,
       0, 1, 0, 0,
       0, 0, 1, 0,
-      0, 0, 0, 1
+      0, 0, 0, 1,
     ];
 
     const mvpMatrix = [scale, postTranslate, projection, rotateZ, rotateX, rotateY, translate, flipX].reduce((acc, cur) => multiplyMatrices(acc, cur));

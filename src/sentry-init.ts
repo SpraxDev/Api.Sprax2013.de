@@ -30,9 +30,9 @@ import { getAppInfo, IS_PRODUCTION } from './constants.js';
 
           cpus: Os.cpus().length,
           memory_total: (Os.totalmem() / 1024 / 1024 / 1024).toFixed(2) + ' GiB',
-          memory_free: null
-        }
-      }
+          memory_free: null,
+        },
+      },
     },
 
     defaultIntegrations: false,
@@ -55,6 +55,6 @@ import { getAppInfo, IS_PRODUCTION } from './constants.js';
       }
 
       return event;
-    }
+    },
   });
 })();

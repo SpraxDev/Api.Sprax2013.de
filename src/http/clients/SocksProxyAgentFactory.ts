@@ -10,14 +10,14 @@ import UnicastOnlyDnsResolver from '../dns/UnicastOnlyDnsResolver.js';
 export default class SocksProxyAgentFactory {
   constructor(
     private readonly unicastOnlyDnsResolver: UnicastOnlyDnsResolver,
-    private readonly socksProxyServerConnector: SocksProxyServerConnector
+    private readonly socksProxyServerConnector: SocksProxyServerConnector,
   ) {
   }
 
   create(proxy: SocksProxyServer, agentOptions: Omit<Undici.Agent.Options, 'connect'>): Undici.Agent {
     return new Undici.Agent({
       ...agentOptions,
-      connect: this.createConnector(proxy)
+      connect: this.createConnector(proxy),
     });
   }
 

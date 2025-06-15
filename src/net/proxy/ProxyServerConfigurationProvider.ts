@@ -25,7 +25,7 @@ export default class ProxyServerConfigurationProvider {
   private readonly proxies: ProxyServer[] = [];
 
   constructor(
-    @inject('value.proxy_server_uris') proxyUris: string[]
+    @inject('value.proxy_server_uris') proxyUris: string[],
   ) {
     this.proxies = this.parseProxies(proxyUris);
     this.logWarningForDuplicateProxies();
@@ -64,7 +64,7 @@ export default class ProxyServerConfigurationProvider {
           host: proxyHost,
           port: parsedUri.port ? parseInt(parsedUri.port, 10) : undefined,
 
-          timeout: 3000
+          timeout: 3000,
         };
       }
 
@@ -74,7 +74,7 @@ export default class ProxyServerConfigurationProvider {
         displayName: parsedUri.searchParams.get('name')?.trim() || simplifiedUri,
         username: decodeURIComponent(parsedUri.username),
         password: decodeURIComponent(parsedUri.password),
-        socksProxyOptions
+        socksProxyOptions,
       });
     }
 

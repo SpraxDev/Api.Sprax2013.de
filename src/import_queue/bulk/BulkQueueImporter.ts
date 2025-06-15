@@ -19,7 +19,7 @@ export type BulkQueueImportResult = {
 @singleton()
 export default class BulkQueueImporter {
   constructor(
-    private readonly databaseClient: DatabaseClient
+    private readonly databaseClient: DatabaseClient,
   ) {
   }
 
@@ -54,7 +54,7 @@ export default class BulkQueueImporter {
 
         const importGroup = await transaction.importGroup.create({
           data: { importingApiKeyId },
-          select: { id: true }
+          select: { id: true },
         });
         result = {
           importGroupId: importGroup.id,
@@ -62,7 +62,7 @@ export default class BulkQueueImporter {
           error: 0,
           duplicate: 0,
           lastError: null,
-          aborted: false
+          aborted: false,
         };
 
         const insertBatch: PrismaClient.Prisma.ImportTaskCreateManyInput[] = [];
@@ -118,9 +118,9 @@ export default class BulkQueueImporter {
 
             totalParsedPayloads: totalPayloadsProcessed,
             erroredImports: { increment: result.error },
-            duplicateImports: { increment: result.duplicate }
+            duplicateImports: { increment: result.duplicate },
           },
-          select: { id: true }
+          select: { id: true },
         });
       }, { timeout: 60 * 60 * 1000 /* 1h */ });
 
@@ -133,7 +133,7 @@ export default class BulkQueueImporter {
   private async writeBatch(transaction: PrismaClient.Prisma.TransactionClient, data: PrismaClient.Prisma.ImportTaskCreateManyInput[]): Promise<number> {
     const batch = await transaction.importTask.createMany({
       data,
-      skipDuplicates: true
+      skipDuplicates: true,
     });
     return batch.count;
   }
@@ -143,7 +143,7 @@ export default class BulkQueueImporter {
     lastProgressReportTotalPayloads: number,
     totalFileBytes: number,
     lineBytes: number,
-    totalPayloadsProcessed: number
+    totalPayloadsProcessed: number,
   ): void {
     const secondsSinceLastReport = (Date.now() - lastReportedProgress) / 1000;
     const estimatedTotalLines = Math.round(totalFileBytes / (lineBytes + '\n'.length));

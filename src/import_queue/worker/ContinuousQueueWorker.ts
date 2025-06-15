@@ -39,7 +39,7 @@ export default class ContinuousQueueWorker {
     private readonly skinImageProcessor: SkinImageProcessor,
     private readonly updateThirdPartyCapesProcessor: UpdateThirdPartyCapesProcessor,
     private readonly proxyServerConfigurationProvider: ProxyServerConfigurationProvider,
-    private readonly appConfiguration: AppConfiguration
+    private readonly appConfiguration: AppConfiguration,
   ) {
   }
 
@@ -155,7 +155,7 @@ export default class ContinuousQueueWorker {
       this.bufferedTasks = await this.databaseClient.importTask.findMany({
         where: {
           state: 'QUEUED',
-          payloadType: ContinuousQueueWorker.PAYLOAD_TYPES_TO_PROCESS[this.nextPayloadTypeIndexToBuffer]
+          payloadType: ContinuousQueueWorker.PAYLOAD_TYPES_TO_PROCESS[this.nextPayloadTypeIndexToBuffer],
         },
         orderBy: { createdAt: 'asc' },
         take: this.taskBufferSize,
@@ -172,7 +172,7 @@ export default class ContinuousQueueWorker {
       await transaction.importTask.update({
         where: { id: task.id },
         data: { state },
-        select: { id: true }
+        select: { id: true },
       });
 
       if (task.importGroupId != null) {
@@ -187,7 +187,7 @@ export default class ContinuousQueueWorker {
         await transaction.importGroup.update({
           where: { id: task.importGroupId },
           data: importGroupUpdateData,
-          select: { id: true }
+          select: { id: true },
         });
       }
     });
@@ -197,9 +197,9 @@ export default class ContinuousQueueWorker {
     return this.databaseClient.importTask.findMany({
       where: {
         payloadType: 'USERNAME',
-        state: 'QUEUED'
+        state: 'QUEUED',
       },
-      take: 10
+      take: 10,
     });
   }
 }

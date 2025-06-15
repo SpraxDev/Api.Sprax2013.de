@@ -4,7 +4,7 @@ import CliCommand from './commands/CliCommand.js';
 @singleton()
 export default class CommandExecutor {
   constructor(
-    @injectAll('CliCommand') private readonly cliCommands: CliCommand[]
+    @injectAll('CliCommand') private readonly cliCommands: CliCommand[],
   ) {
   }
 

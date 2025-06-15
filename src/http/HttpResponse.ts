@@ -5,7 +5,7 @@ export default class HttpResponse {
   constructor(
     public readonly statusCode: number,
     public readonly headers: Map<string, string | string[]>,
-    public readonly body: Buffer
+    public readonly body: Buffer,
   ) {
   }
 
@@ -31,7 +31,7 @@ export default class HttpResponse {
     return new HttpResponse(
       response.statusCode,
       this.parseHeaders(response.headers),
-      Buffer.from(await response.body.arrayBuffer())
+      Buffer.from(await response.body.arrayBuffer()),
     );
   }
 

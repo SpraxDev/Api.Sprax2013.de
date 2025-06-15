@@ -1,7 +1,7 @@
 import Net from 'node:net';
 import { container } from 'tsyringe';
 import ProxyServerConfigurationProvider, {
-  SocksProxyServer
+  SocksProxyServer,
 } from '../../../net/proxy/ProxyServerConfigurationProvider.js';
 import RoundRobinProxyPool from '../../../net/proxy/RoundRobinProxyPool.js';
 import SocksProxyServerConnector from '../../../net/proxy/SocksProxyServerConnector.js';
@@ -110,7 +110,7 @@ export default abstract class AbstractMinecraftServerPing {
 
       lookup: (host, options, callback) => {
         callback(new Error('DNS lookups are not supported'), '');
-      }
+      },
     });
   }
 }

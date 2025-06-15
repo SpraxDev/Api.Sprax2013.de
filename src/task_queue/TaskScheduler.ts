@@ -17,7 +17,7 @@ export default class TaskScheduler implements Disposable {
     private readonly updateMinecraftServerBlocklistTask: UpdateMinecraftServerBlocklistTask,
     private readonly clearExpiredEntriesInSetsWithTtlTask: ClearExpiredEntriesInSetsWithTtlTask,
     private readonly proxyPoolHttpClientHealthcheckTask: ProxyPoolHttpClientHealthcheckTask,
-    private readonly writeImportQueueSizeToQuestDBTask: WriteImportQueueSizeToQuestDBTask
+    private readonly writeImportQueueSizeToQuestDBTask: WriteImportQueueSizeToQuestDBTask,
   ) {
   }
 

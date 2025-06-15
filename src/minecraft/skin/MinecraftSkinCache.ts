@@ -12,14 +12,14 @@ export type CachedSkin = {
 @singleton()
 export default class MinecraftSkinCache {
   constructor(
-    private readonly databaseClient: DatabaseClient
+    private readonly databaseClient: DatabaseClient,
   ) {
   }
 
   async findIdByUrl(skinUrl: string): Promise<bigint | null> {
     const skinInDatabase = await this.databaseClient.skinUrl.findUnique({
       where: { url: skinUrl },
-      select: { skinId: true }
+      select: { skinId: true },
     });
     return skinInDatabase?.skinId ?? null;
   }
@@ -32,10 +32,10 @@ export default class MinecraftSkinCache {
           select: {
             id: true,
             imageBytes: true,
-            normalizedSkin: true
-          }
-        }
-      }
+            normalizedSkin: true,
+          },
+        },
+      },
     });
 
     if (skinInDatabase == null) {
@@ -51,14 +51,14 @@ export default class MinecraftSkinCache {
     return {
       imageId: skinInDatabase.skin.id,
       original: skinImage,
-      normalized: normalizedSkin
+      normalized: normalizedSkin,
     };
   }
 
   async existsSkinUrlWithNonNullTextureValue(skinUrl: string): Promise<boolean> {
     const existingSkinUrl = await this.databaseClient.skinUrl.findUnique({
       where: { url: skinUrl, textureValue: { not: null }, textureSignature: { not: null } },
-      select: { url: true }
+      select: { url: true },
     });
     return existingSkinUrl != null;
   }
@@ -67,7 +67,7 @@ export default class MinecraftSkinCache {
     const skinPixelDataHash = await this.computePixelDataHash(skin);
     const existingSkinImage = await this.databaseClient.skin.findUnique({
       where: { pixelDataHash: skinPixelDataHash },
-      select: { id: true }
+      select: { id: true },
     });
     return existingSkinImage != null;
   }

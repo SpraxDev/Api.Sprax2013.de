@@ -3,7 +3,7 @@ import { container, singleton } from 'tsyringe';
 import * as Undici from 'undici';
 import ProxyServerConfigurationProvider, {
   ProxyServer,
-  SocksProxyServer
+  SocksProxyServer,
 } from '../../net/proxy/ProxyServerConfigurationProvider.js';
 import RoundRobinProxyPool from '../../net/proxy/RoundRobinProxyPool.js';
 import ProxyPoolHttpClientHealthcheckTask from '../../task_queue/tasks/ProxyPoolHttpClientHealthcheckTask.js';
@@ -31,7 +31,7 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
 
   constructor(
     proxyServerConfigurationProvider: ProxyServerConfigurationProvider,
-    socksProxyAgentFactory: SocksProxyAgentFactory
+    socksProxyAgentFactory: SocksProxyAgentFactory,
   ) {
     super();
 
@@ -63,7 +63,7 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
         method: options.method,
         query: options?.query,
         body: options?.body,
-        headers: super.mergeWithDefaultHeaders(options?.headers)
+        headers: super.mergeWithDefaultHeaders(options?.headers),
       });
     } catch (err: any) {
       if (err instanceof ResolvedToNonUnicastIpError) {
@@ -75,7 +75,7 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
           ...proxy.health,
           unhealthy: true,
           unhealthySince: proxy.health.unhealthySince ?? new Date(),
-          lastChecked: new Date()
+          lastChecked: new Date(),
         };
       }
 
@@ -131,10 +131,10 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
         uri: proxy.simplifiedUri,
         token: authorizationHeaderValue,
         proxyTls: {
-          timeout: 3000
-        }
+          timeout: 3000,
+        },
       }),
-      health: { unhealthy: false }
+      health: { unhealthy: false },
     };
   }
 
@@ -142,7 +142,7 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
     return {
       ...proxy,
       undiciDispatcher: socksProxyAgentFactory.create(proxy, this.getDefaultAgentOptions()),
-      health: { unhealthy: false }
+      health: { unhealthy: false },
     };
   }
 

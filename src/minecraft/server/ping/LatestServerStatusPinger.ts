@@ -59,7 +59,7 @@ export default class LatestServerStatusPinger extends AbstractMinecraftServerPin
     resolve({
       rttInMs: rtt,
       resolvedIp: this.resolvedIp,
-      status: JSON.parse(payload)
+      status: JSON.parse(payload),
     });
   }
 }

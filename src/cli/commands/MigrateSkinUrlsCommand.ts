@@ -36,7 +36,7 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
     private readonly httpClient: AutoProxiedHttpClient,
     private readonly databaseClient: DatabaseClient,
     private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
-    private readonly skinPersister: SkinPersister
+    private readonly skinPersister: SkinPersister,
   ) {
   }
 
@@ -82,7 +82,7 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
         importedFallbackSkinUrls: 0,
         importedTextureValuesAndUuids: 0,
         skinUrlsNotFound: 0,
-        textureValueNullResultingInNoSkinUrl: 0
+        textureValueNullResultingInNoSkinUrl: 0,
       };
 
       await this.databaseClient.$transaction(async (transaction) => {
@@ -138,7 +138,7 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
             if (!importGroupCache.has(apiKeyId)) {
               importGroupCache.set(apiKeyId, (await transaction.importGroup.create({
                 data: { importingApiKeyId: apiKeyId, totalParsedPayloads: -1 },
-                select: { id: true }
+                select: { id: true },
               })).id);
             }
             const importGroupId = importGroupCache.get(apiKeyId)!;
@@ -151,7 +151,7 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
                 const data = profileTextureValueBulkImporter.createTasks(`${textureValue},${textureSignature}`, importGroupId);
                 const queued = await transaction.importTask.createMany({
                   data,
-                  skipDuplicates: true
+                  skipDuplicates: true,
                 });
                 migrateResult.importedTextureValuesAndUuids += queued.count;
                 migrateResult.duplicateTextureValuesAndUuids += data.length - queued.count;
@@ -185,7 +185,7 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
     return [
       payload.substring(0, indexOfFirstComma),
       payload.substring(indexOfFirstComma + 1, indexOfLastComma),
-      payload.substring(indexOfLastComma + 1)
+      payload.substring(indexOfLastComma + 1),
     ];
   }
 
@@ -202,7 +202,7 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
       payload.substring(0, indexOfFirstComma) === '\\N' ? null : payload.substring(0, indexOfFirstComma),
       payload.substring(indexOfFirstComma + 1, indexOfSecondComma) === '\\N' ? null : payload.substring(indexOfFirstComma + 1, indexOfSecondComma),
       payload.substring(indexOfSecondComma + 1, indexOfLastComma),
-      payload.substring(indexOfLastComma + 1)
+      payload.substring(indexOfLastComma + 1),
     ];
   }
 
@@ -250,7 +250,7 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
     await this.skinPersister.persist(
       skinImage,
       await normalizedSkin.toPngBuffer(),
-      isOfficialSkinUrl ? skinUrl : null
+      isOfficialSkinUrl ? skinUrl : null,
     );
   }
 
@@ -259,7 +259,7 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
 
     const cachedApiKey = await transaction.apiKey.findFirst({
       where: { name: apiKeyName, internal: true },
-      select: { id: true }
+      select: { id: true },
     });
     if (cachedApiKey != null) {
       return cachedApiKey.id;
@@ -267,7 +267,7 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
 
     const apiKey = await transaction.apiKey.create({
       data: { name: apiKeyName, internal: true, ownerId: '955e4cf6411c40d1a1765bc8e03a8a9a' },
-      select: { id: true }
+      select: { id: true },
     });
     return apiKey.id;
   }
@@ -277,7 +277,7 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
     lastProgressReportTotalPayloads: number,
     totalFileBytes: number,
     lineBytes: number,
-    totalPayloadsProcessed: number
+    totalPayloadsProcessed: number,
   ): void {
     const secondsSinceLastReport = (Date.now() - lastReportedProgress) / 1000;
     const estimatedTotalLines = Math.round(totalFileBytes / (lineBytes + '\n'.length));
@@ -299,7 +299,7 @@ export default class MigrateSkinUrlsCommand implements CliCommand {
 
     return {
       filePath: args[0],
-      importType: args[1] as any
+      importType: args[1] as any,
     };
   }
 }

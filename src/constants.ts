@@ -17,7 +17,7 @@ export function getAppInfo(): Readonly<AppInfo> {
     appInfo = {
       name: 'UNKNOWN-APP-NAME',
       version: 'UNKNOWN-APP-VERSION',
-      homepage: ''
+      homepage: '',
     };
 
     const packageJsonPath = Path.join(APP_ROOT_DIR, 'package.json');

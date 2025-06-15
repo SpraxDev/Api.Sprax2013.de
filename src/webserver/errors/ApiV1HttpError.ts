@@ -3,7 +3,7 @@ import { BadRequestError, NotFoundError } from './HttpErrors.js';
 export class ApiV1BadRequestError extends BadRequestError {
   constructor(
     httpErrorMessage: string,
-    private readonly details?: any[]
+    private readonly details?: any[],
   ) {
     super(httpErrorMessage);
   }
@@ -12,7 +12,7 @@ export class ApiV1BadRequestError extends BadRequestError {
     return {
       error: 'Bad Request',
       message: this.httpErrorMessage,
-      details: this.details
+      details: this.details,
     };
   }
 
@@ -37,7 +37,7 @@ export class ApiV1NotFoundError extends NotFoundError {
   createResponseBody(): Record<string, any> {
     return {
       error: 'Not Found',
-      message: this.httpErrorMessage
+      message: this.httpErrorMessage,
     };
   }
 

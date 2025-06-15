@@ -30,7 +30,7 @@ export default class CliArgumentProvider {
     }
 
     return {
-      command: this.toAppCommand(parsedArgs._[0])
+      command: this.toAppCommand(parsedArgs._[0]),
     };
   }
 
@@ -51,15 +51,15 @@ export default class CliArgumentProvider {
     return Mri(process.argv.slice(2), {
       default: {
         help: false,
-        version: false
+        version: false,
       },
       alias: {
-        help: 'h'
+        help: 'h',
       },
       unknown(flag: string): void {
         console.error(`Unknown flag ${JSON.stringify(flag)}`);
         process.exit(1);
-      }
+      },
     });
   }
 

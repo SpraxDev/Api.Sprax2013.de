@@ -7,7 +7,7 @@ import CapeProvider, { CapeResponse } from './CapeProvider.js';
 @autoInjectable()
 export default class OptifineCapeProvider implements CapeProvider {
   constructor(
-    private readonly httpClient: AutoProxiedHttpClient
+    private readonly httpClient: AutoProxiedHttpClient,
   ) {
   }
 
@@ -33,7 +33,7 @@ export default class OptifineCapeProvider implements CapeProvider {
     return {
       image: capeResponse.body,
       mimeType: 'image/png',
-      ageInSeconds: 0
+      ageInSeconds: 0,
     };
   }
 }

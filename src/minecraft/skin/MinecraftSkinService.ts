@@ -24,7 +24,7 @@ export default class MinecraftSkinService {
     private readonly minecraftSkinCache: MinecraftSkinCache,
     private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
     private readonly skinPersister: SkinPersister,
-    private readonly lazyImportTaskCreator: LazyImportTaskCreator
+    private readonly lazyImportTaskCreator: LazyImportTaskCreator,
   ) {
   }
 
@@ -34,7 +34,7 @@ export default class MinecraftSkinService {
       const defaultSkin = await this.getDefaultSkin(profile.determineDefaultSkin());
       return {
         original: defaultSkin,
-        normalized: defaultSkin
+        normalized: defaultSkin,
       };
     }
 
@@ -58,7 +58,7 @@ export default class MinecraftSkinService {
     await this.skinPersister.persist(
       skinImage.body,
       await normalizedSkin.toPngBuffer(),
-      isOfficialSkinUrl ? (textureProperty ?? null) : null
+      isOfficialSkinUrl ? (textureProperty ?? null) : null,
     );
     if (textureProperty != null) {
       this.lazyImportTaskCreator.lazyQueueTextureProperty(textureProperty);
@@ -66,7 +66,7 @@ export default class MinecraftSkinService {
 
     return {
       original: originalSkin,
-      normalized: normalizedSkin
+      normalized: normalizedSkin,
     };
   }
 
@@ -81,7 +81,7 @@ export default class MinecraftSkinService {
 export class SkinRequestFailedException extends Error {
   constructor(
     public readonly skinUrl: string,
-    public readonly httpStatusCode: number
+    public readonly httpStatusCode: number,
   ) {
     super(`Fetching skin '${skinUrl}' failed with HTTP status code ${httpStatusCode}`);
   }

@@ -9,5 +9,5 @@ export enum CapeType {
 export const CAPE_TYPE_STRINGS: string[] = [
   CapeType.MOJANG,
   CapeType.OPTIFINE,
-  CapeType.LABYMOD
+  CapeType.LABYMOD,
 ] satisfies PrismaClient.CapeType[];

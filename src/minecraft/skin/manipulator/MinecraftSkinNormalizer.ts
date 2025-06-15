@@ -14,7 +14,7 @@ export default class MinecraftSkinNormalizer {
     { x: 16, y: 52, w: 16, h: 12 },
     { x: 32, y: 52, w: 16, h: 12 },
     { x: 20, y: 48, w: 8, h: 4 },
-    { x: 36, y: 48, w: 8, h: 4 }
+    { x: 36, y: 48, w: 8, h: 4 },
   ];
 
   private static readonly SECOND_SKIN_LAYER_AREAS = [
@@ -29,7 +29,7 @@ export default class MinecraftSkinNormalizer {
     { x: 0, y: 52, w: 16, h: 12 },
     { x: 48, y: 52, w: 16, h: 12 },
     { x: 4, y: 48, w: 8, h: 4 },
-    { x: 52, y: 48, w: 8, h: 4 }
+    { x: 52, y: 48, w: 8, h: 4 },
   ];
 
   async normalizeSkin(skin: SkinImageManipulator): Promise<SkinImageManipulator> {

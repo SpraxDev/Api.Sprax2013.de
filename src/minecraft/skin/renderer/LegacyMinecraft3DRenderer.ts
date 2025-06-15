@@ -56,7 +56,7 @@ export default class LegacyMinecraft3DRenderer {
         cam.setScale({ x: 2.5, y: 2.5 });
 
         return cam;
-      }()
+      }(),
     },
 
     models: {
@@ -67,12 +67,12 @@ export default class LegacyMinecraft3DRenderer {
       modelSteveHead: createModel(Path.join(APP_RESOURCES_DIR, 'legacy-3d-models', 'steveHead.obj'), 64, 64),
       modelSteveHeadNoOverlay: createModel(Path.join(APP_RESOURCES_DIR, 'legacy-3d-models', 'steveHeadNoOverlay.obj'), 64, 64),
 
-      block: createModel(Path.join(APP_RESOURCES_DIR, 'legacy-3d-models', 'block.obj'), 64, 64)
-    }
+      block: createModel(Path.join(APP_RESOURCES_DIR, 'legacy-3d-models', 'block.obj'), 64, 64),
+    },
   };
 
   constructor(
-    private readonly skinNormalizer: MinecraftSkinNormalizer
+    private readonly skinNormalizer: MinecraftSkinNormalizer,
   ) {
   }
 
@@ -86,7 +86,7 @@ export default class LegacyMinecraft3DRenderer {
       {
         channels: 4,
         width: cam.width,
-        height: cam.height
+        height: cam.height,
       });
   }
 
@@ -116,8 +116,8 @@ export default class LegacyMinecraft3DRenderer {
       {
         channels: 4,
         width: cam.width,
-        height: cam.height
-      }
+        height: cam.height,
+      },
     );
   }
 }

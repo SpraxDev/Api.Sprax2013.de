@@ -10,7 +10,7 @@ export default class ByPlayerProfileLazyPersister {
   constructor(
     private readonly profilePersister: ProfilePersister,
     private readonly profileSeenNamesPersister: ProfileSeenNamePersister,
-    private readonly lazyImportTaskCreator: LazyImportTaskCreator
+    private readonly lazyImportTaskCreator: LazyImportTaskCreator,
   ) {
   }
 

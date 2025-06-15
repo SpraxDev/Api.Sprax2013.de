@@ -9,7 +9,7 @@ import CapeProvider, { CapeResponse } from './CapeProvider.js';
 export default class MojangCapeProvider implements CapeProvider {
   constructor(
     private readonly httpClient: AutoProxiedHttpClient,
-    private readonly capeCache: CapeCache
+    private readonly capeCache: CapeCache,
   ) {
   }
 
@@ -28,7 +28,7 @@ export default class MojangCapeProvider implements CapeProvider {
       return {
         image: cachedCape.imageBytes,
         mimeType: cachedCape.mimeType,
-        ageInSeconds: 0
+        ageInSeconds: 0,
       };
     }
 
@@ -49,7 +49,7 @@ export default class MojangCapeProvider implements CapeProvider {
     return {
       image: capeResponse.body,
       mimeType: 'image/png',
-      ageInSeconds: 0
+      ageInSeconds: 0,
     };
   }
 }

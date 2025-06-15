@@ -17,7 +17,7 @@ export default class ServerBlocklistService {
   constructor(
     private readonly fqdnService: FqdnValidator,
     private readonly databaseClient: DatabaseClient,
-    private readonly serverBlocklistPersister: ServerBlocklistPersister
+    private readonly serverBlocklistPersister: ServerBlocklistPersister,
   ) {
   }
 
@@ -80,9 +80,9 @@ export default class ServerBlocklistService {
         .map(([host, hash]) => ({
           host,
           sha1: Buffer.from(hash, 'hex'),
-          createdAt: dateSeenAt
+          createdAt: dateSeenAt,
         })),
-      skipDuplicates: true
+      skipDuplicates: true,
     });
     return createResult.count > 0;
   }
@@ -126,7 +126,7 @@ export default class ServerBlocklistService {
     const hosts = [
       `play.${fqdn}`,
       `join.${fqdn}`,
-      `mc.${fqdn}`
+      `mc.${fqdn}`,
     ];
 
     const result = new Map<string, string>();

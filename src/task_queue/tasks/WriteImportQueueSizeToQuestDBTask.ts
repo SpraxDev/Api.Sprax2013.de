@@ -7,7 +7,7 @@ import Task, { TaskPriority } from './Task.js';
 export default class WriteImportQueueSizeToQuestDBTask extends Task {
   constructor(
     private readonly databaseClient: DatabaseClient,
-    private readonly questDbClient: QuestDbClient
+    private readonly questDbClient: QuestDbClient,
   ) {
     super('WriteImportQueueSizeToQuestDB', TaskPriority.NORMAL);
   }

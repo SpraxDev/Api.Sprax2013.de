@@ -6,7 +6,7 @@ export enum TaskPriority {
 export default abstract class Task {
   protected constructor(
     public readonly displayName: string,
-    public readonly priority: TaskPriority
+    public readonly priority: TaskPriority,
   ) {
   }
 

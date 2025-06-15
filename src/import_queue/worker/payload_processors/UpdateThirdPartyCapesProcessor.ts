@@ -10,7 +10,7 @@ import PayloadProcessor from './PayloadProcessor.js';
 export default class UpdateThirdPartyCapesProcessor implements PayloadProcessor {
   constructor(
     private readonly minecraftProfileService: MinecraftProfileService,
-    private readonly capeService: UserCapeService
+    private readonly capeService: UserCapeService,
   ) {
   }
 

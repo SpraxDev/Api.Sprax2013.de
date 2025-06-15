@@ -21,7 +21,7 @@ export default class MinecraftProfileService {
     private readonly profileCache: MinecraftProfileCache,
     private readonly minecraftApiClient: MinecraftApiClient,
     private readonly profilePersister: ProfilePersister,
-    private readonly byPlayerProfileLazyPersister: ByPlayerProfileLazyPersister
+    private readonly byPlayerProfileLazyPersister: ByPlayerProfileLazyPersister,
   ) {
   }
 
@@ -93,7 +93,7 @@ export default class MinecraftProfileService {
     await this.byPlayerProfileLazyPersister.persist(profile);
     return {
       profile,
-      ageInSeconds: 0
+      ageInSeconds: 0,
     };
   }
 

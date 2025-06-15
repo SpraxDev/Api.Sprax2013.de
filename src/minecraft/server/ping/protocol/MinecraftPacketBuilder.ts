@@ -36,7 +36,7 @@ export default class MinecraftPacketBuilder {
 
     const packet = Buffer.concat([
       Buffer.from(this.payloadBuffer.slice(payloadLength)), // Packet length
-      Buffer.from(this.payloadBuffer.slice(0, payloadLength)) // Packet data
+      Buffer.from(this.payloadBuffer.slice(0, payloadLength)), // Packet data
     ]);
     this.clear();
     return packet;

@@ -32,5 +32,5 @@ container.register('value.proxy_server_uris', {
       .split(',')
       .map(uri => uri.trim())
       .filter(uri => uri !== '');
-  }
+  },
 });

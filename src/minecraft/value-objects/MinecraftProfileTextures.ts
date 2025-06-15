@@ -5,7 +5,7 @@ export default class MinecraftProfileTextures {
     public readonly timestamp: Date,
     public readonly skinUrl: string | null,
     public readonly capeUrl: string | null,
-    public readonly slimPlayerModel: boolean
+    public readonly slimPlayerModel: boolean,
   ) {
   }
 
@@ -43,7 +43,7 @@ export default class MinecraftProfileTextures {
       new Date(parsedValue.timestamp),
       parsedValue.textures.SKIN?.url ?? null,
       parsedValue.textures.CAPE?.url ?? null,
-      parsedValue.textures.SKIN?.metadata?.model === 'slim'
+      parsedValue.textures.SKIN?.metadata?.model === 'slim',
     );
   }
 

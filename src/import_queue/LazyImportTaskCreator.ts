@@ -9,7 +9,7 @@ export default class LazyImportTaskCreator implements Disposable {
   private readonly danglingPromises = new Set<Promise<void>>();
 
   constructor(
-    private readonly databaseClient: DatabaseClient
+    private readonly databaseClient: DatabaseClient,
   ) {
   }
 
@@ -52,11 +52,11 @@ export default class LazyImportTaskCreator implements Disposable {
       data: [{
         payload: Buffer.from(JSON.stringify({
           value: textureProperty.value,
-          signature: textureProperty.signature
+          signature: textureProperty.signature,
         })),
-        payloadType: 'PROFILE_TEXTURE_VALUE'
+        payloadType: 'PROFILE_TEXTURE_VALUE',
       }],
-      skipDuplicates: true
+      skipDuplicates: true,
     });
   }
 
@@ -66,9 +66,9 @@ export default class LazyImportTaskCreator implements Disposable {
     await this.databaseClient.importTask.createMany({
       data: [{
         payload: Buffer.from(UUID.normalize(uuid)),
-        payloadType: 'UUID'
+        payloadType: 'UUID',
       }],
-      skipDuplicates: true
+      skipDuplicates: true,
     });
   }
 
@@ -76,9 +76,9 @@ export default class LazyImportTaskCreator implements Disposable {
     await this.databaseClient.importTask.createMany({
       data: [{
         payload: Buffer.from(username.toLowerCase()),
-        payloadType: 'USERNAME'
+        payloadType: 'USERNAME',
       }],
-      skipDuplicates: true
+      skipDuplicates: true,
     });
   }
 
@@ -95,13 +95,13 @@ export default class LazyImportTaskCreator implements Disposable {
           payloadType,
           payload,
           state: { notIn: ['QUEUED', 'ERROR'] },
-          stateUpdatedAt: { lt: new Date(now.getTime() - 60 * 60 * 1000 /* 1h */) }
-        }
+          stateUpdatedAt: { lt: new Date(now.getTime() - 60 * 60 * 1000 /* 1h */) },
+        },
       });
 
       await transaction.importTask.createMany({
         data: [{ payloadType, payload }],
-        skipDuplicates: true
+        skipDuplicates: true,
       });
     });
   }

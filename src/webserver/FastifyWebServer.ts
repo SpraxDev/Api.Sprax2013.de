@@ -14,7 +14,7 @@ export default class FastifyWebServer {
       ignoreDuplicateSlashes: true,
       ignoreTrailingSlash: true,
 
-      trustProxy: false // TODO
+      trustProxy: false, // TODO
     });
     Sentry.setupFastifyErrorHandler(this.fastify);
 
@@ -54,7 +54,7 @@ export default class FastifyWebServer {
   static async handleRestfully(
     request: FastifyRequest,
     reply: FastifyReply,
-    handlers: { [key: string]: () => FastifyReply | Promise<FastifyReply> }
+    handlers: { [key: string]: () => FastifyReply | Promise<FastifyReply> },
   ): Promise<FastifyReply> {
     const method = request.method.toLowerCase();
 

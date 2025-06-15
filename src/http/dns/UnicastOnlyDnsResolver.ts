@@ -6,7 +6,7 @@ export default class UnicastOnlyDnsResolver {
   lookup(
     hostname: string,
     options: Dns.LookupOptions,
-    callback: (err: NodeJS.ErrnoException | null, address: string | Dns.LookupAddress[], family?: number) => void
+    callback: (err: NodeJS.ErrnoException | null, address: string | Dns.LookupAddress[], family?: number) => void,
   ): void {
     Dns.lookup(hostname, options, (err, address, family): void => {
       if (err) {

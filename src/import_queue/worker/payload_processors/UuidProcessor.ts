@@ -8,7 +8,7 @@ import PayloadProcessor from './PayloadProcessor.js';
 export default class UuidProcessor implements PayloadProcessor {
   constructor(
     private readonly minecraftProfileService: MinecraftProfileService,
-    private readonly minecraftProfileCache: MinecraftProfileCache
+    private readonly minecraftProfileCache: MinecraftProfileCache,
   ) {
   }
 

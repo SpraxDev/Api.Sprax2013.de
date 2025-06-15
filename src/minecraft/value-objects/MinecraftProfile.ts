@@ -5,7 +5,7 @@ export type DefaultSkin = 'alex' | 'steve';
 
 export default class MinecraftProfile {
   constructor(
-    private readonly rawProfile: UuidToProfileResponse
+    private readonly rawProfile: UuidToProfileResponse,
   ) {
   }
 
@@ -55,9 +55,9 @@ export default class MinecraftProfile {
       properties: [{
         name: 'textures',
         value: textureValue,
-        signature: textureSignature as string
+        signature: textureSignature as string,
       }],
-      profileActions: []
+      profileActions: [],
     });
   }
 }

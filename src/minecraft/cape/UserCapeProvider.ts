@@ -6,7 +6,7 @@ import CapeProvider, { CapeResponse } from './provider/CapeProvider.js';
 @singleton()
 export default class UserCapeProvider {
   constructor(
-    @injectAll('CapeProvider') private readonly capeProviders: CapeProvider[]
+    @injectAll('CapeProvider') private readonly capeProviders: CapeProvider[],
   ) {
   }
 

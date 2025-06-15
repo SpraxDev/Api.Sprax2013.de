@@ -11,7 +11,7 @@ export default class SkinImageProcessor implements PayloadProcessor {
   constructor(
     private readonly minecraftSkinCache: MinecraftSkinCache,
     private readonly minecraftSkinNormalizer: MinecraftSkinNormalizer,
-    private readonly skinPersister: SkinPersister
+    private readonly skinPersister: SkinPersister,
   ) {
   }
 

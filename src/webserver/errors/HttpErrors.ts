@@ -1,7 +1,7 @@
 export abstract class HttpError extends Error {
   protected constructor(
     public readonly httpStatusCode: number,
-    public readonly httpErrorMessage: string
+    public readonly httpErrorMessage: string,
   ) {
     super(`[${httpStatusCode}] ${httpErrorMessage}`);
   }

@@ -34,7 +34,7 @@ export default abstract class HttpClient {
       maxRedirections: 5,
       maxResponseSize: 20 * 1024 * 1024 /* 20 MiB */,
       bodyTimeout: 12_000,
-      headersTimeout: 12_000
+      headersTimeout: 12_000,
     };
   }
 

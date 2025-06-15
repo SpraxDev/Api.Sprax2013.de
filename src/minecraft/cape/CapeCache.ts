@@ -10,7 +10,7 @@ export type CachedProfileCape = {
 @singleton()
 export default class CapeCache {
   constructor(
-    private readonly databaseClient: DatabaseClient
+    private readonly databaseClient: DatabaseClient,
   ) {
   }
 
@@ -18,13 +18,13 @@ export default class CapeCache {
     const cape = await this.databaseClient.profileSeenCape.findFirst({
       where: {
         profileId,
-        cape: { type: capeType }
+        cape: { type: capeType },
       },
       select: {
         lastSeenUsing: true,
-        cape: true
+        cape: true,
       },
-      orderBy: { lastSeenUsing: 'desc' }
+      orderBy: { lastSeenUsing: 'desc' },
     });
     return cape ?? null;
   }
@@ -32,7 +32,7 @@ export default class CapeCache {
   async findIdByTypeAndUrl(capeType: PrismaClient.CapeType, capeUrl: string): Promise<bigint | null> {
     const cape = await this.databaseClient.capeUrl.findUnique({
       where: { url: capeUrl, cape: { type: capeType } },
-      select: { capeId: true }
+      select: { capeId: true },
     });
     return cape?.capeId ?? null;
   }
@@ -40,7 +40,7 @@ export default class CapeCache {
   async findByTypeAndUrl(capeType: PrismaClient.CapeType, capeUrl: string): Promise<PrismaClient.Cape | null> {
     const cape = await this.databaseClient.capeUrl.findUnique({
       where: { url: capeUrl, cape: { type: capeType } },
-      select: { cape: true }
+      select: { cape: true },
     });
     return cape?.cape ?? null;
   }

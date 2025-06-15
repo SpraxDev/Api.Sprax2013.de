@@ -16,7 +16,7 @@ export default class UserCapeService {
     private readonly capeCache: CapeCache,
     private readonly userCapeProvider: UserCapeProvider,
     private readonly capePersister: CapePersister,
-    private readonly profileSeenCapePersister:ProfileSeenCapePersister
+    private readonly profileSeenCapePersister: ProfileSeenCapePersister,
   ) {
   }
 
@@ -42,7 +42,7 @@ export default class UserCapeService {
       return {
         image: cachedCape.cape.imageBytes,
         mimeType: cachedCape.cape.mimeType,
-        ageInSeconds: cacheAgeInSeconds
+        ageInSeconds: cacheAgeInSeconds,
       };
     }
 
@@ -55,7 +55,7 @@ export default class UserCapeService {
         return {
           image: cachedCape.cape.imageBytes,
           mimeType: cachedCape.cape.mimeType,
-          ageInSeconds: cacheAgeInSeconds
+          ageInSeconds: cacheAgeInSeconds,
         };
       }
       throw err;
@@ -72,7 +72,7 @@ export default class UserCapeService {
       return {
         image: cape.image,
         mimeType: cape.mimeType,
-        ageInSeconds: cacheAgeInSeconds
+        ageInSeconds: cacheAgeInSeconds,
       };
     }
 

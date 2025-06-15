@@ -9,7 +9,7 @@ import ServerHostResolver from './resolve/ServerHostResolver.js';
 @singleton()
 export default class MinecraftServerStatusPinger {
   constructor(
-    private readonly serverHostResolver: ServerHostResolver
+    private readonly serverHostResolver: ServerHostResolver,
   ) {
   }
 

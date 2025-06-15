@@ -5,7 +5,7 @@ import DatabaseClient from '../../../database/DatabaseClient.js';
 @singleton()
 export default class ServerBlocklistPersister {
   constructor(
-    private readonly databaseClient: DatabaseClient
+    private readonly databaseClient: DatabaseClient,
   ) {
   }
 
@@ -32,10 +32,10 @@ export default class ServerBlocklistPersister {
     const hashesNoLongerBlocked = await transaction.serverBlocklist.findMany({
       where: {
         sha1: {
-          notIn: blocklist
-        }
+          notIn: blocklist,
+        },
       },
-      select: { sha1: true }
+      select: { sha1: true },
     });
     if (hashesNoLongerBlocked.length <= 0) {
       return false;
@@ -44,8 +44,8 @@ export default class ServerBlocklistPersister {
     await transaction.serverBlocklistChanges.createMany({
       data: hashesNoLongerBlocked.map(hash => ({
         sha1: hash.sha1,
-        changeIsAdd: false
-      }))
+        changeIsAdd: false,
+      })),
     });
     return true;
   }
@@ -53,9 +53,9 @@ export default class ServerBlocklistPersister {
   private async updateHashesThatAreNowBlocked(transaction: Prisma.TransactionClient, blocklist: Buffer[]): Promise<boolean> {
     const knownBlockedHashesResult = await transaction.serverBlocklist.findMany({
       where: {
-        sha1: { in: blocklist }
+        sha1: { in: blocklist },
       },
-      select: { sha1: true }
+      select: { sha1: true },
     });
     const knownBlockedHashes = new Set(knownBlockedHashesResult.map(hash => hash.sha1.toString('hex')));
 
@@ -66,8 +66,8 @@ export default class ServerBlocklistPersister {
         await transaction.serverBlocklistChanges.create({
           data: {
             sha1: hashToBlock,
-            changeIsAdd: true
-          }
+            changeIsAdd: true,
+          },
         });
         wroteAnyChanges = true;
       }

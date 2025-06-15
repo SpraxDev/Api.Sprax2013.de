@@ -13,13 +13,13 @@ export default class SocksProxyServerConnector {
         host: proxy.socksProxyOptions.host,
         port: proxy.socksProxyOptions.port || 1080,
         userId: proxy.username,
-        password: proxy.password
+        password: proxy.password,
       },
       timeout: proxy.socksProxyOptions.timeout,
       destination: {
         host: ip,
-        port: port
-      }
+        port: port,
+      },
     };
 
     return (await Socks.SocksClient.createConnection(socksOpts)).socket;

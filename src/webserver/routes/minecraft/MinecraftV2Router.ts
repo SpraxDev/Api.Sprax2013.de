@@ -6,13 +6,13 @@ import type ImageManipulator from '../../../minecraft/image/ImageManipulator.js'
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService, { type Profile } from '../../../minecraft/profile/MinecraftProfileService.js';
 import ServerBlocklistService, {
-  InvalidHostError
+  InvalidHostError,
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
 import MinecraftServerStatusService from '../../../minecraft/server/ping/MinecraftServerStatusService.js';
 import MinecraftSkinCache from '../../../minecraft/skin/MinecraftSkinCache.js';
 import MinecraftSkinService, {
   Skin,
-  SkinRequestFailedException
+  SkinRequestFailedException,
 } from '../../../minecraft/skin/MinecraftSkinService.js';
 import MinecraftSkinTypeDetector from '../../../minecraft/skin/MinecraftSkinTypeDetector.js';
 import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRenderer.js';
@@ -32,7 +32,7 @@ export default class MinecraftV2Router implements Router {
     private readonly skinImage2DRenderer: SkinImage2DRenderer,
     private readonly serverBlocklistService: ServerBlocklistService,
     private readonly minecraftServerStatusService: MinecraftServerStatusService,
-    private readonly minecraftSkinCache: MinecraftSkinCache
+    private readonly minecraftSkinCache: MinecraftSkinCache,
   ) {
   }
 
@@ -56,9 +56,9 @@ export default class MinecraftV2Router implements Router {
             .header('Cache-Control', 'public, max-age=60, s-maxage=60')
             .send({
               id: profile.profile.id,
-              name: profile.profile.name
+              name: profile.profile.name,
             } satisfies UsernameToUuidResponse);
-        }
+        },
       });
     });
 
@@ -74,7 +74,7 @@ export default class MinecraftV2Router implements Router {
             .header('Age', Math.floor(profile.ageInSeconds).toString())
             .header('Cache-Control', 'public, max-age=60, s-maxage=60')
             .send(profile.profile);
-        }
+        },
       });
     });
 
@@ -132,7 +132,7 @@ export default class MinecraftV2Router implements Router {
             // .header('Age', Math.floor(profile.ageInSeconds).toString())
             .header('Cache-Control', 'public, max-age=60, s-maxage=60')
             .send(skinResponse.pngBody);
-        }
+        },
       });
     });
 
@@ -161,7 +161,7 @@ export default class MinecraftV2Router implements Router {
             .header('Age', Math.floor(profile.ageInSeconds).toString())
             .header('Cache-Control', 'public, max-age=60, s-maxage=60')
             .send(skinResponse.pngBody);
-        }
+        },
       });
     });
 
@@ -172,7 +172,7 @@ export default class MinecraftV2Router implements Router {
           return reply
             .header('Cache-Control', 'public, max-age=120, s-maxage=120')
             .send(blocklist);
-        }
+        },
       });
     });
 
@@ -200,7 +200,7 @@ export default class MinecraftV2Router implements Router {
           return reply
             .header('Cache-Control', 'public, max-age=120, s-maxage=120')
             .send(responseBody);
-        }
+        },
       });
     });
 
@@ -218,7 +218,7 @@ export default class MinecraftV2Router implements Router {
           return reply
             .header('Cache-Control', 'public, max-age=120, s-maxage=120')
             .send(responseBody);
-        }
+        },
       });
     });
 
@@ -262,7 +262,7 @@ export default class MinecraftV2Router implements Router {
           return reply
             .status(200)
             .send({ online: false });
-        }
+        },
       });
     });
   }
@@ -352,7 +352,7 @@ export default class MinecraftV2Router implements Router {
     return {
       pngBody: responseBody,
       skinArea: requestedSkinArea,
-      forceDownload
+      forceDownload,
     };
   }
 

@@ -15,7 +15,7 @@ export default class ImageManipulator {
 
   constructor(
     protected readonly pixelData: Buffer,
-    imageInfo: { width: number, height: number, channels: 1 | 2 | 3 | 4 }
+    imageInfo: { width: number, height: number, channels: 1 | 2 | 3 | 4 },
   ) {
     this.channels = imageInfo.channels;
     this.width = imageInfo.width;
@@ -61,7 +61,7 @@ export default class ImageManipulator {
     targetX: number,
     targetY: number,
     ignoreAlpha: boolean = false,
-    mode: 'replace' | 'add' = 'replace'
+    mode: 'replace' | 'add' = 'replace',
   ): void {
     for (let i = 0; i < width; ++i) {
       for (let j = 0; j < height; ++j) {
@@ -88,7 +88,7 @@ export default class ImageManipulator {
     width: number,
     height: number,
     targetX: number,
-    targetY: number
+    targetY: number,
   ): void {
     for (let i = 0; i < width; ++i) {
       for (let j = 0; j < height; ++j) {
@@ -110,7 +110,7 @@ export default class ImageManipulator {
       r: this.pixelData[(x * 4) + (y * (this.width * 4))],
       g: this.pixelData[(x * 4) + (y * (this.width * 4)) + 1],
       b: this.pixelData[(x * 4) + (y * (this.width * 4)) + 2],
-      alpha: this.pixelData[(x * 4) + (y * (this.width * 4)) + 3]
+      alpha: this.pixelData[(x * 4) + (y * (this.width * 4)) + 3],
     };
   }
 
@@ -143,8 +143,8 @@ export default class ImageManipulator {
       raw: {
         channels: this.channels,
         width: this.width,
-        height: this.height
-      }
+        height: this.height,
+      },
     });
   }
 
@@ -162,9 +162,9 @@ export default class ImageManipulator {
           r: 0,
           g: 0,
           b: 0,
-          alpha: 0
-        }
-      }
+          alpha: 0,
+        },
+      },
     })
       .raw()
       .toBuffer({ resolveWithObject: true });

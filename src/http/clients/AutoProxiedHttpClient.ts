@@ -15,14 +15,14 @@ export default class AutoProxiedHttpClient extends HttpClient {
     'textures.minecraft.net',
 
     'dl.labymod.net',
-    's.optifine.net'
+    's.optifine.net',
   ];
 
   private nextNonProxyRequest = 0;
 
   constructor(
     private readonly proxyPoolHttpClient: ProxyPoolHttpClient,
-    private readonly simpleHttpClient: SimpleHttpClient
+    private readonly simpleHttpClient: SimpleHttpClient,
   ) {
     super();
   }

@@ -6,7 +6,7 @@ export default class StatusRouter implements Router {
   register(server: FastifyInstance): void {
     server.all('/status', (request, reply): Promise<FastifyReply> => {
       return FastifyWebServer.handleRestfully(request, reply, {
-        get: async (): Promise<FastifyReply> => reply.send({ online: true })
+        get: async (): Promise<FastifyReply> => reply.send({ online: true }),
       });
     });
   }

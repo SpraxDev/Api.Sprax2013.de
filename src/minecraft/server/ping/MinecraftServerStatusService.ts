@@ -20,7 +20,7 @@ export default class MinecraftServerStatusService {
 
   constructor(
     private readonly minecraftServerStatusPinger: MinecraftServerStatusPinger,
-    private readonly databaseClient: DatabaseClient
+    private readonly databaseClient: DatabaseClient,
   ) {
   }
 
@@ -29,7 +29,7 @@ export default class MinecraftServerStatusService {
     if (this.offlineServerCache.has(cacheKey)) {
       return {
         ageInSeconds: this.offlineServerCache.getAgeInSeconds(cacheKey),
-        serverStatus: null
+        serverStatus: null,
       };
     }
 
@@ -43,14 +43,14 @@ export default class MinecraftServerStatusService {
       this.offlineServerCache.add(cacheKey);
       return {
         ageInSeconds: 0,
-        serverStatus: null
+        serverStatus: null,
       };
     }
 
     await this.persistServerStatusInDatabase(serverStatus, host, port);
     return {
       ageInSeconds: 0,
-      serverStatus
+      serverStatus,
     };
   }
 
@@ -72,8 +72,8 @@ export default class MinecraftServerStatusService {
       where: {
         host,
         port,
-        ageInSeconds: { lt: 30 }
-      }
+        ageInSeconds: { lt: 30 },
+      },
     });
     if (serverStatus == null) {
       return null;
@@ -84,9 +84,9 @@ export default class MinecraftServerStatusService {
         rttInMs: serverStatus.rttInMs,
         resolvedIp: serverStatus.resolvedIp,
         legacyPing: serverStatus.wasLegacyProtocol === true ? true : undefined,
-        status: serverStatus.rawStatus as any
+        status: serverStatus.rawStatus as any,
       },
-      ageInSeconds: serverStatus.ageInSeconds
+      ageInSeconds: serverStatus.ageInSeconds,
     };
   }
 
@@ -110,11 +110,11 @@ export default class MinecraftServerStatusService {
             where: { pixelDataHash: parsedFavicon.pixelDataSha256 },
             create: {
               pixelDataHash: parsedFavicon.pixelDataSha256,
-              image: parsedFavicon.data
-            }
-          }
-        } : undefined
-      }
+              image: parsedFavicon.data,
+            },
+          },
+        } : undefined,
+      },
     });
   }
 

@@ -18,7 +18,7 @@ export default class AppConfiguration {
       proxyServerUris: process.env.PROXY_SERVER_URIS ?? '',
       questDbMetricsConfig: process.env.QUESTDB_METRICS_CONFIG ?? '',
 
-      workerTickIntervalDynamic: process.env.WORKER_TICK_INTERVAL_DYNAMIC === '1'
+      workerTickIntervalDynamic: process.env.WORKER_TICK_INTERVAL_DYNAMIC === '1',
     } satisfies AppConfig);
   }
 

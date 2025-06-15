@@ -13,7 +13,7 @@ export default class SentrySdk {
   static logAndCaptureWarning(message: string, data?: Record<string, unknown>): void {
     Sentry.captureMessage(message, {
       level: 'warning',
-      extra: data
+      extra: data,
     });
     console.warn(message);
   }

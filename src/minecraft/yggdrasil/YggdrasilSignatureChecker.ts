@@ -5,7 +5,7 @@ import YggdrasilKeyProvider from './YggdrasilKeyProvider.js';
 @singleton()
 export default class YggdrasilSignatureChecker {
   constructor(
-    private readonly yggdrasilKeyProvider: YggdrasilKeyProvider
+    private readonly yggdrasilKeyProvider: YggdrasilKeyProvider,
   ) {
   }
 

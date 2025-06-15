@@ -7,7 +7,7 @@ import MinecraftProfileTextures from '../../value-objects/MinecraftProfileTextur
 @singleton()
 export default class CapePersister {
   constructor(
-    private readonly databaseClient: DatabaseClient
+    private readonly databaseClient: DatabaseClient,
   ) {
   }
 
@@ -26,7 +26,7 @@ export default class CapePersister {
     return await this.databaseClient.$transaction(async (transaction): Promise<bigint> => {
       const existingCapeByUrl = await transaction.capeUrl.findUnique({
         where: { url: capeUrl },
-        select: { capeId: true }
+        select: { capeId: true },
       });
       if (existingCapeByUrl != null) {
         return existingCapeByUrl.capeId;
@@ -36,15 +36,15 @@ export default class CapePersister {
 
       const existingCape = await transaction.cape.findUnique({
         select: { id: true },
-        where: { type_pixelDataHash: { type: 'MOJANG', pixelDataHash: capePixelDataHash } }
+        where: { type_pixelDataHash: { type: 'MOJANG', pixelDataHash: capePixelDataHash } },
       });
       if (existingCape != null) {
         await transaction.capeUrl.create({
           data: {
             url: capeUrl,
-            capeId: existingCape.id
+            capeId: existingCape.id,
           },
-          select: { capeId: true }
+          select: { capeId: true },
         });
         return existingCape.id;
       }
@@ -56,9 +56,9 @@ export default class CapePersister {
           imageBytes: capeImage,
           mimeType: 'image/png',
 
-          capeUrls: { create: { url: capeUrl } }
+          capeUrls: { create: { url: capeUrl } },
         },
-        select: { id: true }
+        select: { id: true },
       });
       return persistedCape.id;
     });
@@ -67,7 +67,7 @@ export default class CapePersister {
   async persistGenericCape(
     type: PrismaClient.CapeType,
     capeImage: Buffer,
-    mimeType: string
+    mimeType: string,
   ): Promise<bigint> {
     if (type === 'MOJANG') {
       throw new Error('persisting MOJANG capes has to be done with #persistMojangCape');
@@ -79,7 +79,7 @@ export default class CapePersister {
 
       const existingCape = await transaction.cape.findUnique({
         select: { id: true },
-        where: { type_pixelDataHash: { type, pixelDataHash: capePixelDataHash } }
+        where: { type_pixelDataHash: { type, pixelDataHash: capePixelDataHash } },
       });
       if (existingCape != null) {
         return existingCape.id;
@@ -90,9 +90,9 @@ export default class CapePersister {
           type,
           pixelDataHash: capePixelDataHash,
           imageBytes: capeImage,
-          mimeType
+          mimeType,
         },
-        select: { id: true }
+        select: { id: true },
       });
       return persistedCape.id;
     });

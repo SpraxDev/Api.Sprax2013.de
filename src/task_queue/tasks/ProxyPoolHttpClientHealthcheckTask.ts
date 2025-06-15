@@ -15,7 +15,7 @@ export default class ProxyPoolHttpClientHealthcheckTask extends Task {
   private readonly clientList: WeakRef<ProxyPoolHttpClient>[] = [];
 
   constructor(
-    private readonly questDbClient: QuestDbClient
+    private readonly questDbClient: QuestDbClient,
   ) {
     super('ProxyPoolHttpClientHealthcheckTask', TaskPriority.HIGH);
   }
@@ -39,7 +39,7 @@ export default class ProxyPoolHttpClientHealthcheckTask extends Task {
           displayName: proxy.displayName,
           online: !proxy.health.unhealthy,
           rttMs: proxy.health.lastReferenceRttMs,
-          timestamp: healthcheckStart
+          timestamp: healthcheckStart,
         });
       }
 
@@ -63,10 +63,10 @@ export default class ProxyPoolHttpClientHealthcheckTask extends Task {
       const response = await Undici.request(ProxyPoolHttpClientHealthcheckTask.HEALTHCHECK_URL, {
         dispatcher: proxy.undiciDispatcher,
         headers: {
-          'User-Agent': ProxyPoolHttpClientHealthcheckTask.USER_AGENT
+          'User-Agent': ProxyPoolHttpClientHealthcheckTask.USER_AGENT,
         },
         bodyTimeout: 3000,
-        headersTimeout: 3000
+        headersTimeout: 3000,
       });
       await HttpResponse.fromUndiciResponse(response);  // consume body
       if (response.statusCode !== 200) {
@@ -82,7 +82,7 @@ export default class ProxyPoolHttpClientHealthcheckTask extends Task {
       proxy.health = {
         unhealthy: false,
         lastChecked: new Date(),
-        lastReferenceRttMs: referenceRttMs
+        lastReferenceRttMs: referenceRttMs,
       };
     } catch (err: any) {
       SentrySdk.logAndCaptureWarning(`[ProxyHealthcheck] Proxy '${proxy.displayName}' is unhealthy: ${err.message}`, { err });
@@ -90,7 +90,7 @@ export default class ProxyPoolHttpClientHealthcheckTask extends Task {
       proxy.health = {
         unhealthy: true,
         unhealthySince: proxy.health.unhealthySince ?? new Date(),
-        lastChecked: new Date()
+        lastChecked: new Date(),
       };
     }
   }

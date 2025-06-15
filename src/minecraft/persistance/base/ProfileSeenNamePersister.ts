@@ -5,7 +5,7 @@ import DatabaseClient from '../../../database/DatabaseClient.js';
 @singleton()
 export default class ProfileSeenNamePersister {
   constructor(
-    private readonly databaseClient: DatabaseClient
+    private readonly databaseClient: DatabaseClient,
   ) {
   }
 
@@ -19,7 +19,7 @@ export default class ProfileSeenNamePersister {
 
       const existingNameSeenEntry = await transaction.profileSeenName.findUnique({
         where: { profileId_nameLowercase: { profileId, nameLowercase } },
-        select: { firstSeenUsing: true, lastSeenUsing: true }
+        select: { firstSeenUsing: true, lastSeenUsing: true },
       });
       if (!this.shouldUpdateTimestamps(existingNameSeenEntry, seenAt)) {
         return;
@@ -33,20 +33,20 @@ export default class ProfileSeenNamePersister {
           profileId,
           nameLowercase,
           firstSeenUsing: seenAt,
-          lastSeenUsing: seenAt
+          lastSeenUsing: seenAt,
         },
         update: {
           firstSeenUsing: overrideFirstSeenUsing ? seenAt : undefined,
-          lastSeenUsing: overrideLastSeenUsing ? seenAt : undefined
+          lastSeenUsing: overrideLastSeenUsing ? seenAt : undefined,
         },
-        select: { nameLowercase: true }
+        select: { nameLowercase: true },
       });
     });
   }
 
   private shouldUpdateTimestamps(
     existingCapeSeenEntry: Pick<PrismaClient.ProfileSeenName, 'firstSeenUsing' | 'lastSeenUsing'> | null,
-    seenAt: Date
+    seenAt: Date,
   ): boolean {
     return existingCapeSeenEntry == null ||
       existingCapeSeenEntry.lastSeenUsing < seenAt ||

@@ -6,14 +6,14 @@ import MinecraftProfileTextures from '../../value-objects/MinecraftProfileTextur
 @singleton()
 export default class SkinPersister {
   constructor(
-    private readonly databaseClient: DatabaseClient
+    private readonly databaseClient: DatabaseClient,
   ) {
   }
 
   async persist(
     originalSkinPng: Buffer,
     normalizedSkinPng: Buffer,
-    skinUrlOrTextureProperty: string | { value: string, signature: string } | null
+    skinUrlOrTextureProperty: string | { value: string, signature: string } | null,
   ): Promise<bigint> {
     let skinUrl = typeof skinUrlOrTextureProperty === 'string' ? skinUrlOrTextureProperty : null;
     let textureValue: string | undefined = undefined;
@@ -37,7 +37,7 @@ export default class SkinPersister {
       if (skinUrl != null) {
         const existingSkinByUrl = await transaction.skinUrl.findUnique({
           where: { url: skinUrl },
-          select: { skinId: true }
+          select: { skinId: true },
         });
         if (existingSkinByUrl != null) {
           return existingSkinByUrl.skinId;
@@ -49,7 +49,7 @@ export default class SkinPersister {
 
       const existingSkin = await transaction.skin.findUnique({
         select: { id: true },
-        where: { pixelDataHash: originalPixelDataHash }
+        where: { pixelDataHash: originalPixelDataHash },
       });
       if (existingSkin != null) {
         if (skinUrl != null) {
@@ -59,9 +59,9 @@ export default class SkinPersister {
               textureValue,
               textureSignature,
               skinId: existingSkin.id,
-              createdAt
+              createdAt,
             },
-            select: { skinId: true }
+            select: { skinId: true },
           });
         }
         return existingSkin.id;
@@ -76,9 +76,9 @@ export default class SkinPersister {
               where: { pixelDataHash: normalizedPixelDataHash },
               create: {
                 pixelDataHash: normalizedPixelDataHash,
-                imageBytes: normalizedSkinPng
-              }
-            }
+                imageBytes: normalizedSkinPng,
+              },
+            },
           } : undefined,
 
           skinUrls: skinUrl ? {
@@ -86,11 +86,11 @@ export default class SkinPersister {
               url: skinUrl,
               textureValue,
               textureSignature,
-              createdAt
-            }
-          } : undefined
+              createdAt,
+            },
+          } : undefined,
         },
-        select: { id: true }
+        select: { id: true },
       });
       return persistedSkin.id;
     });

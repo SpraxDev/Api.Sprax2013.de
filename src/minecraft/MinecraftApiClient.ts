@@ -20,7 +20,7 @@ export type UuidToProfileResponse = {
 @singleton()
 export default class MinecraftApiClient {
   constructor(
-    private readonly httpClient: AutoProxiedHttpClient
+    private readonly httpClient: AutoProxiedHttpClient,
   ) {
   }
 
@@ -53,8 +53,8 @@ export default class MinecraftApiClient {
       'https://api.mojang.com/profiles/minecraft',
       {
         body: JSON.stringify(usernames),
-        headers: { 'Content-Type': 'application/json' }
-      }
+        headers: { 'Content-Type': 'application/json' },
+      },
     );
     if (!response.ok) {
       throw new Error(`Failed to get UUID for usernames ${JSON.stringify(usernames)}: {status=${response.statusCode}, body=${response.parseBodyAsText()}}`);

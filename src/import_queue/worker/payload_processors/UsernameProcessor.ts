@@ -17,7 +17,7 @@ export default class UsernameProcessor implements PayloadProcessor {
     private readonly minecraftProfileService: MinecraftProfileService,
     private readonly minecraftProfileCache: MinecraftProfileCache,
     private readonly minecraftApiClient: MinecraftApiClient,
-    private readonly uuidProcessor: UuidProcessor
+    private readonly uuidProcessor: UuidProcessor,
   ) {
   }
 
@@ -71,7 +71,7 @@ export default class UsernameProcessor implements PayloadProcessor {
         const task = this.findTaskByUsername(validTasksToLookUp, lookupData.name);
         result.push({
           task,
-          result: await this.uuidProcessor.process(lookupData.id)
+          result: await this.uuidProcessor.process(lookupData.id),
         });
       }
     } catch (err) {

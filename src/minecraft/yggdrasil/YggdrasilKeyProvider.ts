@@ -14,7 +14,7 @@ export default class YggdrasilKeyProvider {
 
   constructor(
     private readonly httpClient: AutoProxiedHttpClient,
-    taskScheduler: TaskScheduler
+    taskScheduler: TaskScheduler,
   ) {
     const updateKeysTask = async () => this.updatePublicKeys().catch(SentrySdk.logAndCaptureError);
     taskScheduler.runRepeating(updateKeysTask, 24 * 60 * 60 * 1000 /* 1d */);
@@ -54,7 +54,7 @@ export default class YggdrasilKeyProvider {
 
       publicKeys.push(Crypto.createPublicKey({
         key: `-----BEGIN PUBLIC KEY-----\n${profilePropertyKey.publicKey}\n-----END PUBLIC KEY-----`,
-        format: 'pem'
+        format: 'pem',
       }));
     }
 
@@ -66,7 +66,7 @@ export default class YggdrasilKeyProvider {
     return Crypto.createPublicKey({
       key: fallbackKey,
       format: 'der',
-      type: 'spki'
+      type: 'spki',
     });
   }
 }

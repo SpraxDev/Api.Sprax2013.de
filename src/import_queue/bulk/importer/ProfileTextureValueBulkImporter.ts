@@ -5,7 +5,7 @@ import UuidBulkImporter from './UuidBulkImporter.js';
 
 export default class ProfileTextureValueBulkImporter implements BulkImporter {
   constructor(
-    private readonly uuidBulkImporter: UuidBulkImporter
+    private readonly uuidBulkImporter: UuidBulkImporter,
   ) {
   }
 
@@ -38,10 +38,10 @@ export default class ProfileTextureValueBulkImporter implements BulkImporter {
       tasks.push({
         payload: Buffer.from(JSON.stringify({
           value: textureValue,
-          signature: textureSignature.length !== 0 ? textureSignature : undefined
+          signature: textureSignature.length !== 0 ? textureSignature : undefined,
         })),
         payloadType: 'PROFILE_TEXTURE_VALUE',
-        importGroupId
+        importGroupId,
       });
     }
 

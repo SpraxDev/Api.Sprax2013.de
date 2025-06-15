@@ -32,7 +32,7 @@ export default class LegacyServerStatusPinger extends AbstractMinecraftServerPin
       0x7F, // (non-existing) protocol version
       ...hostnameLength,
       ...hostname,
-      ...port
+      ...port,
     ]), () => {
       this.statusRequestSent = Date.now();
     });
@@ -59,7 +59,7 @@ export default class LegacyServerStatusPinger extends AbstractMinecraftServerPin
       resolvedIp: this.resolvedIp,
       legacyPing: true,
 
-      status: this.parseStatusResponse()
+      status: this.parseStatusResponse(),
     });
 
     socket.destroy();
@@ -79,15 +79,15 @@ export default class LegacyServerStatusPinger extends AbstractMinecraftServerPin
     return {
       version: {
         protocol: protocolVersion,
-        name: minecraftServerVersion
+        name: minecraftServerVersion,
       },
       description: {
-        text: messageOfTheDay
+        text: messageOfTheDay,
       },
       players: {
         online: currentPlayers,
-        max: maxPlayers
-      }
+        max: maxPlayers,
+      },
     };
   }
 }

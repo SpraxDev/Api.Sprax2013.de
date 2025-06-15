@@ -14,7 +14,7 @@ export default class UuidBulkImporter implements BulkImporter {
     return [{
       payload: Buffer.from(UUID.normalize(payload)),
       payloadType: 'UUID',
-      importGroupId
+      importGroupId,
     }];
   }
 }

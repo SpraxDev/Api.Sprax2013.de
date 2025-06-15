@@ -6,7 +6,7 @@ import { Profile } from './MinecraftProfileService.js';
 @singleton()
 export default class MinecraftProfileCache {
   constructor(
-    private readonly databaseClient: DatabaseClient
+    private readonly databaseClient: DatabaseClient,
   ) {
   }
 
@@ -14,9 +14,9 @@ export default class MinecraftProfileCache {
     const profile = await this.databaseClient.profileCache.findUnique({
       select: {
         raw: true,
-        ageInSeconds: true
+        ageInSeconds: true,
       },
-      where: { id: uuid }
+      where: { id: uuid },
     });
 
     if (profile == null) {
@@ -24,7 +24,7 @@ export default class MinecraftProfileCache {
     }
     return {
       profile: profile.raw as UuidToProfileResponse,
-      ageInSeconds: profile.ageInSeconds
+      ageInSeconds: profile.ageInSeconds,
     };
   }
 
@@ -32,10 +32,10 @@ export default class MinecraftProfileCache {
     const profile = await this.databaseClient.profileCache.findFirst({
       select: {
         raw: true,
-        ageInSeconds: true
+        ageInSeconds: true,
       },
       where: { nameLowercase: username.toLowerCase() },
-      orderBy: { ageInSeconds: 'asc' }
+      orderBy: { ageInSeconds: 'asc' },
     });
 
     if (profile == null) {
@@ -43,7 +43,7 @@ export default class MinecraftProfileCache {
     }
     return {
       profile: profile.raw as UuidToProfileResponse,
-      ageInSeconds: profile.ageInSeconds
+      ageInSeconds: profile.ageInSeconds,
     };
   }
 }

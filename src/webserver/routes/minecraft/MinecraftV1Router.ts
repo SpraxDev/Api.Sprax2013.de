@@ -11,13 +11,13 @@ import ImageManipulator from '../../../minecraft/image/ImageManipulator.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileService, { Profile } from '../../../minecraft/profile/MinecraftProfileService.js';
 import ServerBlocklistService, {
-  InvalidHostError
+  InvalidHostError,
 } from '../../../minecraft/server/blocklist/ServerBlocklistService.js';
 import SkinImageManipulator from '../../../minecraft/skin/manipulator/SkinImageManipulator.js';
 import MinecraftSkinCache from '../../../minecraft/skin/MinecraftSkinCache.js';
 import MinecraftSkinService, {
   Skin,
-  SkinRequestFailedException
+  SkinRequestFailedException,
 } from '../../../minecraft/skin/MinecraftSkinService.js';
 import MinecraftSkinTypeDetector from '../../../minecraft/skin/MinecraftSkinTypeDetector.js';
 import LegacyMinecraft3DRenderer from '../../../minecraft/skin/renderer/LegacyMinecraft3DRenderer.js';
@@ -40,7 +40,7 @@ export default class MinecraftV1Router implements Router {
     private readonly cape2dRenderer: Cape2dRenderer,
     private readonly serverBlocklistService: ServerBlocklistService,
     private readonly minecraftSkinTypeDetector: MinecraftSkinTypeDetector,
-    private readonly legacyMinecraft3DRenderer: LegacyMinecraft3DRenderer
+    private readonly legacyMinecraft3DRenderer: LegacyMinecraft3DRenderer,
   ) {
   }
 
@@ -68,9 +68,9 @@ export default class MinecraftV1Router implements Router {
             .header('Cache-Control', this.createCacheControlHeader(60, profile.ageInSeconds))
             .send({
               id: profile.profile.id,
-              name: profile.profile.name
+              name: profile.profile.name,
             } satisfies UsernameToUuidResponse);
-        }
+        },
       });
     });
 
@@ -101,7 +101,7 @@ export default class MinecraftV1Router implements Router {
             return reply
               .send({
                 legacy: false,
-                ...profile.profile
+                ...profile.profile,
               });
           }
 
@@ -117,13 +117,13 @@ export default class MinecraftV1Router implements Router {
                 skinUrl: minecraftProfile.parseTextures()?.skinUrl ?? null,
                 capeUrl: minecraftProfile.parseTextures()?.capeUrl ?? null,
                 texture_value: minecraftProfile.getTexturesProperty()?.value,
-                texture_signature: minecraftProfile.getTexturesProperty()?.signature
+                texture_signature: minecraftProfile.getTexturesProperty()?.signature,
               },
 
               profile_actions: [],
-              name_history: []
+              name_history: [],
             });
-        }
+        },
       });
     });
 
@@ -136,9 +136,9 @@ export default class MinecraftV1Router implements Router {
             .send({
               error: 'Gone',
               message: 'This endpoint has been removed as Mojang removed the username history API ' +
-                '(https://web.archive.org/web/20221006001721/https://help.minecraft.net/hc/en-us/articles/8969841895693-Username-History-API-Removal-FAQ-)'
+                '(https://web.archive.org/web/20221006001721/https://help.minecraft.net/hc/en-us/articles/8969841895693-Username-History-API-Removal-FAQ-)',
             });
-        }
+        },
       });
     });
 
@@ -198,7 +198,7 @@ export default class MinecraftV1Router implements Router {
             // .header('Age', Math.floor(profile.ageInSeconds).toString())
             .header('Cache-Control', this.createCacheControlHeader(60, 0))
             .send(skinResponse.pngBody);
-        }
+        },
       });
     });
 
@@ -259,7 +259,7 @@ export default class MinecraftV1Router implements Router {
             // .header('Age', Math.floor(profile.ageInSeconds).toString())
             .header('Cache-Control', this.createCacheControlHeader(60, 0))
             .send(skinResponse.pngBody);
-        }
+        },
       });
     });
 
@@ -290,7 +290,7 @@ export default class MinecraftV1Router implements Router {
             .header('Age', Math.floor(profile.ageInSeconds).toString())
             .header('Cache-Control', this.createCacheControlHeader(60, profile.ageInSeconds))
             .send(skinResponse.pngBody);
-        }
+        },
       });
     });
 
@@ -321,7 +321,7 @@ export default class MinecraftV1Router implements Router {
             .header('Age', Math.floor(profile.ageInSeconds).toString())
             .header('Cache-Control', this.createCacheControlHeader(60, profile.ageInSeconds))
             .send(skinResponse.pngBody);
-        }
+        },
       });
     });
 
@@ -334,9 +334,9 @@ export default class MinecraftV1Router implements Router {
             .send({
               error: 'Gone',
               message: 'This endpoint was never intended for the general public and only returned the internal IDs ' +
-                'used by this API to identify the skins (or null) – Please use one of the other cape endpoints instead'
+                'used by this API to identify the skins (or null) – Please use one of the other cape endpoints instead',
             });
-        }
+        },
       });
     });
 
@@ -373,7 +373,7 @@ export default class MinecraftV1Router implements Router {
           return reply
             .header('Cache-Control', 'public, max-age=60, s-maxage=60')
             .send(capeResponse.image);
-        }
+        },
       });
     });
 
@@ -393,7 +393,7 @@ export default class MinecraftV1Router implements Router {
               .status(503)
               .send({
                 error: 'Service Unavailable',
-                message: 'Rendering LabyMod-Capes is currently not supported'
+                message: 'Rendering LabyMod-Capes is currently not supported',
               });
           }
 
@@ -424,7 +424,7 @@ export default class MinecraftV1Router implements Router {
           return reply
             .header('Cache-Control', 'public, max-age=60, s-maxage=60')
             .send(renderCapeImage);
-        }
+        },
       });
     });
 
@@ -435,7 +435,7 @@ export default class MinecraftV1Router implements Router {
           return reply
             .header('Cache-Control', 'public, max-age=120, s-maxage=120')
             .send(blocklist);
-        }
+        },
       });
     });
 
@@ -453,7 +453,7 @@ export default class MinecraftV1Router implements Router {
           return reply
             .header('Cache-Control', 'public, max-age=120, s-maxage=120')
             .send(responseBody);
-        }
+        },
       });
     });
 
@@ -481,7 +481,7 @@ export default class MinecraftV1Router implements Router {
           return reply
             .header('Cache-Control', 'public, max-age=120, s-maxage=120')
             .send(responseBody);
-        }
+        },
       });
     });
 
@@ -518,7 +518,7 @@ export default class MinecraftV1Router implements Router {
           return reply
             .header('Content-Type', 'image/png')
             .send(await renderedBlock.toPngBuffer({ width: size, height: size }));
-        }
+        },
       });
     });
   }
@@ -545,7 +545,7 @@ export default class MinecraftV1Router implements Router {
     skin: Skin,
     renderSlim: boolean,
     requestedRawSkin: boolean,
-    is3d: boolean = false
+    is3d: boolean = false,
   ): Promise<{ pngBody: Buffer; skinArea: 'head' | 'body' | null; forceDownload: boolean }> {
     function parseSkinArea(input: unknown): 'head' | 'body' | null {
       if (input == null) {
@@ -603,7 +603,7 @@ export default class MinecraftV1Router implements Router {
     return {
       pngBody: responseBody,
       skinArea: requestedSkinArea,
-      forceDownload
+      forceDownload,
     };
   }
 
