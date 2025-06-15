@@ -29,7 +29,7 @@ export default class TaskScheduler implements Disposable {
 
     if (isWebApp) {
       this.scheduleAndRunDelayed(this.updateMinecraftServerBlocklistTask, fiveMinutes);
-      this.scheduleAndRunDelayed(this.writeImportQueueSizeToQuestDBTask, fiveMinutes / 2);
+      this.scheduleAndRunDelayed(this.writeImportQueueSizeToQuestDBTask, fiveMinutes * 3);
     }
   }
 
