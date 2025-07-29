@@ -1,3 +1,4 @@
+import Crypto from 'node:crypto';
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../../../database/DatabaseClient.js';
 import ImageManipulator from '../../image/ImageManipulator.js';
@@ -46,6 +47,13 @@ export default class SkinPersister {
 
       const originalPixelDataHash = await this.computePixelDataHash(originalSkinPng);
       const normalizedPixelDataHash = await this.computePixelDataHash(normalizedSkinPng);
+
+      const lockId = Crypto
+        .createHash('sha256')
+        .update(originalSkinPng)
+        .digest()
+        .readInt32BE();
+      await transaction.$executeRaw`SELECT pg_advisory_xact_lock(${lockId})`;
 
       const existingSkin = await transaction.skin.findUnique({
         select: { id: true },
