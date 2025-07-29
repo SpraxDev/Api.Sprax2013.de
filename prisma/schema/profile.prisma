@@ -11,6 +11,7 @@ model Profile {
   apiKeys       ApiKey[]
 
   @@index([updatedAt(sort: Asc)], type: BTree)
+  @@index([nameLowercase(sort: Asc)], type: BTree)
   @@map("profiles")
 }
 

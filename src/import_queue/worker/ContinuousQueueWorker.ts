@@ -19,7 +19,7 @@ export default class ContinuousQueueWorker {
     'USERNAME',
     'PROFILE_TEXTURE_VALUE',
     'SKIN_IMAGE',
-    'UUID_UPDATE_THIRD_PARTY_CAPES'
+    'UUID_UPDATE_THIRD_PARTY_CAPES',
   ];
 
   private ticksRunning = 0;
@@ -49,7 +49,7 @@ export default class ContinuousQueueWorker {
       delay = 3000 / Math.max(this.proxyServerConfigurationProvider.getProxyServers().length, 1);
     }
     const averageTicksPerMinute = Math.round(60000 / delay);
-    this.taskBufferSize = Math.max(30, Math.min(averageTicksPerMinute / 3, 30));
+    this.taskBufferSize = Math.max(50, Math.min(averageTicksPerMinute / 3, 50));
 
     let maxConcurrentTicks = 1;
     if (this.appConfiguration.config.workerTickIntervalDynamic) {
@@ -75,7 +75,6 @@ export default class ContinuousQueueWorker {
     console.log(`Estimating ${averageTicksPerMinute} ticks/minute for the queue worker (delay=${delay}ms)`);
   }
 
-  // TODO: print progress/status-report every minute
   private async tick(): Promise<void> {
     const task = await this.fetchNextTask();
     if (task == null) {
@@ -151,17 +150,23 @@ export default class ContinuousQueueWorker {
   }
 
   private async _fetchNextTask(): Promise<PrismaClient.ImportTask | null> {
-    if (this.bufferedTasks.length === 0) {
+    const firstNextPayloadTypeIndexToBufferValue = this.nextPayloadTypeIndexToBuffer;
+    let tries = 0;
+
+    while (this.bufferedTasks.length === 0 && tries <= 3 && (tries <= 0 || this.nextPayloadTypeIndexToBuffer !== firstNextPayloadTypeIndexToBufferValue)) {
+      const isUsernamePayloadType = ContinuousQueueWorker.PAYLOAD_TYPES_TO_PROCESS[this.nextPayloadTypeIndexToBuffer] === PrismaClient.ImportPayloadType.USERNAME;
+
       this.bufferedTasks = await this.databaseClient.importTask.findMany({
         where: {
           state: 'QUEUED',
           payloadType: ContinuousQueueWorker.PAYLOAD_TYPES_TO_PROCESS[this.nextPayloadTypeIndexToBuffer],
         },
         orderBy: { createdAt: 'asc' },
-        take: this.taskBufferSize,
+        take: isUsernamePayloadType ? 1 : this.taskBufferSize,
       });
 
       this.nextPayloadTypeIndexToBuffer = (this.nextPayloadTypeIndexToBuffer + 1) % ContinuousQueueWorker.PAYLOAD_TYPES_TO_PROCESS.length;
+      ++tries;
     }
 
     return this.bufferedTasks.shift() ?? null;
@@ -199,6 +204,7 @@ export default class ContinuousQueueWorker {
         payloadType: 'USERNAME',
         state: 'QUEUED',
       },
+      orderBy: { createdAt: 'asc' },
       take: 10,
     });
   }
