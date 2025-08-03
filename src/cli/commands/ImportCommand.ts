@@ -1,17 +1,17 @@
 import Fs from 'node:fs';
 import { singleton } from 'tsyringe';
-import BulkQueueImporter from '../../import_queue/bulk/BulkQueueImporter.js';
+import BulkQueueImporter, { type BulkQueueImportResult } from '../../import_queue/bulk/BulkQueueImporter.js';
 import CliCommand from './CliCommand.js';
 
 type ImportCommandArgs = {
-  type: 'uuid' | 'username' | 'profile-texture-value',
+  type: 'uuid' | 'username' | 'profile-texture-value' | 'dir-with-skin-files',
   filePath: string,
   apiKeyId: bigint
 };
 
 @singleton()
 export default class ImportCommand implements CliCommand {
-  private readonly VALID_IMPORT_TYPES: string[] = ['uuid', 'username', 'profile-texture-value'] satisfies ImportCommandArgs['type'][];
+  private readonly VALID_IMPORT_TYPES: string[] = ['uuid', 'username', 'profile-texture-value', 'dir-with-skin-files'] satisfies ImportCommandArgs['type'][];
 
   constructor(
     private readonly bulkQueueImporter: BulkQueueImporter,
@@ -38,10 +38,17 @@ export default class ImportCommand implements CliCommand {
 
     const parsedArgs = this.parseArgs(args);
 
-    const result = await this.bulkQueueImporter.importEachLine(parsedArgs.filePath, parsedArgs.type, parsedArgs.apiKeyId);
+    let importResultPromise: Promise<BulkQueueImportResult>;
+    if (parsedArgs.type === 'dir-with-skin-files') {
+      importResultPromise = this.bulkQueueImporter.importEachSkinFile(parsedArgs.filePath, parsedArgs.apiKeyId);
+    } else {
+      importResultPromise = this.bulkQueueImporter.importEachLine(parsedArgs.filePath, parsedArgs.type, parsedArgs.apiKeyId);
+    }
+
+    const importResult = await importResultPromise;
     console.log('\nFinished adding everything to the import queue:');
-    console.log(result);
-    return !result.aborted;
+    console.log(importResult);
+    return !importResult.aborted;
   }
 
   private parseArgs(args: string[]): ImportCommandArgs {
