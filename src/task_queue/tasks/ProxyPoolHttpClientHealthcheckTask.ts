@@ -30,6 +30,10 @@ export default class ProxyPoolHttpClientHealthcheckTask extends Task {
         continue;
       }
 
+      if (!httpClient.usedAtLeastOnce) {
+        continue;
+      }
+
       const healthcheckStart = new Date();
       const proxyMetrics: ProxyServerMetric[] = [];
       for (const proxy of httpClient.proxyPool.getAllProxies()) {

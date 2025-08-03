@@ -31,6 +31,7 @@ export type UndiciProxyServer = ProxyServer & {
 export default class ProxyPoolHttpClient extends SimpleHttpClient {
   public readonly proxyPool: RoundRobinProxyPool<UndiciProxyServer>;
   private readonly retriesOnProxyError = 0;
+  private usedAtLeastOneTime = false;
 
   constructor(
     proxyServerConfigurationProvider: ProxyServerConfigurationProvider,
@@ -52,8 +53,13 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
     return this.proxyPool.proxyCount;
   }
 
+  get usedAtLeastOnce(): boolean {
+    return this.usedAtLeastOneTime;
+  }
+
   protected async request(url: string, options: FullRequestOptions, triesLeft = this.retriesOnProxyError): Promise<HttpResponse> {
     this.ensureUrlLooksLikePublicServer(url);
+    this.usedAtLeastOneTime = true;
 
     const skipIpv6Only = await this.determineSkipIpv6OnlyProxies(url);
 
