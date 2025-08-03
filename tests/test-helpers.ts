@@ -5,7 +5,7 @@ export function createStrictDeepMock<T>(mockImplementation?: DeepPartial<T>): De
   return mockDeep<T>(
     {
       fallbackMockImplementation: () => {
-        throw new Error('Not implemented');
+        throw new Error('Mock not implemented');
       },
     },
     mockImplementation,

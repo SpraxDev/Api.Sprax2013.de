@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/node';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { injectAll, singleton } from 'tsyringe';
+import Metrics from '../metrics/Metrics.js';
 import SentrySdk from '../util/SentrySdk.js';
 import { HttpError, NotFoundError } from './errors/HttpErrors.js';
 import Router from './routes/Router.js';
@@ -9,7 +10,10 @@ import Router from './routes/Router.js';
 export default class FastifyWebServer {
   private readonly fastify: FastifyInstance;
 
-  constructor(@injectAll('Router') routers: Router[]) {
+  constructor(
+    @injectAll('Router') routers: Router[],
+    private readonly metrics: Metrics,
+  ) {
     this.fastify = Fastify({
       ignoreDuplicateSlashes: true,
       ignoreTrailingSlash: true,
@@ -32,6 +36,11 @@ export default class FastifyWebServer {
       return reply
         .code(500)
         .send({ error: 'Internal Server Error' });
+    });
+    this.fastify.addHook('onResponse', (request: FastifyRequest, reply: FastifyReply): void => {
+      if (!['/metrics', '/status', '/favicon.ico'].includes(request.originalUrl)) {
+        this.metrics.collectIncomingHttpRequest(request.method, reply.statusCode);
+      }
     });
 
     this.setupRouters(routers);

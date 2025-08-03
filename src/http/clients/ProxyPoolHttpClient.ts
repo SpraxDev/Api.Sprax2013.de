@@ -2,6 +2,7 @@ import Net from 'node:net';
 import { SocksClientError } from 'socks';
 import { container, singleton } from 'tsyringe';
 import * as Undici from 'undici';
+import Metrics from '../../metrics/Metrics.js';
 import ProxyServerConfigurationProvider, {
   ProxyServer,
   SocksProxyServer,
@@ -35,8 +36,9 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
     proxyServerConfigurationProvider: ProxyServerConfigurationProvider,
     socksProxyAgentFactory: SocksProxyAgentFactory,
     private readonly dnsResolver: CachedDnsResolver,
+    metrics: Metrics,
   ) {
-    super();
+    super(metrics);
 
     const proxies = this.parseProxies(proxyServerConfigurationProvider.getProxyServers(), socksProxyAgentFactory);
     this.logWarningForDuplicateProxies(proxies);
@@ -96,6 +98,7 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
     if (SimpleHttpClient.DEBUG_LOGGING) {
       console.debug(`[ProxyPoolHttpClient] << Status ${httpResponse.statusCode} with ${httpResponse.body.length} bytes`);
     }
+    super.metrics?.collectOutgoingHttpRequest(options.method, url, httpResponse.statusCode);
     return httpResponse;
   }
 

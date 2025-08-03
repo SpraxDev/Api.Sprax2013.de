@@ -1,5 +1,6 @@
 import { jest } from '@jest/globals';
 import { FastifyInstance, type FastifyReply } from 'fastify';
+import Metrics from '../../../src/metrics/Metrics.js';
 import SentrySdk from '../../../src/util/SentrySdk.js';
 import FastifyWebServer from '../../../src/webserver/FastifyWebServer.js';
 import Router from '../../../src/webserver/routes/Router.js';
@@ -23,7 +24,7 @@ class TestRouter implements Router {
   }
 }
 
-const fastifyWebServer = new FastifyWebServer([new TestRouter()]);
+const fastifyWebServer = new FastifyWebServer([new TestRouter()], new Metrics());
 const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
 
 beforeEach(() => {

@@ -1,19 +1,23 @@
-import { container } from 'tsyringe';
+import { container, injectable } from 'tsyringe';
 import * as Undici from 'undici';
 import { IS_PRODUCTION } from '../../constants.js';
+import Metrics from '../../metrics/Metrics.js';
 import UnicastOnlyDnsResolver from '../dns/resolver/UnicastOnlyDnsResolver.js';
 import HttpResponse from '../HttpResponse.js';
 import UserAgentGenerator from '../UserAgentGenerator.js';
 import HttpClient, { FullRequestOptions, GetRequestOptions, PostRequestOptions } from './HttpClient.js';
 
 // TODO: Supporting cookies might be a good idea
+@injectable()
 export default class SimpleHttpClient extends HttpClient {
   protected static readonly DEBUG_LOGGING = !IS_PRODUCTION;
 
   private readonly userAgent: string;
   private agent?: Undici.Dispatcher;
 
-  constructor() {
+  constructor(
+    protected readonly metrics: Metrics,
+  ) {
     super();
     this.userAgent = process.env.SPRAXAPI_USER_AGENT || UserAgentGenerator.generateDefault();
   }
@@ -53,6 +57,7 @@ export default class SimpleHttpClient extends HttpClient {
     if (SimpleHttpClient.DEBUG_LOGGING) {
       console.debug(`[HttpClient] << Status ${httpResponse.statusCode} with ${httpResponse.body.length} bytes`);
     }
+    this.metrics.collectOutgoingHttpRequest(options.method, url, httpResponse.statusCode);
     return httpResponse;
   }
 

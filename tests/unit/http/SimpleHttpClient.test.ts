@@ -5,6 +5,7 @@ import * as Undici from 'undici';
 import SimpleHttpClient from '../../../src/http/clients/SimpleHttpClient.js';
 import ResolvedToNonUnicastIpError from '../../../src/http/dns/errors/ResolvedToNonUnicastIpError.js';
 import UnicastOnlyDnsResolver from '../../../src/http/dns/resolver/UnicastOnlyDnsResolver.js';
+import Metrics from '../../../src/metrics/Metrics.js';
 import { createStrictDeepMock } from '../../test-helpers.js';
 
 let originalAgent: Undici.Agent;
@@ -29,7 +30,7 @@ beforeEach(() => {
   mockAgent = new Undici.MockAgent();
   mockAgent.disableNetConnect();
 
-  httpClient = new SimpleHttpClient();
+  httpClient = new SimpleHttpClient(new Metrics());
   originalAgent = (httpClient as any).agent;
   (httpClient as any).agent = mockAgent;
 
