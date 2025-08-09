@@ -1,11 +1,9 @@
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import DatabaseClient from '../../../../src/database/DatabaseClient.js';
 import MinecraftProfileCache from '../../../../src/minecraft/profile/MinecraftProfileCache.js';
-import MinecraftSkinCache from '../../../../src/minecraft/skin/MinecraftSkinCache.js';
 import { EXISTING_MC_ID, EXISTING_MC_NAME, EXISTING_MC_PROFILE_RESPONSE } from '../../../test-constants.js';
 
 let databaseClient: DeepMockProxy<DatabaseClient>;
-let minecraftSkinCache: DeepMockProxy<MinecraftSkinCache>;
 let minecraftProfileCache: MinecraftProfileCache;
 
 beforeEach(() => {
@@ -14,12 +12,7 @@ beforeEach(() => {
       throw new Error('Not implemented');
     },
   });
-  minecraftSkinCache = mockDeep<MinecraftSkinCache>({
-    fallbackMockImplementation: () => {
-      throw new Error('Not implemented');
-    },
-  });
-  minecraftProfileCache = new MinecraftProfileCache(databaseClient, minecraftSkinCache);
+  minecraftProfileCache = new MinecraftProfileCache(databaseClient);
 });
 
 describe('#findByUuid', () => {
@@ -68,12 +61,4 @@ describe('#findByUsername', () => {
 
     expect(databaseClient.profileCache.findFirst).toHaveBeenCalledTimes(1);
   });
-});
-
-test('#persist', async () => {
-  databaseClient.profile.upsert.mockResolvedValue(undefined as any);
-
-  await expect(minecraftProfileCache.persist(EXISTING_MC_PROFILE_RESPONSE)).resolves.toBeUndefined();
-
-  expect(databaseClient.profile.upsert).toHaveBeenCalledTimes(1);
 });
