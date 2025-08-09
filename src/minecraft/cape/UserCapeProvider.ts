@@ -1,4 +1,5 @@
 import { injectAll, singleton } from 'tsyringe';
+import { ContainerTokens } from '../../constants.js';
 import MinecraftProfile from '../value-objects/MinecraftProfile.js';
 import { CapeType } from './CapeType.js';
 import CapeProvider, { CapeResponse } from './provider/CapeProvider.js';
@@ -6,7 +7,7 @@ import CapeProvider, { CapeResponse } from './provider/CapeProvider.js';
 @singleton()
 export default class UserCapeProvider {
   constructor(
-    @injectAll('CapeProvider') private readonly capeProviders: CapeProvider[],
+    @injectAll(ContainerTokens.CAPE_PROVIDER) private readonly capeProviders: CapeProvider[],
   ) {
   }
 

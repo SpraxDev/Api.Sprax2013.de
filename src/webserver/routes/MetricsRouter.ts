@@ -1,10 +1,11 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import { autoInjectable } from 'tsyringe';
+import { injectable } from 'tsyringe';
+import { ContainerTokens } from '../../constants.js';
 import Metrics from '../../metrics/Metrics.js';
 import FastifyWebServer from '../FastifyWebServer.js';
 import Router from './Router.js';
 
-@autoInjectable()
+@injectable({ token: ContainerTokens.ROUTER })
 export default class MetricsRouter implements Router {
   constructor(
     private readonly metrics: Metrics,

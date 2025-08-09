@@ -1,5 +1,6 @@
 import Fs from 'node:fs';
-import { singleton } from 'tsyringe';
+import { injectable } from 'tsyringe';
+import { ContainerTokens } from '../../constants.js';
 import BulkQueueImporter, { type BulkQueueImportResult } from '../../import_queue/bulk/BulkQueueImporter.js';
 import CliCommand from './CliCommand.js';
 
@@ -9,7 +10,7 @@ type ImportCommandArgs = {
   apiKeyId: bigint
 };
 
-@singleton()
+@injectable({ token: ContainerTokens.CLI_COMMAND })
 export default class ImportCommand implements CliCommand {
   private readonly VALID_IMPORT_TYPES: string[] = ['uuid', 'username', 'profile-texture-value', 'dir-with-skin-files'] satisfies ImportCommandArgs['type'][];
 

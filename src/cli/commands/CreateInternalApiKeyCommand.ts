@@ -1,9 +1,10 @@
-import { singleton } from 'tsyringe';
+import { injectable } from 'tsyringe';
+import { ContainerTokens } from '../../constants.js';
 import DatabaseClient from '../../database/DatabaseClient.js';
 import MinecraftProfileService from '../../minecraft/profile/MinecraftProfileService.js';
 import CliCommand from './CliCommand.js';
 
-@singleton()
+@injectable({ token: ContainerTokens.CLI_COMMAND })
 export default class CreateInternalApiKeyCommand implements CliCommand {
   private readonly INTERNAL_API_KEY_OWNER = '955e4cf6411c40d1a1765bc8e03a8a9a'; // SpraxDev
 

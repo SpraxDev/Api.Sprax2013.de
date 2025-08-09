@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import Net from 'node:net';
-import { autoInjectable } from 'tsyringe';
+import { injectable } from 'tsyringe';
+import { ContainerTokens } from '../../../constants.js';
 import ResolvedToNonUnicastIpError from '../../../http/dns/errors/ResolvedToNonUnicastIpError.js';
 import type ImageManipulator from '../../../minecraft/image/ImageManipulator.js';
 import type { UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
@@ -23,7 +24,7 @@ import { BadRequestError, NotFoundError } from '../../errors/HttpErrors.js';
 import FastifyWebServer from '../../FastifyWebServer.js';
 import Router from '../Router.js';
 
-@autoInjectable()
+@injectable({ token: ContainerTokens.ROUTER })
 export default class MinecraftV2Router implements Router {
   constructor(
     private readonly minecraftProfileService: MinecraftProfileService,

@@ -1,6 +1,7 @@
 import * as PrismaClient from '@prisma/client';
 import Fs from 'node:fs';
-import { singleton } from 'tsyringe';
+import { injectable } from 'tsyringe';
+import { ContainerTokens } from '../../constants.js';
 import DatabaseClient from '../../database/DatabaseClient.js';
 import AutoProxiedHttpClient from '../../http/clients/AutoProxiedHttpClient.js';
 import ProfileTextureValueBulkImporter from '../../import_queue/bulk/importer/ProfileTextureValueBulkImporter.js';
@@ -29,7 +30,7 @@ type MigrateSkinUrlsCliArgs = {
   importType: 'urls' | 'profile-texture-values'
 }
 
-@singleton()
+@injectable({ token: ContainerTokens.CLI_COMMAND })
 export default class MigrateSkinUrlsCommand implements CliCommand {
   constructor(
     private readonly minecraftSkinCache: MinecraftSkinCache,

@@ -1,29 +1,15 @@
 import 'reflect-metadata';
-import { container, Lifecycle } from 'tsyringe';
-import CreateInternalApiKeyCommand from './cli/commands/CreateInternalApiKeyCommand.js';
-import ImportCommand from './cli/commands/ImportCommand.js';
-import MigrateSkinUrlsCommand from './cli/commands/MigrateSkinUrlsCommand.js';
+import Fs from 'node:fs';
+import Path from 'node:path';
+import Url from 'node:url';
+import { container } from 'tsyringe';
 import AppConfiguration from './config/AppConfiguration.js';
-import LabymodCapeProvider from './minecraft/cape/provider/LabymodCapeProvider.js';
-import MojangCapeProvider from './minecraft/cape/provider/MojangCapeProvider.js';
-import OptifineCapeProvider from './minecraft/cape/provider/OptifineCapeProvider.js';
-import MetricsRouter from './webserver/routes/MetricsRouter.js';
-import MinecraftV1Router from './webserver/routes/minecraft/MinecraftV1Router.js';
-import MinecraftV2Router from './webserver/routes/minecraft/MinecraftV2Router.js';
-import StatusRouter from './webserver/routes/StatusRouter.js';
 
-container.register('Router', { useClass: StatusRouter }, { lifecycle: Lifecycle.Singleton });
-container.register('Router', { useClass: MetricsRouter }, { lifecycle: Lifecycle.Singleton });
-container.register('Router', { useClass: MinecraftV2Router }, { lifecycle: Lifecycle.Singleton });
-container.register('Router', { useClass: MinecraftV1Router }, { lifecycle: Lifecycle.Singleton });
-
-container.register('CapeProvider', { useClass: MojangCapeProvider }, { lifecycle: Lifecycle.Singleton });
-container.register('CapeProvider', { useClass: OptifineCapeProvider }, { lifecycle: Lifecycle.Singleton });
-container.register('CapeProvider', { useClass: LabymodCapeProvider }, { lifecycle: Lifecycle.Singleton });
-
-container.register('CliCommand', { useClass: ImportCommand }, { lifecycle: Lifecycle.Singleton });
-container.register('CliCommand', { useClass: CreateInternalApiKeyCommand }, { lifecycle: Lifecycle.Singleton });
-container.register('CliCommand', { useClass: MigrateSkinUrlsCommand }, { lifecycle: Lifecycle.Singleton });
+await recursiveAutoLoadMultiple(
+  'webserver/routes',
+  'cli/commands',
+  'minecraft/cape/provider/',
+);
 
 container.register('value.proxy_server_uris', {
   useFactory: (container): string[] => {
@@ -36,3 +22,36 @@ container.register('value.proxy_server_uris', {
       .filter(uri => uri !== '');
   },
 });
+
+async function recursiveAutoLoad(relativePath: string): Promise<Promise<void>[]> {
+  const __dirname = Url.fileURLToPath(new URL('.', import.meta.url));
+  const absolutePath = Path.join(__dirname, relativePath);
+
+  const importPromises: Promise<void>[] = [];
+
+  const dirHandle = await Fs.promises.opendir(absolutePath);
+  for await (const dirent of dirHandle) {
+    const direntPath = Path.join(dirent.parentPath, dirent.name);
+    const fileExtension = Path.extname(dirent.name);
+
+    if (dirent.isFile() && ['.js', '.ts'].includes(fileExtension)) {
+      importPromises.push(import(direntPath));
+    } else if (dirent.isDirectory()) {
+      importPromises.push(...(await recursiveAutoLoad(Path.relative(__dirname, direntPath))));
+    } else {
+      if (fileExtension !== '.map') {
+        console.warn('Unable to auto-load unsupported file type: ' + direntPath);
+      }
+    }
+  }
+
+  return importPromises;
+}
+
+async function recursiveAutoLoadMultiple(...relativePaths: string[]): Promise<void> {
+  const allPromises: Promise<void>[] = [];
+  for (const relativePath of relativePaths) {
+    allPromises.push(...(await recursiveAutoLoad(relativePath)));
+  }
+  await Promise.all(allPromises);
+}

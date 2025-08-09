@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/node';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { injectAll, singleton } from 'tsyringe';
+import { ContainerTokens } from '../constants.js';
 import Metrics from '../metrics/Metrics.js';
 import SentrySdk from '../util/SentrySdk.js';
 import { HttpError, NotFoundError } from './errors/HttpErrors.js';
@@ -11,7 +12,7 @@ export default class FastifyWebServer {
   private readonly fastify: FastifyInstance;
 
   constructor(
-    @injectAll('Router') routers: Router[],
+    @injectAll(ContainerTokens.ROUTER) routers: Router[],
     private readonly metrics: Metrics,
   ) {
     this.fastify = Fastify({

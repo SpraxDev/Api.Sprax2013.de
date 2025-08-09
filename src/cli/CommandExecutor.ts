@@ -1,10 +1,11 @@
 import { injectAll, singleton } from 'tsyringe';
+import { ContainerTokens } from '../constants.js';
 import CliCommand from './commands/CliCommand.js';
 
 @singleton()
 export default class CommandExecutor {
   constructor(
-    @injectAll('CliCommand') private readonly cliCommands: CliCommand[],
+    @injectAll(ContainerTokens.CLI_COMMAND) private readonly cliCommands: CliCommand[],
   ) {
   }
 

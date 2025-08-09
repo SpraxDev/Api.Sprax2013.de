@@ -1,10 +1,11 @@
-import { autoInjectable } from 'tsyringe';
+import { injectable } from 'tsyringe';
+import { ContainerTokens } from '../../../constants.js';
 import AutoProxiedHttpClient from '../../../http/clients/AutoProxiedHttpClient.js';
 import MinecraftProfile from '../../value-objects/MinecraftProfile.js';
 import { CapeType } from '../CapeType.js';
 import CapeProvider, { CapeResponse } from './CapeProvider.js';
 
-@autoInjectable()
+@injectable({ token: ContainerTokens.CAPE_PROVIDER })
 export default class OptifineCapeProvider implements CapeProvider {
   constructor(
     private readonly httpClient: AutoProxiedHttpClient,

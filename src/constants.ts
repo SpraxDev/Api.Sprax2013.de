@@ -6,6 +6,12 @@ import SentrySdk from './util/SentrySdk.js';
 type AppInfo = { name: string, version: string, homepage: string };
 let appInfo: AppInfo;
 
+export const ContainerTokens = {
+  ROUTER: 'Router',
+  CAPE_PROVIDER: 'CapeProvider',
+  CLI_COMMAND: 'CliCommand',
+};
+
 const __dirname = Url.fileURLToPath(new URL('.', import.meta.url));
 
 export const IS_PRODUCTION = process.env.NODE_ENV === 'production';

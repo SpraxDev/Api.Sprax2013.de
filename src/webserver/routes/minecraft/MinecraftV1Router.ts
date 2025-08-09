@@ -2,7 +2,8 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import assert from 'node:assert';
 import https from 'node:http';
 import Sharp from 'sharp';
-import { autoInjectable } from 'tsyringe';
+import { injectable } from 'tsyringe';
+import { ContainerTokens } from '../../../constants.js';
 import ResolvedToNonUnicastIpError from '../../../http/dns/errors/ResolvedToNonUnicastIpError.js';
 import { CAPE_TYPE_STRINGS, CapeType } from '../../../minecraft/cape/CapeType.js';
 import Cape2dRenderer from '../../../minecraft/cape/renderer/Cape2dRenderer.js';
@@ -29,7 +30,7 @@ import { ApiV1BadRequestError, ApiV1NotFoundError } from '../../errors/ApiV1Http
 import FastifyWebServer from '../../FastifyWebServer.js';
 import Router from '../Router.js';
 
-@autoInjectable()
+@injectable({ token: ContainerTokens.ROUTER })
 export default class MinecraftV1Router implements Router {
   constructor(
     private readonly minecraftProfileService: MinecraftProfileService,
