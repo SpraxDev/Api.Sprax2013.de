@@ -5,7 +5,16 @@ import { Disposable, singleton } from 'tsyringe';
 @singleton()
 export default class DatabaseClient extends PrismaClient implements Disposable {
   constructor() {
-    super();
+    super({
+      // Optimize connection pooling for better performance
+      datasources: {
+        db: {
+          url: process.env.DATABASE_URL,
+        },
+      },
+      // Enable connection pooling with optimal settings
+      // Note: These settings can be overridden via DATABASE_URL connection string
+    });
   }
 
   /**

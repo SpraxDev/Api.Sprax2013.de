@@ -19,6 +19,7 @@ export default class AutoProxiedHttpClient extends HttpClient {
   ];
 
   private nextNonProxyRequest = 0;
+  private readonly inFlightRequests = new Map<string, Promise<HttpResponse>>();
 
   constructor(
     private readonly proxyPoolHttpClient: ProxyPoolHttpClient,
@@ -27,7 +28,26 @@ export default class AutoProxiedHttpClient extends HttpClient {
     super();
   }
 
-  async get(url: string, options?: GetRequestOptions, triesLeft = 2): Promise<HttpResponse> {
+  async get(url: string, options?: GetRequestOptions, triesLeft = 2, baseDelay = 1000): Promise<HttpResponse> {
+    // Create a cache key for request deduplication
+    const cacheKey = `GET:${url}:${JSON.stringify(options || {})}`;
+    
+    // Check if this request is already in flight
+    if (this.inFlightRequests.has(cacheKey)) {
+      return await this.inFlightRequests.get(cacheKey)!;
+    }
+
+    const requestPromise = this._performGet(url, options, triesLeft, baseDelay);
+    this.inFlightRequests.set(cacheKey, requestPromise);
+    
+    try {
+      return await requestPromise;
+    } finally {
+      this.inFlightRequests.delete(cacheKey);
+    }
+  }
+
+  private async _performGet(url: string, options?: GetRequestOptions, triesLeft = 2, baseDelay = 1000): Promise<HttpResponse> {
     let httpClient = 'SimpleHttpClient';
     try {
       if (this.shouldRequestThroughProxy(url)) {
@@ -45,14 +65,23 @@ export default class AutoProxiedHttpClient extends HttpClient {
 
       SentrySdk.logAndCaptureWarning(`Failed to request '${url}' using ${httpClient}: ${err.message}`, { err });
       if (triesLeft > 0) {
-        return this.get(url, options, triesLeft - 1);
+        // Exponential backoff with jitter to prevent thundering herd
+        const delay = baseDelay * Math.pow(2, 2 - triesLeft) + Math.random() * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this._performGet(url, options, triesLeft - 1, baseDelay);
       }
 
       throw new Error(`Failed to request '${url}': ${err.message}`, { cause: err });
     }
   }
 
-  async post(url: string, options?: PostRequestOptions, triesLeft = 2): Promise<HttpResponse> {
+  async post(url: string, options?: PostRequestOptions, triesLeft = 2, baseDelay = 1000): Promise<HttpResponse> {
+    // For POST requests, we typically don't want to deduplicate as they might have side effects
+    // But we can still optimize the retry logic
+    return this._performPost(url, options, triesLeft, baseDelay);
+  }
+
+  private async _performPost(url: string, options?: PostRequestOptions, triesLeft = 2, baseDelay = 1000): Promise<HttpResponse> {
     let httpClient = 'SimpleHttpClient';
     try {
       if (this.shouldRequestThroughProxy(url)) {
@@ -70,7 +99,10 @@ export default class AutoProxiedHttpClient extends HttpClient {
 
       SentrySdk.logAndCaptureWarning(`Failed to request '${url}' using ${httpClient}: ${err.message}`, { err });
       if (triesLeft > 0) {
-        return this.post(url, options, triesLeft - 1);
+        // Exponential backoff with jitter to prevent thundering herd
+        const delay = baseDelay * Math.pow(2, 2 - triesLeft) + Math.random() * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this._performPost(url, options, triesLeft - 1, baseDelay);
       }
 
       throw new Error(`Failed to request '${url}': ${err.message}`, { cause: err });

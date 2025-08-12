@@ -19,6 +19,7 @@ import SkinImage2DRenderer from '../../../minecraft/skin/renderer/SkinImage2DRen
 import MinecraftProfile from '../../../minecraft/value-objects/MinecraftProfile.js';
 import MinecraftProfileTextures from '../../../minecraft/value-objects/MinecraftProfileTextures.js';
 import UUID from '../../../util/UUID.js';
+import CacheHeaders from '../../../util/CacheHeaders.js';
 import { BadRequestError, NotFoundError } from '../../errors/HttpErrors.js';
 import FastifyWebServer from '../../FastifyWebServer.js';
 import Router from '../Router.js';
@@ -47,13 +48,13 @@ export default class MinecraftV2Router implements Router {
 
           const profile = await this.minecraftProfileService.provideProfileByUsername(inputUsername);
           if (profile == null) {
-            reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            reply.header('Cache-Control', CacheHeaders.generateProfileCacheHeaders(0));
             throw new NotFoundError('No UUID found for username');
           }
 
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .header('Cache-Control', CacheHeaders.generateProfileCacheHeaders(profile.ageInSeconds))
             .send({
               id: profile.profile.id,
               name: profile.profile.name,
@@ -67,12 +68,12 @@ export default class MinecraftV2Router implements Router {
         get: async (): Promise<FastifyReply> => {
           const profile = await this.resolveUserToProfile((request.params as any).user);
           if (profile == null) {
-            reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            reply.header('Cache-Control', CacheHeaders.generateProfileCacheHeaders(0));
             throw new NotFoundError(`Unable to find a profile for the given UUID or username`);
           }
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .header('Cache-Control', CacheHeaders.generateProfileCacheHeaders(profile.ageInSeconds))
             .send(profile.profile);
         },
       });
@@ -130,7 +131,7 @@ export default class MinecraftV2Router implements Router {
 
           return reply
             // .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .header('Cache-Control', CacheHeaders.generateImageCacheHeaders(0))
             .send(skinResponse.pngBody);
         },
       });
@@ -141,7 +142,7 @@ export default class MinecraftV2Router implements Router {
         get: async (): Promise<FastifyReply> => {
           const profile = await this.resolveUserToProfile((request.params as any).user);
           if (profile == null) {
-            reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            reply.header('Cache-Control', CacheHeaders.generateProfileCacheHeaders(0));
             throw new NotFoundError(`Unable to find a profile for the given UUID or username`);
           }
           const minecraftProfile = new MinecraftProfile(profile.profile);
@@ -159,7 +160,7 @@ export default class MinecraftV2Router implements Router {
 
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .header('Cache-Control', CacheHeaders.generateImageCacheHeaders(profile.ageInSeconds))
             .send(skinResponse.pngBody);
         },
       });
@@ -170,7 +171,7 @@ export default class MinecraftV2Router implements Router {
         get: async (): Promise<FastifyReply> => {
           const blocklist = await this.serverBlocklistService.provideBlocklist();
           return reply
-            .header('Cache-Control', 'public, max-age=120, s-maxage=120')
+            .header('Cache-Control', CacheHeaders.generateStaticDataCacheHeaders())
             .send(blocklist);
         },
       });
@@ -198,7 +199,7 @@ export default class MinecraftV2Router implements Router {
             responseBody[host] = isBlocked;
           }
           return reply
-            .header('Cache-Control', 'public, max-age=120, s-maxage=120')
+            .header('Cache-Control', CacheHeaders.generateStaticDataCacheHeaders())
             .send(responseBody);
         },
       });
@@ -216,7 +217,7 @@ export default class MinecraftV2Router implements Router {
           }
 
           return reply
-            .header('Cache-Control', 'public, max-age=120, s-maxage=120')
+            .header('Cache-Control', CacheHeaders.generateStaticDataCacheHeaders())
             .send(responseBody);
         },
       });
@@ -250,7 +251,7 @@ export default class MinecraftV2Router implements Router {
           const serverStatus = await this.minecraftServerStatusService.provideServerStatus(inputHost, port);
 
           reply
-            .header('Cache-Control', `public, max-age=${Math.max(0, 30 - serverStatus.ageInSeconds)}, s-maxage=${Math.max(0, 30 - serverStatus.ageInSeconds)}`)
+            .header('Cache-Control', CacheHeaders.generateServerStatusCacheHeaders(serverStatus.ageInSeconds))
             .header('Age', serverStatus.ageInSeconds);
 
           if (serverStatus.serverStatus != null) {

@@ -28,6 +28,11 @@ export default class ContinuousQueueWorker {
   private inflightBufferedTaskUpdate: Promise<PrismaClient.ImportTask | null> | null = null;
   private nextPayloadTypeIndexToBuffer = 0;
   private ticksProcessedSinceLastReport = 0;
+  
+  // Batch update system for better performance
+  private pendingStatusUpdates: Array<{ task: PrismaClient.ImportTask, state: 'IMPORTED' | 'NO_CHANGES' | 'ERROR' }> = [];
+  private statusUpdateBatchSize = 10;
+  private statusUpdateTimeout: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly taskScheduler: TaskScheduler,
@@ -168,28 +173,78 @@ export default class ContinuousQueueWorker {
   }
 
   private async updateTaskStatus(task: PrismaClient.ImportTask, state: 'IMPORTED' | 'NO_CHANGES' | 'ERROR'): Promise<void> {
+    // Add to batch instead of immediate database update
+    this.pendingStatusUpdates.push({ task, state });
+    
+    // Process batch if it reaches the batch size or set a timeout for smaller batches
+    if (this.pendingStatusUpdates.length >= this.statusUpdateBatchSize) {
+      await this.processBatchedStatusUpdates();
+    } else if (this.statusUpdateTimeout === null) {
+      // Schedule batch processing within 100ms if not already scheduled
+      this.statusUpdateTimeout = setTimeout(() => {
+        this.processBatchedStatusUpdates().catch(SentrySdk.logAndCaptureError);
+      }, 100);
+    }
+  }
+
+  private async processBatchedStatusUpdates(): Promise<void> {
+    if (this.pendingStatusUpdates.length === 0) {
+      return;
+    }
+
+    if (this.statusUpdateTimeout !== null) {
+      clearTimeout(this.statusUpdateTimeout);
+      this.statusUpdateTimeout = null;
+    }
+
+    const updates = [...this.pendingStatusUpdates];
+    this.pendingStatusUpdates = [];
+
     await this.databaseClient.$transaction(async (transaction) => {
-      await transaction.importTask.update({
-        where: { id: task.id },
-        data: { state },
-        select: { id: true },
-      });
-
-      if (task.importGroupId != null) {
-        let importGroupUpdateData: PrismaClient.Prisma.ImportGroupUpdateInput = { succeededImports: { increment: 1 } };
-        if (state === 'ERROR') {
-          importGroupUpdateData = { erroredImports: { increment: 1 } };
-        }
-        if (state === 'NO_CHANGES') {
-          importGroupUpdateData = { duplicateImports: { increment: 1 } };
-        }
-
-        await transaction.importGroup.update({
-          where: { id: task.importGroupId },
-          data: importGroupUpdateData,
+      // Batch update all task statuses
+      const taskUpdatePromises = updates.map(({ task, state }) =>
+        transaction.importTask.update({
+          where: { id: task.id },
+          data: { state },
           select: { id: true },
-        });
+        })
+      );
+
+      await Promise.all(taskUpdatePromises);
+
+      // Group import group updates by ID and state
+      const importGroupUpdates = new Map<bigint, { succeeded: number; errored: number; duplicate: number }>();
+      
+      for (const { task, state } of updates) {
+        if (task.importGroupId != null) {
+          const existing = importGroupUpdates.get(task.importGroupId) || { succeeded: 0, errored: 0, duplicate: 0 };
+          
+          if (state === 'IMPORTED') {
+            existing.succeeded++;
+          } else if (state === 'ERROR') {
+            existing.errored++;
+          } else if (state === 'NO_CHANGES') {
+            existing.duplicate++;
+          }
+          
+          importGroupUpdates.set(task.importGroupId, existing);
+        }
       }
+
+      // Batch update import groups
+      const importGroupUpdatePromises = Array.from(importGroupUpdates.entries()).map(([id, counts]) =>
+        transaction.importGroup.update({
+          where: { id },
+          data: {
+            succeededImports: { increment: counts.succeeded },
+            erroredImports: { increment: counts.errored },
+            duplicateImports: { increment: counts.duplicate },
+          },
+          select: { id: true },
+        })
+      );
+
+      await Promise.all(importGroupUpdatePromises);
     });
   }
 
