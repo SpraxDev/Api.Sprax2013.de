@@ -63,19 +63,110 @@ export default class ImageManipulator {
     ignoreAlpha: boolean = false,
     mode: 'replace' | 'add' = 'replace',
   ): void {
+    // Pre-calculate bounds to avoid repeated checks in inner loop
+    const maxX = Math.min(targetX + width, this.width);
+    const maxY = Math.min(targetY + height, this.height);
+    const startX = Math.max(targetX, 0);
+    const startY = Math.max(targetY, 0);
+    
+    // Early exit if no drawing area
+    if (startX >= maxX || startY >= maxY) {
+      return;
+    }
+
+    // For small rectangles, use the optimized method
+    if (width <= 8 && height <= 8) {
+      return this.drawSubImgOptimized(imageToDraw, subX, subY, width, height, targetX, targetY, ignoreAlpha, mode);
+    }
+
+    // Original implementation for larger areas
     for (let i = 0; i < width; ++i) {
       for (let j = 0; j < height; ++j) {
         const newTargetX = targetX + i;
         const newTargetY = targetY + j;
 
         const color = imageToDraw.getColor(subX + i, subY + j);
-        if (newTargetX <= this.width && newTargetY <= this.height && color.alpha > 0) {
+        if (newTargetX < this.width && newTargetY < this.height && newTargetX >= 0 && newTargetY >= 0 && color.alpha > 0) {
           let newColor = { r: color.r, g: color.g, b: color.b, alpha: ignoreAlpha ? 255 : color.alpha };
           if (mode == 'add') {
             newColor = ImageManipulator.mergeColors(this.getColor(newTargetX, newTargetY), newColor);
           }
 
           this.setColor(newTargetX, newTargetY, newColor);
+        }
+      }
+    }
+  }
+
+  /**
+   * Optimized version for small image operations (8x8 or smaller)
+   * Reduces function call overhead for common skin operations
+   */
+  private drawSubImgOptimized(
+    imageToDraw: ImageManipulator,
+    subX: number,
+    subY: number,
+    width: number,
+    height: number,
+    targetX: number,
+    targetY: number,
+    ignoreAlpha: boolean,
+    mode: 'replace' | 'add',
+  ): void {
+    const bytesPerPixel = this.channels;
+    const targetBytesPerPixel = imageToDraw.channels;
+    
+    for (let j = 0; j < height; ++j) {
+      for (let i = 0; i < width; ++i) {
+        const newTargetX = targetX + i;
+        const newTargetY = targetY + j;
+        
+        // Bounds check
+        if (newTargetX < 0 || newTargetY < 0 || newTargetX >= this.width || newTargetY >= this.height) {
+          continue;
+        }
+
+        // Direct buffer access for better performance
+        const sourceIndex = ((subY + j) * imageToDraw.width + (subX + i)) * targetBytesPerPixel;
+        const targetIndex = (newTargetY * this.width + newTargetX) * bytesPerPixel;
+        
+        if (sourceIndex >= 0 && sourceIndex + 3 < imageToDraw.pixelData.length) {
+          const alpha = imageToDraw.pixelData[sourceIndex + 3];
+          
+          if (alpha > 0) {
+            const r = imageToDraw.pixelData[sourceIndex];
+            const g = imageToDraw.pixelData[sourceIndex + 1];
+            const b = imageToDraw.pixelData[sourceIndex + 2];
+            const finalAlpha = ignoreAlpha ? 255 : alpha;
+            
+            if (mode === 'add' && targetIndex >= 0 && targetIndex + 3 < this.pixelData.length) {
+              // Simple additive blending for performance
+              const existingR = this.pixelData[targetIndex];
+              const existingG = this.pixelData[targetIndex + 1];
+              const existingB = this.pixelData[targetIndex + 2];
+              const existingAlpha = this.pixelData[targetIndex + 3];
+              
+              if (existingAlpha > 0) {
+                // Simplified blending for performance
+                const factor = finalAlpha / 255;
+                this.pixelData[targetIndex] = Math.min(255, existingR + r * factor);
+                this.pixelData[targetIndex + 1] = Math.min(255, existingG + g * factor);
+                this.pixelData[targetIndex + 2] = Math.min(255, existingB + b * factor);
+                this.pixelData[targetIndex + 3] = Math.max(existingAlpha, finalAlpha);
+              } else {
+                this.pixelData[targetIndex] = r;
+                this.pixelData[targetIndex + 1] = g;
+                this.pixelData[targetIndex + 2] = b;
+                this.pixelData[targetIndex + 3] = finalAlpha;
+              }
+            } else if (targetIndex >= 0 && targetIndex + 3 < this.pixelData.length) {
+              // Direct copy for replace mode
+              this.pixelData[targetIndex] = r;
+              this.pixelData[targetIndex + 1] = g;
+              this.pixelData[targetIndex + 2] = b;
+              this.pixelData[targetIndex + 3] = finalAlpha;
+            }
+          }
         }
       }
     }

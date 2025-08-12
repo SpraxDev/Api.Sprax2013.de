@@ -1,6 +1,7 @@
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../../database/DatabaseClient.js';
 import ImageManipulator from '../image/ImageManipulator.js';
+import { PerformanceMonitor } from '../../util/PerformanceMonitor.js';
 import SkinImageManipulator from './manipulator/SkinImageManipulator.js';
 
 export type CachedSkin = {
@@ -35,6 +36,7 @@ export default class MinecraftSkinCache {
     // Check memory cache first
     const cached = this.memoryCache.get(skinUrl);
     if (cached && Date.now() - cached.timestamp < this.MEMORY_CACHE_TTL) {
+      PerformanceMonitor.recordCacheHit('memory');
       return cached.skin;
     }
 
@@ -52,6 +54,7 @@ export default class MinecraftSkinCache {
     });
 
     if (skinInDatabase == null) {
+      PerformanceMonitor.recordCacheMiss('memory');
       return null;
     }
 
@@ -90,7 +93,8 @@ export default class MinecraftSkinCache {
 
   private cleanupMemoryCache(): void {
     const now = Date.now();
-    for (const [key, value] of this.memoryCache.entries()) {
+    const entries = Array.from(this.memoryCache.entries());
+    for (const [key, value] of entries) {
       if (now - value.timestamp > this.MEMORY_CACHE_TTL) {
         this.memoryCache.delete(key);
       }

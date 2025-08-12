@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/node';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
+import { createHash } from 'node:crypto';
 import { injectAll, singleton } from 'tsyringe';
 import SentrySdk from '../util/SentrySdk.js';
 import { HttpError, NotFoundError } from './errors/HttpErrors.js';
@@ -13,8 +14,19 @@ export default class FastifyWebServer {
     this.fastify = Fastify({
       ignoreDuplicateSlashes: true,
       ignoreTrailingSlash: true,
-
-      trustProxy: false, // TODO
+      
+      // Performance optimizations
+      keepAliveTimeout: 60000,
+      connectionTimeout: 30000,
+      bodyLimit: 1048576, // 1MB limit
+      
+      // Enable HTTP/2 for better performance
+      http2: false, // Can be enabled when clients support it widely
+      
+      // Optimize for production
+      disableRequestLogging: process.env.NODE_ENV === 'production',
+      
+      trustProxy: false, // TODO: Set to true when behind CloudFlare
     });
     Sentry.setupFastifyErrorHandler(this.fastify);
 
@@ -35,6 +47,33 @@ export default class FastifyWebServer {
     });
 
     this.setupRouters(routers);
+    this.setupPerformanceOptimizations();
+  }
+
+  private setupPerformanceOptimizations(): void {
+    // Add global hooks for performance optimization
+    this.fastify.addHook('onSend', async (request, reply, payload) => {
+      // Add ETag for cacheable responses
+      if (reply.statusCode === 200 && payload && !reply.hasHeader('etag')) {
+        const contentType = reply.getHeader('content-type');
+        
+        // Add ETags for JSON and image responses
+        if (typeof contentType === 'string' && 
+            (contentType.includes('application/json') || contentType.includes('image/'))) {
+          const etag = `"${createHash('md5').update(payload as Buffer).digest('hex')}"`;
+          reply.header('etag', etag);
+          
+          // Check if client has matching ETag
+          const clientEtag = request.headers['if-none-match'];
+          if (clientEtag === etag) {
+            reply.code(304);
+            return '';
+          }
+        }
+      }
+      
+      return payload;
+    });
   }
 
   async listen(host: string, port: number): Promise<void> {

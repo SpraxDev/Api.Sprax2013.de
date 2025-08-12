@@ -5,6 +5,7 @@ import DatabaseClient from '../../database/DatabaseClient.js';
 import ProxyServerConfigurationProvider from '../../net/proxy/ProxyServerConfigurationProvider.js';
 import TaskScheduler from '../../task_queue/TaskScheduler.js';
 import SentrySdk from '../../util/SentrySdk.js';
+import { PerformanceMonitor } from '../../util/PerformanceMonitor.js';
 import Arbeitsbeschaffungsmassnahme from './Arbeitsbeschaffungsmassnahme.js';
 import ProfileTextureValueProcessor from './payload_processors/ProfileTextureValueProcessor.js';
 import SkinImageProcessor from './payload_processors/SkinImageProcessor.js';
@@ -199,6 +200,12 @@ export default class ContinuousQueueWorker {
 
     const updates = [...this.pendingStatusUpdates];
     this.pendingStatusUpdates = [];
+    
+    // Record the database operations saved by batching
+    const operationsSaved = Math.max(0, updates.length - 1);
+    if (operationsSaved > 0) {
+      PerformanceMonitor.recordBatchSavings(operationsSaved);
+    }
 
     await this.databaseClient.$transaction(async (transaction) => {
       // Batch update all task statuses

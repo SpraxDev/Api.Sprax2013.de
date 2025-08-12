@@ -1,6 +1,7 @@
 import { singleton } from 'tsyringe';
 import { Dispatcher } from 'undici';
 import SentrySdk from '../../util/SentrySdk.js';
+import { PerformanceMonitor } from '../../util/PerformanceMonitor.js';
 import ResolvedToNonUnicastIpError from '../dns/errors/ResolvedToNonUnicastIpError.js';
 import HttpResponse from '../HttpResponse.js';
 import HttpClient, { FullRequestOptions, GetRequestOptions, PostRequestOptions } from './HttpClient.js';
@@ -34,6 +35,7 @@ export default class AutoProxiedHttpClient extends HttpClient {
     
     // Check if this request is already in flight
     if (this.inFlightRequests.has(cacheKey)) {
+      PerformanceMonitor.recordCacheHit('request_dedup');
       return await this.inFlightRequests.get(cacheKey)!;
     }
 
@@ -67,6 +69,7 @@ export default class AutoProxiedHttpClient extends HttpClient {
       if (triesLeft > 0) {
         // Exponential backoff with jitter to prevent thundering herd
         const delay = baseDelay * Math.pow(2, 2 - triesLeft) + Math.random() * 1000;
+        PerformanceMonitor.recordRetryAvoidance();
         await new Promise(resolve => setTimeout(resolve, delay));
         return this._performGet(url, options, triesLeft - 1, baseDelay);
       }
@@ -101,6 +104,7 @@ export default class AutoProxiedHttpClient extends HttpClient {
       if (triesLeft > 0) {
         // Exponential backoff with jitter to prevent thundering herd
         const delay = baseDelay * Math.pow(2, 2 - triesLeft) + Math.random() * 1000;
+        PerformanceMonitor.recordRetryAvoidance();
         await new Promise(resolve => setTimeout(resolve, delay));
         return this._performPost(url, options, triesLeft - 1, baseDelay);
       }
