@@ -1,4 +1,4 @@
-import QuestDb from '@questdb/nodejs-client';
+import * as QuestDb from '@questdb/nodejs-client';
 import { Disposable, singleton } from 'tsyringe';
 import AppConfiguration from '../config/AppConfiguration.js';
 
@@ -11,50 +11,54 @@ export type ProxyServerMetric = {
 
 @singleton()
 export default class QuestDbClient implements Disposable {
-  private readonly sender?: QuestDb.Sender;
+  private readonly senderPromise?: Promise<QuestDb.Sender>;
 
   constructor(appConfig: AppConfiguration) {
     if (appConfig.config.questDbMetricsConfig.length > 0) {
-      this.sender = QuestDb.Sender.fromConfig(appConfig.config.questDbMetricsConfig);
+      this.senderPromise = QuestDb.Sender.fromConfig(appConfig.config.questDbMetricsConfig);
     }
   }
 
   async pushImportQueueSize(itemsQueued: number, itemsErrored: number): Promise<void> {
-    if (this.sender == null) {
+    if (this.senderPromise == null) {
       return;
     }
 
-    this.sender
+    const sender = await this.senderPromise;
+
+    sender
       .table('sprax_api_import_queue_stats')
       .intColumn('queued', itemsQueued)
       .intColumn('errored', itemsErrored);
-    await this.sender.at(Date.now(), 'ms');
+    await sender.at(Date.now(), 'ms');
 
-    await this.sender.flush();
+    await sender.flush();
   }
 
   async pushProxyServerMetric(metrics: ProxyServerMetric[]): Promise<void> {
-    if (this.sender == null) {
+    if (this.senderPromise == null) {
       return;
     }
 
+    const sender = await this.senderPromise;
+
     for (const metric of metrics) {
-      this.sender
+      sender
         .table('sprax_api_proxy_servers')
         .stringColumn('displayName', metric.displayName)
         .booleanColumn('online', metric.online);
       if (metric.rttMs != null) {
-        this.sender.intColumn('rttMs', metric.rttMs);
+        sender.intColumn('rttMs', metric.rttMs);
       }
 
-      await this.sender.at(metric.timestamp.getTime(), 'ms');
+      await sender.at(metric.timestamp.getTime(), 'ms');
     }
 
-    await this.sender.flush();
+    await sender.flush();
   }
 
   async dispose(): Promise<void> {
-    await this.sender?.flush();
-    await this.sender?.close();
+    await (await this.senderPromise)?.flush();
+    await (await this.senderPromise)?.close();
   }
 }
