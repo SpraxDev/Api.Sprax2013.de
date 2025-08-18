@@ -55,6 +55,7 @@
     "@prisma/client": "^5.22.0",
     "@questdb/nodejs-client": "^4.0.2",
     "@sentry/node": "^8.55.0",
+    "@spraxdev/node-commons": "github:SpraxDev/Node-Commons#f09df36c9fcea383c0affa8f8f01df9ac645a1ba",
     "fastify": "^5.5.0",
     "gl": "^8.1.6",
     "ipaddr.js": "^2.2.0",

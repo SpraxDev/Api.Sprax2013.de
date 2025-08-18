@@ -1,8 +1,8 @@
+import { HttpResponse } from '@spraxdev/node-commons/http';
 import { singleton } from 'tsyringe';
 import * as Undici from 'undici';
 import QuestDbClient, { ProxyServerMetric } from '../../database/QuestDbClient.js';
 import ProxyPoolHttpClient, { UndiciProxyServer } from '../../http/clients/ProxyPoolHttpClient.js';
-import HttpResponse from '../../http/HttpResponse.js';
 import UserAgentGenerator from '../../http/UserAgentGenerator.js';
 import SentrySdk from '../../util/SentrySdk.js';
 import Task, { TaskPriority } from './Task.js';

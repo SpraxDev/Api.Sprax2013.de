@@ -1,9 +1,9 @@
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import AutoProxiedHttpClient from '../../../../../src/http/clients/AutoProxiedHttpClient.js';
-import HttpResponse from '../../../../../src/http/HttpResponse.js';
 import { CapeResponse } from '../../../../../src/minecraft/cape/provider/CapeProvider.js';
 import OptifineCapeProvider from '../../../../../src/minecraft/cape/provider/OptifineCapeProvider.js';
 import { EXISTING_MC_NAME, EXISTING_MC_PROFILE } from '../../../../test-constants.js';
+import { HttpResponse } from '@spraxdev/node-commons/http';
 
 describe('OptiFineCapeProvider', () => {
   let httpClient: DeepMockProxy<AutoProxiedHttpClient>;

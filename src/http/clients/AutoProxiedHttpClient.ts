@@ -1,9 +1,14 @@
+import {
+  GetRequestOptions,
+  HttpClient,
+  HttpRequest,
+  HttpResponse,
+  PostRequestOptions,
+} from '@spraxdev/node-commons/http';
 import { singleton } from 'tsyringe';
 import { Dispatcher } from 'undici';
 import SentrySdk from '../../util/SentrySdk.js';
 import ResolvedToNonUnicastIpError from '../dns/errors/ResolvedToNonUnicastIpError.js';
-import HttpResponse from '../HttpResponse.js';
-import HttpClient, { FullRequestOptions, GetRequestOptions, PostRequestOptions } from './HttpClient.js';
 import ProxyPoolHttpClient from './ProxyPoolHttpClient.js';
 import SimpleHttpClient from './SimpleHttpClient.js';
 
@@ -77,11 +82,15 @@ export default class AutoProxiedHttpClient extends HttpClient {
     }
   }
 
-  protected async request(_url: string, _options: FullRequestOptions): Promise<HttpResponse> {
+  protected async request(_request: HttpRequest): Promise<HttpResponse> {
     throw new Error('This method should never be called on this class');
   }
 
   protected selectDispatcher(): Dispatcher {
+    throw new Error('This method should never be called on this class');
+  }
+
+  addEventListener(): void {
     throw new Error('This method should never be called on this class');
   }
 

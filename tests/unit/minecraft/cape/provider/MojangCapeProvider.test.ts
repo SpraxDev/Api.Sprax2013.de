@@ -1,8 +1,8 @@
 import * as PrismaClient from '@prisma/client';
 import { CapeType } from '@prisma/client';
+import { HttpResponse } from '@spraxdev/node-commons/http';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import AutoProxiedHttpClient from '../../../../../src/http/clients/AutoProxiedHttpClient.js';
-import HttpResponse from '../../../../../src/http/HttpResponse.js';
 import CapeCache from '../../../../../src/minecraft/cape/CapeCache.js';
 import { CapeResponse } from '../../../../../src/minecraft/cape/provider/CapeProvider.js';
 import MojangCapeProvider from '../../../../../src/minecraft/cape/provider/MojangCapeProvider.js';

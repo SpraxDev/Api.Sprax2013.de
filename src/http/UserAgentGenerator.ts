@@ -1,23 +1,9 @@
-import Os from 'node:os';
+import { UserAgentGenerator as UserAgentGeneratorLib } from '@spraxdev/node-commons/http';
 import { getAppInfo } from '../constants.js';
 
 export default class UserAgentGenerator {
   static generateDefault(): string {
     const appInfo = getAppInfo();
-    return this.generate(appInfo.name, appInfo.version, true, appInfo.homepage);
-  }
-
-  static generate(appName: string, appVersion: string, includeSystemInfo: boolean = true, appUrl?: string): string {
-    let userAgent = `${appName}/${appVersion}`;
-
-    if (includeSystemInfo) {
-      userAgent += ` (${Os.type()}; ${process.arch}; ${process.platform})`;
-    }
-
-    if (appUrl != null) {
-      userAgent += ` (+${appUrl})`;
-    }
-
-    return userAgent;
+    return UserAgentGeneratorLib.generate(appInfo.name, appInfo.version, true, appInfo.homepage);
   }
 }

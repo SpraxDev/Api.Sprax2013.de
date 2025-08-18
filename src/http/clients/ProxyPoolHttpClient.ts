@@ -1,3 +1,4 @@
+import { FullRequestOptions, HttpClientEvents, HttpRequest, HttpResponse } from '@spraxdev/node-commons/http';
 import Net from 'node:net';
 import { SocksClientError } from 'socks';
 import { container, singleton } from 'tsyringe';
@@ -12,8 +13,6 @@ import ProxyPoolHttpClientHealthcheckTask from '../../task_queue/tasks/ProxyPool
 import SentrySdk from '../../util/SentrySdk.js';
 import ResolvedToNonUnicastIpError from '../dns/errors/ResolvedToNonUnicastIpError.js';
 import CachedDnsResolver from '../dns/resolver/CachedDnsResolver.js';
-import HttpResponse from '../HttpResponse.js';
-import { FullRequestOptions } from './HttpClient.js';
 import SimpleHttpClient from './SimpleHttpClient.js';
 import SocksProxyAgentFactory from './SocksProxyAgentFactory.js';
 
@@ -57,26 +56,27 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
     return this.usedAtLeastOneTime;
   }
 
-  protected async request(url: string, options: FullRequestOptions, triesLeft = this.retriesOnProxyError): Promise<HttpResponse> {
-    this.ensureUrlLooksLikePublicServer(url);
+  protected async request(request: HttpRequest, triesLeft = this.retriesOnProxyError): Promise<HttpResponse> {
+    this.ensureUrlLooksLikePublicServer(request.url);
     this.usedAtLeastOneTime = true;
 
-    const skipIpv6Only = await this.determineSkipIpv6OnlyProxies(url);
-
+    const skipIpv6Only = await this.determineSkipIpv6OnlyProxies(request.url);
     const proxy = this.selectNextProxy(skipIpv6Only);
+
+    request.requestFlowPersistentData['skipIpv6Only'] = skipIpv6Only;
+    request.requestFlowPersistentData['proxyDisplayName'] = proxy.displayName;
+    await this.emitEvent(new HttpClientEvents.PreRequestEvent(request));
+
     let response: Undici.Dispatcher.ResponseData;
 
-    if (SimpleHttpClient.DEBUG_LOGGING) {
-      console.debug(`[ProxyPoolHttpClient] >> ${options.method} ${url} (proxy=${proxy.displayName})`);
-    }
     try {
-      response = await Undici.request(url, {
+      response = await Undici.request(request.url, {
         dispatcher: proxy.undiciDispatcher,
 
-        method: options.method,
-        query: options?.query,
-        body: options?.body,
-        headers: super.mergeWithDefaultHeaders(options?.headers),
+        method: request.options.method,
+        query: request.options.query,
+        body: request.options.body,
+        headers: this.mergeWithDefaultHeaders_(request.options.headers),
       });
     } catch (err: any) {
       if (err instanceof ResolvedToNonUnicastIpError) {
@@ -92,25 +92,53 @@ export default class ProxyPoolHttpClient extends SimpleHttpClient {
         };
       }
 
-      SentrySdk.logAndCaptureWarning(`Failed to request '${url}' with proxy '${proxy.displayName}': ${err.message}`, { err });
+      SentrySdk.logAndCaptureWarning(`Failed to request '${request.url}' with proxy '${proxy.displayName}': ${err.message}`, { err });
       if (triesLeft > 0) {
-        return this.request(url, options, triesLeft - 1);
+        return this.request(request, triesLeft - 1);
       }
 
-      throw new Error(`Failed to request '${url}' using proxies (no more retries left): ${err.message}`, { cause: err });
+      throw new Error(`Failed to request '${request.url}' using proxies (no more retries left): ${err.message}`, { cause: err });
     }
 
     const httpResponse = await HttpResponse.fromUndiciResponse(response);
-    if (SimpleHttpClient.DEBUG_LOGGING) {
-      console.debug(`[ProxyPoolHttpClient] << Status ${httpResponse.statusCode} with ${httpResponse.body.length} bytes`);
-    }
-    super.metrics?.collectOutgoingHttpRequest(options.method, url, httpResponse.statusCode);
+    await this.emitEvent(new HttpClientEvents.PostRequestEvent(request, httpResponse));
     return httpResponse;
   }
 
-  protected selectDispatcher(skipIpv6Only = false): Undici.Dispatcher {
-    const proxy = this.proxyPool.selectNextProxy(skipIpv6Only);
+  protected selectDispatcher(request: HttpRequest): Undici.Dispatcher {
+    const skipIpv6Only = request.requestFlowPersistentData['skipIpv6Only'];
+
+    const proxy = this.proxyPool.selectNextProxy(typeof skipIpv6Only === 'boolean' ? skipIpv6Only : false);
     return proxy.undiciDispatcher;
+  }
+
+  protected registerDefaultEventListeners(): void {
+    this.addEventListener('preRequest', (event) => {
+      if (SimpleHttpClient.DEBUG_LOGGING) {
+        const proxyDisplayName = event.request.requestFlowPersistentData['proxyDisplayName'];
+        console.debug(`[ProxyPoolHttpClient] >> ${event.request.options.method} ${event.request.url} (proxy=${proxyDisplayName})`);
+      }
+    });
+
+    this.addEventListener('postRequest', (event) => {
+      if (SimpleHttpClient.DEBUG_LOGGING) {
+        console.debug(`[ProxyPoolHttpClient] << Status ${event.response.statusCode} with ${event.response.body.length} bytes`);
+      }
+      this.metrics.collectOutgoingHttpRequest(event.request.options.method, event.request.url, event.response.statusCode);
+    });
+  }
+
+  private mergeWithDefaultHeaders_(headers?: FullRequestOptions['headers']): Map<string, string | string[]> {
+    const mergedHeaders = new Map<string, string | string[]>();
+    mergedHeaders.set('user-agent', this.userAgent);
+    mergedHeaders.set('accept', 'application/json');
+
+    if (headers != null) {
+      for (const [key, value] of Object.entries(headers)) {
+        mergedHeaders.set(key.toLowerCase(), value);
+      }
+    }
+    return mergedHeaders;
   }
 
   private selectNextProxy(skipIpv6Only: boolean): UndiciProxyServer {
