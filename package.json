@@ -34,9 +34,11 @@
     "build:docker": "docker build --file Containerfile --pull --rm --target prod --tag spraxdev/spraxapi:latest .",
     "build:podman": "podman build --file Containerfile --pull=newer --rm --target prod --tag spraxdev/spraxapi:latest .",
 
-    "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" jest --coverage",
-    "test:ci": "npm run test -- --ci --randomize --reporters github-actions --reporters summary",
-    "type-check": "npm run build -- --noEmit && tsc --project tests/tsconfig.json",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "test:coverage": "npm run test -- --coverage",
+    "test:ci": "npm run test:coverage -- --reporter github-actions",
+    "type-check": "npm run build -- --noEmit && tsc --noEmit --project tests/tsconfig.json",
 
     "dev": "node --watch --env-file .env --loader ts-node/esm --import ./src/sentry-init.ts --enable-source-maps src/main.ts web",
     "dev:queue-worker": "node --watch --env-file .env --loader ts-node/esm --import ./src/sentry-init.ts --enable-source-maps src/main.ts queue-worker",
@@ -69,14 +71,13 @@
   "devDependencies": {
     "@tsconfig/node22": "^22.0.2",
     "@types/gl": "^6.0.5",
-    "@types/jest": "^30.0.0",
     "@types/node": "^22.17.2",
     "@types/webgl-ext": "^0.0.37",
-    "jest": "^30.0.5",
-    "jest-mock-extended": "^4.0.0",
+    "@vitest/coverage-v8": "^3.2.4",
     "prisma": "^5.22.0",
-    "ts-jest": "^29.4.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4",
+    "vitest-mock-extended": "^3.1.0"
   }
 }

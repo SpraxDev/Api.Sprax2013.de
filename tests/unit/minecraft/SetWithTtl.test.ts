@@ -1,18 +1,18 @@
-import { jest } from '@jest/globals';
 import { container } from 'tsyringe';
+import { vitest } from 'vitest';
 import SetWithTtl from '../../../src/minecraft/SetWithTtl.js';
 import ClearExpiredEntriesInMapsWithTtlTask
   from '../../../src/task_queue/tasks/ClearExpiredEntriesInMapsWithTtlTask.js';
 import MapWithTtl from '../../../src/util/MapWithTtl.js';
 
-jest.useFakeTimers();
-jest.setSystemTime(new Date('2024-01-01'));
+vitest.useFakeTimers();
+vitest.setSystemTime(new Date('2024-01-01'));
 
 describe('SetWithTtl', () => {
   let setWithTtl: SetWithTtl<string>;
   beforeEach(() => {
-    const clearExpiredEntriesInMapsWithTtlTaskResolveSpy = jest.fn();
-    const containerResolveSpy = jest.spyOn(container, 'resolve').mockReturnValue({
+    const clearExpiredEntriesInMapsWithTtlTaskResolveSpy = vitest.fn();
+    const containerResolveSpy = vitest.spyOn(container, 'resolve').mockReturnValue({
       registerSet: clearExpiredEntriesInMapsWithTtlTaskResolveSpy,
     });
 
@@ -32,7 +32,7 @@ describe('SetWithTtl', () => {
 
   test('#has returns false for a value that has expired', () => {
     setWithTtl.add('a');
-    jest.advanceTimersByTime(5001);
+    vitest.advanceTimersByTime(5001);
 
     expect(setWithTtl.has('a')).toBe(false);
   });
@@ -43,7 +43,7 @@ describe('SetWithTtl', () => {
 
   test('#getAgeInSeconds returns age of 0 for expired key', () => {
     setWithTtl.add('a');
-    jest.advanceTimersByTime(5001);
+    vitest.advanceTimersByTime(5001);
 
     expect(setWithTtl.has('a')).toBe(false);
     expect(setWithTtl.getAgeInSeconds('a')).toBe(0);
@@ -53,7 +53,7 @@ describe('SetWithTtl', () => {
     setWithTtl.add('a');
 
     expect(setWithTtl.getAgeInSeconds('a')).toBe(0);
-    jest.advanceTimersByTime(2000);
+    vitest.advanceTimersByTime(2000);
     expect(setWithTtl.getAgeInSeconds('a')).toBe(2);
   });
 
@@ -72,10 +72,10 @@ describe('SetWithTtl', () => {
 
   test('#clearExpired removes all expired values', () => {
     setWithTtl.add('a');
-    jest.advanceTimersByTime(2500);
+    vitest.advanceTimersByTime(2500);
     setWithTtl.add('b');
 
-    jest.advanceTimersByTime(5000);
+    vitest.advanceTimersByTime(5000);
     setWithTtl.clearExpired();
 
     expect(setWithTtl.has('a')).toBe(false);

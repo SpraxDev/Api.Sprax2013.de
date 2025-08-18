@@ -1,5 +1,5 @@
-import { jest } from '@jest/globals';
 import { FastifyInstance, type FastifyReply } from 'fastify';
+import { vitest } from 'vitest';
 import Metrics from '../../../src/metrics/Metrics.js';
 import SentrySdk from '../../../src/util/SentrySdk.js';
 import FastifyWebServer from '../../../src/webserver/FastifyWebServer.js';
@@ -28,7 +28,7 @@ const fastifyWebServer = new FastifyWebServer([new TestRouter()], new Metrics())
 const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
 
 beforeEach(() => {
-  jest.spyOn(SentrySdk, 'logAndCaptureError').mockReturnValue(undefined);
+  vitest.spyOn(SentrySdk, 'logAndCaptureError').mockReturnValue(undefined);
 });
 
 describe('FastifyWebServer', () => {
@@ -54,7 +54,7 @@ describe('FastifyWebServer', () => {
   });
 
   test('#listen should call the Fastify server', async () => {
-    const listenSpy = jest.spyOn(fastify, 'listen').mockResolvedValue('' as never);
+    const listenSpy = vitest.spyOn(fastify, 'listen').mockResolvedValue('' as never);
     await fastifyWebServer.listen('127.0.0.1', 8080);
 
     expect(listenSpy).toHaveBeenCalledTimes(1);
@@ -62,7 +62,7 @@ describe('FastifyWebServer', () => {
   });
 
   test('#shutdown should call the Fastify server', async () => {
-    const closeSpy = jest.spyOn(fastify, 'close').mockReturnValue(undefined);
+    const closeSpy = vitest.spyOn(fastify, 'close').mockReturnValue(undefined);
     await fastifyWebServer.shutdown();
 
     expect(closeSpy).toHaveBeenCalledTimes(1);

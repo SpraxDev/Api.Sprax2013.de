@@ -1,6 +1,6 @@
-import { jest } from '@jest/globals';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import * as Undici from 'undici';
+import { vitest } from 'vitest';
 import SocksProxyAgentFactory from '../../../../src/http/clients/SocksProxyAgentFactory.js';
 import ResolvedToNonUnicastIpError from '../../../../src/http/dns/errors/ResolvedToNonUnicastIpError.js';
 import UnicastOnlyDnsResolver from '../../../../src/http/dns/resolver/UnicastOnlyDnsResolver.js';
@@ -27,7 +27,7 @@ describe('SocksProxyAgentFactory', () => {
 
   beforeEach(() => {
     unicastOnlyDnsResolver = mockDeep<UnicastOnlyDnsResolver>({
-      resolvesToUnicastIp: jest.fn<any>().mockResolvedValue(true),
+      resolvesToUnicastIp: vitest.fn<any>().mockResolvedValue(true),
     });
 
     socksProxyServerConnector = mockDeep<SocksProxyServerConnector>();

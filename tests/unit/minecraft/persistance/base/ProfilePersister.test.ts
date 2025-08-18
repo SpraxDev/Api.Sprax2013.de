@@ -1,5 +1,5 @@
-import { jest } from '@jest/globals';
-import { DeepMockProxy } from 'jest-mock-extended';
+import { DeepMockProxy } from 'vitest-mock-extended';
+import { vitest } from 'vitest';
 import DatabaseClient from '../../../../../src/database/DatabaseClient.js';
 import ProfilePersister from '../../../../../src/minecraft/persistance/base/ProfilePersister.js';
 import { EXISTING_MC_ID, EXISTING_MC_NAME, EXISTING_MC_PROFILE_RESPONSE } from '../../../../test-constants.js';
@@ -11,8 +11,8 @@ let profilePersister: ProfilePersister;
 beforeEach(() => {
   databaseClient = createStrictDeepMock<DatabaseClient>({
     profile: {
-      upsert: jest.fn<any>().mockResolvedValue(undefined),
-      update: jest.fn<any>().mockResolvedValue(undefined),
+      upsert: vitest.fn<any>().mockResolvedValue(undefined),
+      update: vitest.fn<any>().mockResolvedValue(undefined),
     },
   });
 

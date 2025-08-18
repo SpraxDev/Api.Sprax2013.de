@@ -1,7 +1,7 @@
 import { HttpResponse } from '@spraxdev/node-commons/http';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import AutoProxiedHttpClient from '../../../../../src/http/clients/AutoProxiedHttpClient.js';
-import { CapeResponse } from '../../../../../src/minecraft/cape/provider/CapeProvider.js';
+import type { CapeResponse } from '../../../../../src/minecraft/cape/provider/CapeProvider.js';
 import LabymodCapeProvider from '../../../../../src/minecraft/cape/provider/LabymodCapeProvider.js';
 import { EXISTING_MC_ID_WITH_HYPHENS, EXISTING_MC_PROFILE } from '../../../../test-constants.js';
 
@@ -42,11 +42,11 @@ describe('LabymodCapeProvider', () => {
   test('Returns the response body when a user has a cape', async () => {
     httpClient.get.mockResolvedValue(new HttpResponse(200, new Map([['content-type', 'application/octet-stream']]), Buffer.from('A PNG')));
 
-    await expect(capeProvider.provide(EXISTING_MC_PROFILE)).resolves.toEqual<CapeResponse>({
+    await expect(capeProvider.provide(EXISTING_MC_PROFILE)).resolves.toEqual({
       image: Buffer.from('A PNG'),
       mimeType: 'image/png',
       ageInSeconds: 0,
-    });
+    } satisfies CapeResponse);
     expect(httpClient.get).toHaveBeenCalledWith(`https://dl.labymod.net/capes/${EXISTING_MC_ID_WITH_HYPHENS}`);
   });
 });

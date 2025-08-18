@@ -1,10 +1,10 @@
 import * as PrismaClient from '@prisma/client';
 import { CapeType } from '@prisma/client';
 import { HttpResponse } from '@spraxdev/node-commons/http';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import AutoProxiedHttpClient from '../../../../../src/http/clients/AutoProxiedHttpClient.js';
 import CapeCache from '../../../../../src/minecraft/cape/CapeCache.js';
-import { CapeResponse } from '../../../../../src/minecraft/cape/provider/CapeProvider.js';
+import type { CapeResponse } from '../../../../../src/minecraft/cape/provider/CapeProvider.js';
 import MojangCapeProvider from '../../../../../src/minecraft/cape/provider/MojangCapeProvider.js';
 import MinecraftProfile from '../../../../../src/minecraft/value-objects/MinecraftProfile.js';
 import { EXISTING_MC_PROFILE } from '../../../../test-constants.js';
@@ -81,11 +81,11 @@ describe('MojangCapeProvider', () => {
     capeCache.findByTypeAndUrl.mockResolvedValue(null);
     httpClient.get.mockResolvedValue(new HttpResponse(200, new Map([['content-type', responseType]]), Buffer.from('A PNG')));
 
-    await expect(capeProvider.provide(profileWithCape)).resolves.toEqual<CapeResponse>({
+    await expect(capeProvider.provide(profileWithCape)).resolves.toEqual({
       image: Buffer.from('A PNG'),
       mimeType: 'image/png',
       ageInSeconds: 0,
-    });
+    } satisfies CapeResponse);
     expect(httpClient.get).toHaveBeenCalledWith(`https://textures.minecraft.net/texture/cd9d82ab17fd92022dbd4a86cde4c382a7540e117fae7b9a2853658505a80625`);
   });
 
@@ -99,11 +99,11 @@ describe('MojangCapeProvider', () => {
       createdAt: new Date(),
     } satisfies PrismaClient.Cape);
 
-    await expect(capeProvider.provide(profileWithCape)).resolves.toEqual<CapeResponse>({
+    await expect(capeProvider.provide(profileWithCape)).resolves.toEqual({
       image: Buffer.from('A PNG'),
       mimeType: 'image/png',
       ageInSeconds: 0,
-    });
+    } satisfies CapeResponse);
     expect(httpClient.get).not.toHaveBeenCalled();
   });
 });

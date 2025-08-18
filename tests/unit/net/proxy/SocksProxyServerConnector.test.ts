@@ -1,14 +1,20 @@
-import { jest } from '@jest/globals';
+import { vitest } from 'vitest';
 import { SocksProxyServer } from '../../../../src/net/proxy/ProxyServerConfigurationProvider.js';
 
-const socksClientCreateConnection = jest.fn<any>().mockResolvedValue({ socket: 'test-socket' });
-jest.mock('socks', () => ({
-  SocksClient: {
-    createConnection: socksClientCreateConnection,
+const socksClientCreateConnection = vitest.fn();
+vitest.mock('socks', () => ({
+  default: {
+    SocksClient: {
+      createConnection: socksClientCreateConnection,
+    },
   },
 }));
 
 describe('SocksProxyServerConnector', () => {
+  beforeEach(() => {
+    socksClientCreateConnection.mockResolvedValue({ socket: 'test-socket' });
+  });
+
   test.each([
     ['#createConnection uses the socks module to open a connection', 1080],
     ['#createConnection uses default port 1080 if not specified', undefined],

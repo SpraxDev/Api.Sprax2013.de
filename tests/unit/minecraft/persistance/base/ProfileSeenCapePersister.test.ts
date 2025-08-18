@@ -1,6 +1,6 @@
-import { jest } from '@jest/globals';
 import * as PrismaClient from '@prisma/client';
-import { DeepMockProxy } from 'jest-mock-extended';
+import { DeepMockProxy } from 'vitest-mock-extended';
+import { vitest } from 'vitest';
 import DatabaseClient from '../../../../../src/database/DatabaseClient.js';
 import ProfileSeenCapePersister from '../../../../../src/minecraft/persistance/base/ProfileSeenCapePersister.js';
 import { EXISTING_MC_ID } from '../../../../test-constants.js';
@@ -13,11 +13,11 @@ let profileSeenCapePersister: ProfileSeenCapePersister;
 beforeEach(() => {
   databaseTransaction = createStrictDeepMock<PrismaClient.PrismaClient>({
     profileSeenCape: {
-      upsert: jest.fn<any>().mockResolvedValue(undefined),
+      upsert: vitest.fn<any>().mockResolvedValue(undefined),
     },
   });
   databaseClient = createStrictDeepMock<DatabaseClient>({
-    $transaction: jest.fn<any>().mockImplementation((fn: any) => fn(databaseTransaction)),
+    $transaction: vitest.fn<any>().mockImplementation((fn: any) => fn(databaseTransaction)),
   });
 
   profileSeenCapePersister = new ProfileSeenCapePersister(databaseClient);

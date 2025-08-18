@@ -1,4 +1,4 @@
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import DatabaseClient from '../../../../src/database/DatabaseClient.js';
 import MinecraftProfileCache from '../../../../src/minecraft/profile/MinecraftProfileCache.js';
 import { EXISTING_MC_ID, EXISTING_MC_NAME, EXISTING_MC_PROFILE_RESPONSE } from '../../../test-constants.js';

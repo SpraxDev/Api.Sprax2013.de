@@ -1,5 +1,5 @@
 import { HttpResponse } from '@spraxdev/node-commons/http';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import AutoProxiedHttpClient from '../../../src/http/clients/AutoProxiedHttpClient.js';
 import MinecraftApiClient, { UsernameToUuidResponse } from '../../../src/minecraft/MinecraftApiClient.js';
 import { EXISTING_MC_ID, EXISTING_MC_NAME, EXISTING_MC_PROFILE_RESPONSE } from '../../test-constants.js';

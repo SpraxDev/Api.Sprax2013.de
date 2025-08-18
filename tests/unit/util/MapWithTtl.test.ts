@@ -1,17 +1,17 @@
-import { jest } from '@jest/globals';
 import { container } from 'tsyringe';
+import { vitest } from 'vitest';
 import ClearExpiredEntriesInMapsWithTtlTask
   from '../../../src/task_queue/tasks/ClearExpiredEntriesInMapsWithTtlTask.js';
 import MapWithTtl from '../../../src/util/MapWithTtl.js';
 
-jest.useFakeTimers();
-jest.setSystemTime(new Date('2024-01-01'));
+vitest.useFakeTimers();
+vitest.setSystemTime(new Date('2024-01-01'));
 
 describe('MapWithTtl', () => {
   let mapWithTtl: MapWithTtl<string, number>;
   beforeEach(() => {
-    const clearExpiredEntriesInMapWithTtlTaskResolveSpy = jest.fn();
-    const containerResolveSpy = jest.spyOn(container, 'resolve').mockReturnValue({
+    const clearExpiredEntriesInMapWithTtlTaskResolveSpy = vitest.fn();
+    const containerResolveSpy = vitest.spyOn(container, 'resolve').mockReturnValue({
       registerSet: clearExpiredEntriesInMapWithTtlTaskResolveSpy,
     });
 
@@ -34,7 +34,7 @@ describe('MapWithTtl', () => {
 
   test('#get returns null for an expired value', () => {
     mapWithTtl.set('a', 100);
-    jest.advanceTimersByTime(5001);
+    vitest.advanceTimersByTime(5001);
 
     expect(mapWithTtl.get('a')).toBeNull();
   });
@@ -47,7 +47,7 @@ describe('MapWithTtl', () => {
 
   test('#has returns false for a value that has expired', () => {
     mapWithTtl.set('a', 100);
-    jest.advanceTimersByTime(5001);
+    vitest.advanceTimersByTime(5001);
 
     expect(mapWithTtl.has('a')).toBe(false);
   });
@@ -58,7 +58,7 @@ describe('MapWithTtl', () => {
 
   test('#getAgeInSeconds returns age of 0 for expired key', () => {
     mapWithTtl.set('a', 10);
-    jest.advanceTimersByTime(5001);
+    vitest.advanceTimersByTime(5001);
 
     expect(mapWithTtl.has('a')).toBe(false);
     expect(mapWithTtl.getAgeInSeconds('a')).toBe(0);
@@ -68,7 +68,7 @@ describe('MapWithTtl', () => {
     mapWithTtl.set('a', 10);
 
     expect(mapWithTtl.getAgeInSeconds('a')).toBe(0);
-    jest.advanceTimersByTime(2000);
+    vitest.advanceTimersByTime(2000);
     expect(mapWithTtl.getAgeInSeconds('a')).toBe(2);
   });
 
@@ -87,10 +87,10 @@ describe('MapWithTtl', () => {
 
   test('#clearExpired removes all expired values', () => {
     mapWithTtl.set('a', 10);
-    jest.advanceTimersByTime(2500);
+    vitest.advanceTimersByTime(2500);
     mapWithTtl.set('b', 20);
 
-    jest.advanceTimersByTime(5000);
+    vitest.advanceTimersByTime(5000);
     mapWithTtl.clearExpired();
 
     expect(mapWithTtl.has('a')).toBe(false);

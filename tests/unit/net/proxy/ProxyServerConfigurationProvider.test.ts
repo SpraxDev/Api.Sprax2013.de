@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { vitest } from 'vitest';
 import ProxyServerConfigurationProvider, {
   ProxyServer,
   SocksProxyServer,
@@ -169,7 +169,7 @@ describe('ProxyServerConfigurationProvider', () => {
   });
 
   test('Warning is logged for duplicate proxy server URIs', () => {
-    jest.spyOn(SentrySdk, 'logAndCaptureWarning').mockReturnValue(undefined);
+    vitest.spyOn(SentrySdk, 'logAndCaptureWarning').mockReturnValue(undefined);
 
     const configProvider = new ProxyServerConfigurationProvider([
       'https://proxy1.example.com',
@@ -187,7 +187,7 @@ describe('ProxyServerConfigurationProvider', () => {
   });
 
   test('Warning is logged for duplicate proxy server names', () => {
-    jest.spyOn(SentrySdk, 'logAndCaptureWarning').mockReturnValue(undefined);
+    vitest.spyOn(SentrySdk, 'logAndCaptureWarning').mockReturnValue(undefined);
 
     const configProvider = new ProxyServerConfigurationProvider([
       'https://proxy1.example.com?name=test',

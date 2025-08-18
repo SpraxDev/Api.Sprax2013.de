@@ -1,9 +1,8 @@
-import '../../src/container-init.js';
-import { FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { container } from 'tsyringe';
 import FastifyWebServer from '../../src/webserver/FastifyWebServer.js';
 
-describe('/mc/v1/history/*', () => {
+describe('/status', () => {
   test('Expect 200 OK: %j', async () => {
     const fastifyWebServer = container.resolve(FastifyWebServer);
     const fastify = (fastifyWebServer as any).fastify as FastifyInstance;

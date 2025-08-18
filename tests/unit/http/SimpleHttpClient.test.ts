@@ -1,7 +1,7 @@
-import { jest } from '@jest/globals';
 import type Dns from 'node:dns';
 import { container } from 'tsyringe';
 import * as Undici from 'undici';
+import { vitest } from 'vitest';
 import SimpleHttpClient from '../../../src/http/clients/SimpleHttpClient.js';
 import ResolvedToNonUnicastIpError from '../../../src/http/dns/errors/ResolvedToNonUnicastIpError.js';
 import UnicastOnlyDnsResolver from '../../../src/http/dns/resolver/UnicastOnlyDnsResolver.js';
@@ -146,7 +146,7 @@ describe('SimpleHttpClient GET requests', () => {
 
   test('Debug messages are logged', async () => {
     (SimpleHttpClient as any).DEBUG_LOGGING = true;
-    jest.spyOn(console, 'debug').mockReturnValue(undefined);
+    vitest.spyOn(console, 'debug').mockReturnValue(undefined);
 
     await httpClient.get('https://test-hostname');
     expect(console.debug).toHaveBeenCalledTimes(2);

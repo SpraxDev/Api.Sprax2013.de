@@ -1,5 +1,5 @@
-import { jest } from '@jest/globals';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
+import { vitest } from 'vitest';
 import MinecraftApiClient from '../../../../src/minecraft/MinecraftApiClient.js';
 import ProfilePersister from '../../../../src/minecraft/persistance/base/ProfilePersister.js';
 import ByPlayerProfileLazyPersister from '../../../../src/minecraft/persistance/ByPlayerProfileLazyPersister.js';
@@ -111,7 +111,7 @@ describe('#provideProfileByUuid', () => {
       ageInSeconds: 3 * 60,
     } satisfies Profile;
 
-    jest.spyOn(SentrySdk, 'captureError').mockReturnValue(undefined);
+    vitest.spyOn(SentrySdk, 'captureError').mockReturnValue(undefined);
 
     profileCache.findByUuid.mockResolvedValue(expectedProfile);
     minecraftApiClient.fetchProfileForUuid.mockImplementation(() => {
@@ -266,7 +266,7 @@ describe('#provideProfileByUsername', () => {
       ageInSeconds: 8 * 60,
     } satisfies Profile;
 
-    jest.spyOn(SentrySdk, 'captureError').mockReturnValue(undefined);
+    vitest.spyOn(SentrySdk, 'captureError').mockReturnValue(undefined);
     profileCache.findByUsername.mockResolvedValue(expectedProfile);
     profileCache.findByUuid.mockResolvedValue(expectedProfile);
     minecraftApiClient.fetchProfileForUuid.mockImplementation(() => {
@@ -293,7 +293,7 @@ describe('#provideProfileByUsername', () => {
       ageInSeconds: 8 * 60,
     } satisfies Profile;
 
-    jest.spyOn(SentrySdk, 'captureError').mockReturnValue(undefined);
+    vitest.spyOn(SentrySdk, 'captureError').mockReturnValue(undefined);
     profileCache.findByUsername.mockResolvedValue(expectedProfile);
     profileCache.findByUuid.mockResolvedValue(expectedProfile);
     minecraftApiClient.fetchProfileForUuid.mockImplementation(() => {

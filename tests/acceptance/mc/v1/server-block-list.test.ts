@@ -1,6 +1,6 @@
 import '../../../../src/container-init.js';
 import { FastifyInstance } from 'fastify';
-import { DeepMockProxy } from 'jest-mock-extended';
+import { DeepMockProxy } from 'vitest-mock-extended';
 import { container } from 'tsyringe';
 import DatabaseClient from '../../../../src/database/DatabaseClient.js';
 import FastifyWebServer from '../../../../src/webserver/FastifyWebServer.js';
