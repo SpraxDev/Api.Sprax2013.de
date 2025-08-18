@@ -8,6 +8,7 @@ export default class SentrySdk {
 
   static captureError(error: unknown): void {
     Sentry.captureException(error);
+    console.error(error);
   }
 
   static logAndCaptureWarning(message: string, data?: Record<string, unknown>): void {
