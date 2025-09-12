@@ -26,7 +26,7 @@ export default class WebApp implements App {
     this.webServer = container.resolve(FastifyWebServer);
 
     this.taskScheduler.start(true);
-    await this.webServer.listen('0.0.0.0', appConfig.config.serverPort);
+    await this.webServer.listen(appConfig.config.serverInterface, appConfig.config.serverPort);
 
     this.printReadyMessage(appConfig);
   }

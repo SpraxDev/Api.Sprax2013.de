@@ -14,6 +14,7 @@ describe('AppConfiguration', () => {
     const config = new AppConfiguration();
 
     expect(config.config).toEqual<AppConfig>({
+      serverInterface: '0.0.0.0',
       serverPort: 8087,
       proxyServerUris: '',
       questDbMetricsConfig: '',
@@ -24,9 +25,23 @@ describe('AppConfiguration', () => {
   test('Configuration object is frozen', () => {
     const config = new AppConfiguration();
     expect(Object.isFrozen(config.config)).toBe(true);
+    expect(Object.isFrozen(config.config.serverInterface)).toBe(true);
     expect(Object.isFrozen(config.config.serverPort)).toBe(true);
     expect(Object.isFrozen(config.config.proxyServerUris)).toBe(true);
     expect(Object.isFrozen(config.config.questDbMetricsConfig)).toBe(true);
+  });
+
+  test.each(['0.0.0.0', '127.0.0.1', '[::1]'])('Configured serverInterface: %s', (interfaceValue: string) => {
+    process.env.SPRAXAPI_SERVER_INTERFACE = interfaceValue;
+
+    const config = new AppConfiguration();
+    expect(config.config).toEqual<AppConfig>({
+      serverInterface: interfaceValue,
+      serverPort: 8087,
+      proxyServerUris: '',
+      questDbMetricsConfig: '',
+      workerTickIntervalDynamic: false,
+    });
   });
 
   test.each(['abc', '0'])('Invalid port: %s', (portValue: string) => {
@@ -34,6 +49,7 @@ describe('AppConfiguration', () => {
 
     const config = new AppConfiguration();
     expect(config.config).toEqual<AppConfig>({
+      serverInterface: '0.0.0.0',
       serverPort: 8087,
       proxyServerUris: '',
       questDbMetricsConfig: '',
@@ -50,6 +66,7 @@ describe('AppConfiguration', () => {
 
     const config = new AppConfiguration();
     expect(config.config).toEqual<AppConfig>({
+      serverInterface: '0.0.0.0',
       serverPort: 8087,
       proxyServerUris,
       questDbMetricsConfig: '',
@@ -65,6 +82,7 @@ describe('AppConfiguration', () => {
 
     const config = new AppConfiguration();
     expect(config.config).toEqual<AppConfig>({
+      serverInterface: '0.0.0.0',
       serverPort: 8087,
       proxyServerUris: '',
       questDbMetricsConfig,
@@ -83,6 +101,7 @@ describe('AppConfiguration', () => {
 
     const config = new AppConfiguration();
     expect(config.config).toEqual<AppConfig>({
+      serverInterface: '0.0.0.0',
       serverPort: 8087,
       proxyServerUris: '',
       questDbMetricsConfig: '',
