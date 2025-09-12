@@ -34,7 +34,7 @@
     "build:docker": "docker build --file Containerfile --pull --rm --target prod --tag spraxdev/spraxapi:latest .",
     "build:podman": "podman build --file Containerfile --pull=newer --rm --target prod --tag spraxdev/spraxapi:latest .",
 
-    "test": "vitest --run",
+    "test": "npm run type-check && vitest --run",
     "test:watch": "vitest",
     "test:coverage": "npm run test -- --coverage",
     "test:ci": "npm run test:coverage -- --reporter github-actions",
