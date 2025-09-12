@@ -5,6 +5,7 @@ import MinecraftApiClient, { UsernameToUuidResponse, type UuidToProfileResponse 
 import ProfilePersister from '../persistance/base/ProfilePersister.js';
 import ByPlayerProfileLazyPersister from '../persistance/ByPlayerProfileLazyPersister.js';
 import SetWithTtl from '../SetWithTtl.js';
+import ThirdPartyMinecraftApiClient from '../ThirdPartyMinecraftApiClient.js';
 import MinecraftProfileCache from './MinecraftProfileCache.js';
 
 export type Profile = {
@@ -20,6 +21,7 @@ export default class MinecraftProfileService {
   constructor(
     private readonly profileCache: MinecraftProfileCache,
     private readonly minecraftApiClient: MinecraftApiClient,
+    private readonly thirdPartyMinecraftApiClient: ThirdPartyMinecraftApiClient,
     private readonly profilePersister: ProfilePersister,
     private readonly byPlayerProfileLazyPersister: ByPlayerProfileLazyPersister,
   ) {
@@ -112,7 +114,7 @@ export default class MinecraftProfileService {
 
     let resolvedUuid: UsernameToUuidResponse | null;
     try {
-      resolvedUuid = await this.minecraftApiClient.fetchUuidForUsername(username);
+      resolvedUuid = await this.executeUsernameToUuidLookup(username);
     } catch (err: any) {
       if (profileInDatabase != null && profileInDatabase.ageInSeconds <= 10 * 60) {
         SentrySdk.captureError(err);
@@ -127,5 +129,25 @@ export default class MinecraftProfileService {
     }
 
     return this.provideProfileByUuid(resolvedUuid.id);
+  }
+
+  private async executeUsernameToUuidLookup(username: string): Promise<UsernameToUuidResponse | null> {
+    let firstPartyApiFetchError: Error;
+
+    try {
+      return await this.minecraftApiClient.fetchUuidForUsername(username);
+    } catch (err: any) {
+      if (!(err instanceof Error)) {
+        throw err;
+      }
+
+      firstPartyApiFetchError = err;
+    }
+
+    try {
+      return await this.thirdPartyMinecraftApiClient.fetchUuidForUsername(username);
+    } catch (thirdPartyApiFetchError: any) {
+      throw new Error('Resolving Username to UUID failed', { cause: [firstPartyApiFetchError, thirdPartyApiFetchError] });
+    }
   }
 }

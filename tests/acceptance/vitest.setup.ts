@@ -38,6 +38,7 @@ import MinecraftSkinService from '../../src/minecraft/skin/MinecraftSkinService.
 import MinecraftSkinTypeDetector from '../../src/minecraft/skin/MinecraftSkinTypeDetector.js';
 import LegacyMinecraft3DRenderer from '../../src/minecraft/skin/renderer/LegacyMinecraft3DRenderer.js';
 import SkinImage2DRenderer from '../../src/minecraft/skin/renderer/SkinImage2DRenderer.js';
+import ThirdPartyMinecraftApiClient from '../../src/minecraft/ThirdPartyMinecraftApiClient.js';
 import ProxyServerConfigurationProvider from '../../src/net/proxy/ProxyServerConfigurationProvider.js';
 import SocksProxyServerConnector from '../../src/net/proxy/SocksProxyServerConnector.js';
 import ProxyPoolHttpClientHealthcheckTask from '../../src/task_queue/tasks/ProxyPoolHttpClientHealthcheckTask.js';
@@ -78,17 +79,21 @@ beforeEach(async () => {
     ),
     new SimpleHttpClient(new Metrics()),
   );
-  const minecraftV1Router = new MinecraftV1Router(
-    new MinecraftProfileService(
-      new MinecraftProfileCache(container.resolve(DatabaseClient)),
-      new MinecraftApiClient(autoProxiedHttpClient),
+  const minecraftProfileService = new MinecraftProfileService(
+    new MinecraftProfileCache(container.resolve(DatabaseClient)),
+    new MinecraftApiClient(autoProxiedHttpClient),
+    new ThirdPartyMinecraftApiClient(autoProxiedHttpClient),
+    new ProfilePersister(container.resolve(DatabaseClient)),
+    new ByPlayerProfileLazyPersister(
       new ProfilePersister(container.resolve(DatabaseClient)),
-      new ByPlayerProfileLazyPersister(
-        new ProfilePersister(container.resolve(DatabaseClient)),
-        new ProfileSeenNamePersister(container.resolve(DatabaseClient)),
-        new LazyImportTaskCreator(container.resolve(DatabaseClient)),
-      ),
+      new ProfileSeenNamePersister(container.resolve(DatabaseClient)),
+      new LazyImportTaskCreator(container.resolve(DatabaseClient)),
     ),
+  );
+  container.registerInstance(MinecraftProfileService, minecraftProfileService);
+
+  const minecraftV1Router = new MinecraftV1Router(
+    minecraftProfileService,
     new MinecraftSkinService(
       autoProxiedHttpClient,
       new MinecraftSkinCache(container.resolve(DatabaseClient)),

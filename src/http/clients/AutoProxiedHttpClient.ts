@@ -19,6 +19,8 @@ export default class AutoProxiedHttpClient extends HttpClient {
     'sessionserver.mojang.com',
     'textures.minecraft.net',
 
+    'mcproxy.dev',
+
     'dl.labymod.net',
     's.optifine.net',
   ];

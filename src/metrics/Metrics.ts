@@ -29,6 +29,7 @@ export default class Metrics {
       'api.minecraftservices.com',
       'sessionserver.mojang.com',
       'textures.minecraft.net',
+      'mcproxy.dev',
       'dl.labymod.net',
       's.optifine.net',
     ].includes(hostnameFromUrl)) {

@@ -1,15 +1,17 @@
-import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import { vitest } from 'vitest';
-import MinecraftApiClient from '../../../../src/minecraft/MinecraftApiClient.js';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
+import MinecraftApiClient, { type UsernameToUuidResponse } from '../../../../src/minecraft/MinecraftApiClient.js';
 import ProfilePersister from '../../../../src/minecraft/persistance/base/ProfilePersister.js';
 import ByPlayerProfileLazyPersister from '../../../../src/minecraft/persistance/ByPlayerProfileLazyPersister.js';
 import MinecraftProfileCache from '../../../../src/minecraft/profile/MinecraftProfileCache.js';
 import MinecraftProfileService, { Profile } from '../../../../src/minecraft/profile/MinecraftProfileService.js';
+import type ThirdPartyMinecraftApiClient from '../../../../src/minecraft/ThirdPartyMinecraftApiClient.js';
 import SentrySdk from '../../../../src/util/SentrySdk.js';
 import { EXISTING_MC_ID, EXISTING_MC_NAME, EXISTING_MC_PROFILE_RESPONSE } from '../../../test-constants.js';
 
 let profileCache: DeepMockProxy<MinecraftProfileCache>;
 let minecraftApiClient: DeepMockProxy<MinecraftApiClient>;
+let thirdPartyMinecraftApiClient: DeepMockProxy<ThirdPartyMinecraftApiClient>;
 let profilePersister: DeepMockProxy<ProfilePersister>;
 let byPlayerProfileLazyPersister: DeepMockProxy<ByPlayerProfileLazyPersister>;
 let minecraftProfileService: MinecraftProfileService;
@@ -25,6 +27,11 @@ beforeEach(() => {
       throw new Error('Not implemented');
     },
   });
+  thirdPartyMinecraftApiClient = mockDeep<ThirdPartyMinecraftApiClient>({
+    fallbackMockImplementation: () => {
+      throw new Error('Not implemented');
+    },
+  });
   profilePersister = mockDeep<ProfilePersister>({
     fallbackMockImplementation: () => {
       throw new Error('Not implemented');
@@ -35,7 +42,7 @@ beforeEach(() => {
       throw new Error('Not implemented');
     },
   });
-  minecraftProfileService = new MinecraftProfileService(profileCache, minecraftApiClient, profilePersister, byPlayerProfileLazyPersister);
+  minecraftProfileService = new MinecraftProfileService(profileCache, minecraftApiClient, thirdPartyMinecraftApiClient, profilePersister, byPlayerProfileLazyPersister);
 });
 
 describe('#provideProfileByUuid', () => {
@@ -246,18 +253,62 @@ describe('#provideProfileByUsername', () => {
     expect(minecraftApiClient.fetchUuidForUsername).toHaveBeenCalledTimes(0);
   });
 
+  test('On Mojang API troubles (username->profile) the third-party API is used to determine the UUID', async () => {
+    const expectedProfile = {
+      profile: EXISTING_MC_PROFILE_RESPONSE,
+      ageInSeconds: 0,
+    } satisfies Profile;
+
+    profileCache.findByUuid.mockResolvedValue(null);
+    profileCache.findByUsername.mockResolvedValue(null);
+    byPlayerProfileLazyPersister.persist.mockResolvedValue(undefined);
+    minecraftApiClient.fetchUuidForUsername.mockImplementation(() => {
+      throw new Error('Connection timed out or something');
+    });
+    minecraftApiClient.fetchProfileForUuid.mockResolvedValue(EXISTING_MC_PROFILE_RESPONSE);
+    thirdPartyMinecraftApiClient.fetchUuidForUsername.mockResolvedValue({ id: EXISTING_MC_ID, name: EXISTING_MC_NAME });
+
+    await expect(minecraftProfileService.provideProfileByUsername(EXISTING_MC_NAME)).resolves.toEqual(expectedProfile);
+
+    expect(profileCache.findByUsername).toHaveBeenCalledTimes(1);
+    expect(profileCache.findByUsername).toHaveBeenCalledWith(EXISTING_MC_NAME);
+
+    expect(minecraftApiClient.fetchUuidForUsername).toHaveBeenCalledTimes(1);
+    expect(minecraftApiClient.fetchProfileForUuid).toHaveBeenCalledTimes(1);
+    expect(thirdPartyMinecraftApiClient.fetchUuidForUsername).toHaveBeenCalledTimes(1);
+  });
+
   test('On Mojang API troubles (username->profile) an error is thrown', async () => {
     profileCache.findByUsername.mockResolvedValue(null);
     minecraftApiClient.fetchUuidForUsername.mockImplementation(() => {
       throw new Error('Connection timed out or something');
     });
 
-    await expect(minecraftProfileService.provideProfileByUsername(EXISTING_MC_NAME)).rejects.toThrow('Connection timed out or something');
+    try {
+      await minecraftProfileService.provideProfileByUsername(EXISTING_MC_NAME);
+      assert.fail('Expected error to be thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      const err = error as Error;
+
+      expect(err.message).toBe('Resolving Username to UUID failed');
+      expect(Array.isArray(err.cause)).toBe(true);
+      const cause = err.cause as unknown[];
+
+      expect(cause).toHaveLength(2);
+      expect(cause[0]).toBeInstanceOf(Error);
+      expect(cause[1]).toBeInstanceOf(Error);
+
+      expect((cause[0] as Error).message).toBe('Connection timed out or something');
+      expect((cause[1] as Error).message).toBe('Not implemented');
+    }
 
     expect(profileCache.findByUsername).toHaveBeenCalledTimes(1);
     expect(profileCache.findByUsername).toHaveBeenCalledWith(EXISTING_MC_NAME);
 
     expect(minecraftApiClient.fetchUuidForUsername).toHaveBeenCalledTimes(1);
+    expect(minecraftApiClient.fetchProfileForUuid).toHaveBeenCalledTimes(0);
+    expect(thirdPartyMinecraftApiClient.fetchUuidForUsername).toHaveBeenCalledTimes(1);
   });
 
   test('On Mojang API troubles (username->uuid), a recent but outdated cached profile is returned', async () => {

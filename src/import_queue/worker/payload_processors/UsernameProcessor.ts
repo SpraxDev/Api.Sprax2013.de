@@ -1,8 +1,9 @@
 import * as PrismaClient from '@prisma/client';
 import { singleton } from 'tsyringe';
-import MinecraftApiClient from '../../../minecraft/MinecraftApiClient.js';
+import MinecraftApiClient, { type UsernameToUuidResponse } from '../../../minecraft/MinecraftApiClient.js';
 import MinecraftProfileCache from '../../../minecraft/profile/MinecraftProfileCache.js';
 import MinecraftProfileService from '../../../minecraft/profile/MinecraftProfileService.js';
+import ThirdPartyMinecraftApiClient from '../../../minecraft/ThirdPartyMinecraftApiClient.js';
 import PayloadProcessor from './PayloadProcessor.js';
 import UuidProcessor from './UuidProcessor.js';
 
@@ -17,6 +18,7 @@ export default class UsernameProcessor implements PayloadProcessor {
     private readonly minecraftProfileService: MinecraftProfileService,
     private readonly minecraftProfileCache: MinecraftProfileCache,
     private readonly minecraftApiClient: MinecraftApiClient,
+    private readonly thirdPartyMinecraftApiClient: ThirdPartyMinecraftApiClient,
     private readonly uuidProcessor: UuidProcessor,
   ) {
   }
@@ -58,7 +60,7 @@ export default class UsernameProcessor implements PayloadProcessor {
 
     try {
       const usernames = validTasksToLookUp.map(task => task.payload.toString().toLowerCase());
-      const bulkLookupResult = await this.minecraftApiClient.fetchBulkUuidForUsername(usernames);
+      const bulkLookupResult = await this.fetchUuidsForUsernames(usernames);
 
       const usernamesNotFound = bulkLookupResult
         .filter(lookup => usernames.includes(lookup.name.toLowerCase()));
@@ -94,5 +96,32 @@ export default class UsernameProcessor implements PayloadProcessor {
       throw new Error(`No task found for username '${username}'`);
     }
     return result;
+  }
+
+  private async fetchUuidsForUsernames(usernames: string[]): Promise<UsernameToUuidResponse[]> {
+    let firstPartyApiFetchError: Error;
+
+    try {
+      return await this.minecraftApiClient.fetchBulkUuidForUsername(usernames);
+    } catch (err) {
+      if (!(err instanceof Error)) {
+        throw err;
+      }
+      firstPartyApiFetchError = err;
+    }
+
+    try {
+      const results: UsernameToUuidResponse[] = [];
+      for (const username of usernames) {
+        const uuidResponse = await this.thirdPartyMinecraftApiClient.fetchUuidForUsername(username);
+        if (uuidResponse != null) {
+          results.push(uuidResponse);
+        }
+      }
+
+      return results;
+    } catch (thirdPartyApiFetchError) {
+      throw new Error('Resolving Username to UUID failed', { cause: [firstPartyApiFetchError, thirdPartyApiFetchError] });
+    }
   }
 }

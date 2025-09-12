@@ -19,6 +19,7 @@ export type ProxyServer = {
 };
 export type SocksProxyServer = ProxyServer & { socksProxyOptions: SocksProxyOptions };
 
+// TODO: Proxies das Prinzip von Trusted-Outgoing-Only oder so beibringen, um den Proxy nicht für user-supplied remotes zu nutzen (e.g. Charlie, Venus, ...)
 @injectable()
 export default class ProxyServerConfigurationProvider {
   private static readonly SUPPORTED_PROTOCOLS = ['socks5:', 'socks4:', 'https:', 'http:'];
