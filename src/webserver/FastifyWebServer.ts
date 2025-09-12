@@ -16,8 +16,10 @@ export default class FastifyWebServer {
     private readonly metrics: Metrics,
   ) {
     this.fastify = Fastify({
-      ignoreDuplicateSlashes: true,
-      ignoreTrailingSlash: true,
+      routerOptions: {
+        ignoreDuplicateSlashes: true,
+        ignoreTrailingSlash: true,
+      },
 
       trustProxy: false, // TODO
     });
