@@ -40,10 +40,17 @@ export default class FastifyWebServer {
         .code(500)
         .send({ error: 'Internal Server Error' });
     });
-    this.fastify.addHook('onResponse', (request: FastifyRequest, reply: FastifyReply): void => {
+    this.fastify.addHook('onRequest', (_request: FastifyRequest, reply: FastifyReply, done: Fastify.HookHandlerDoneFunction): void => {
+      reply
+        .header('X-Powered-By', 'fastify')
+        .header('Content-Security-Policy', `default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none';`);
+      done();
+    });
+    this.fastify.addHook('onResponse', (request: FastifyRequest, reply: FastifyReply, done: Fastify.HookHandlerDoneFunction): void => {
       if (!['/metrics', '/status', '/favicon.ico'].includes(request.originalUrl)) {
         this.metrics.collectIncomingHttpRequest(request.method, reply.statusCode);
       }
+      done();
     });
 
     this.setupRouters(routers);
