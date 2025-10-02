@@ -84,22 +84,6 @@ export default class ContinuousQueueWorker {
     }
 
     try {
-      if (task.payloadType === 'USERNAME') {
-        const usernameTasks = await this.fetchUsernameTasksBulk();
-        if (usernameTasks.length > 1) {
-          const bulkResults = await this.usernameProcessor.processBulk(usernameTasks);
-          for (const result of bulkResults) {
-            if (typeof result.result === 'boolean') {
-              await this.updateTaskStatus(result.task, result.result ? 'IMPORTED' : 'NO_CHANGES');
-            } else {
-              SentrySdk.logAndCaptureError(result.result);
-              await this.updateTaskStatus(result.task, 'ERROR');
-            }
-          }
-          return;
-        }
-      }
-
       const taskWasDuplicate = await this.processTask(task);
       await this.updateTaskStatus(task, taskWasDuplicate ? 'IMPORTED' : 'NO_CHANGES');
     } catch (err: any) {
@@ -153,7 +137,7 @@ export default class ContinuousQueueWorker {
     const firstNextPayloadTypeIndexToBufferValue = this.nextPayloadTypeIndexToBuffer;
     let tries = 0;
 
-    while (this.bufferedTasks.length === 0 && tries <= 3 && (tries <= 0 || this.nextPayloadTypeIndexToBuffer !== firstNextPayloadTypeIndexToBufferValue)) {
+    while (this.bufferedTasks.length === 0 && tries <= 5 && (tries <= 0 || this.nextPayloadTypeIndexToBuffer !== firstNextPayloadTypeIndexToBufferValue)) {
       const isUsernamePayloadType = ContinuousQueueWorker.PAYLOAD_TYPES_TO_PROCESS[this.nextPayloadTypeIndexToBuffer] === PrismaClient.ImportPayloadType.USERNAME;
 
       this.bufferedTasks = await this.databaseClient.importTask.findMany({
@@ -195,17 +179,6 @@ export default class ContinuousQueueWorker {
           select: { id: true },
         });
       }
-    });
-  }
-
-  private async fetchUsernameTasksBulk(): Promise<PrismaClient.ImportTask[]> {
-    return this.databaseClient.importTask.findMany({
-      where: {
-        payloadType: 'USERNAME',
-        state: 'QUEUED',
-      },
-      orderBy: { createdAt: 'asc' },
-      take: 10,
     });
   }
 }
