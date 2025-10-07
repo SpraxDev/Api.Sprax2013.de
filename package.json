@@ -71,12 +71,12 @@
   "devDependencies": {
     "@tsconfig/node22": "^22.0.2",
     "@types/gl": "^6.0.5",
-    "@types/node": "^22.18.7",
+    "@types/node": "^22.18.8",
     "@types/webgl-ext": "^0.0.37",
     "@vitest/coverage-v8": "^3.2.4",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2",
+    "typescript": "^5.9.3",
     "vitest": "^3.2.4",
     "vitest-mock-extended": "^3.1.0"
   }
