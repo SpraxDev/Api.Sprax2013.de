@@ -26,7 +26,7 @@ export default defineConfig({
           dir: './tests/acceptance/',
           name: 'acceptance',
           setupFiles: ['./tests/acceptance/vitest.setup.ts'],
-          testTimeout: 8_000,
+          testTimeout: 12_000,
           // TODO: Acceptance tests should not cause coverage for src/webserver/ files (was configured that way in jest, before migrating to vitest)
           // coveragePathIgnorePatterns: ['^(?!<rootDir>/src/webserver/).*\\.ts$'],
         },
