@@ -105,7 +105,7 @@ describe('/mc/v1/servers/blocked/known', () => {
 });
 
 describe('/mc/v1/servers/blocked/check', () => {
-  test.only.each([
+  test.each([
     ['example.com', 1, { 'example.com': true, '*.example.com': true, '*.com': false }],
     ['example.com:25565', 1, { 'example.com': true, '*.example.com': true, '*.com': false }],
     ['lobby.mc.example.com', 5, {
