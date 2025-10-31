@@ -13,11 +13,11 @@ let profileSeenNamesPersister: ProfileSeenNamePersister;
 beforeEach(() => {
   databaseTransaction = createStrictDeepMock<PrismaClient.PrismaClient>({
     profileSeenName: {
-      upsert: vitest.fn<any>().mockResolvedValue(undefined),
+      upsert: vitest.fn(),
     },
   });
   databaseClient = createStrictDeepMock<DatabaseClient>({
-    $transaction: vitest.fn<any>().mockImplementation((fn: any) => fn(databaseTransaction)),
+    $transaction: vitest.fn().mockImplementation((fn: any) => fn(databaseTransaction)),
   });
 
   profileSeenNamesPersister = new ProfileSeenNamePersister(databaseClient);

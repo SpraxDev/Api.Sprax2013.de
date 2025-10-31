@@ -27,7 +27,7 @@ describe('SocksProxyAgentFactory', () => {
 
   beforeEach(() => {
     unicastOnlyDnsResolver = mockDeep<UnicastOnlyDnsResolver>({
-      resolvesToUnicastIp: vitest.fn<any>().mockResolvedValue(true),
+      resolvesToUnicastIp: vitest.fn().mockResolvedValue(true),
     });
 
     socksProxyServerConnector = mockDeep<SocksProxyServerConnector>();

@@ -13,7 +13,7 @@ let skinPersister: SkinPersister;
 beforeEach(() => {
   databaseTransaction = createStrictDeepMock<PrismaClient.PrismaClient>({});
   databaseClient = createStrictDeepMock<DatabaseClient>({
-    $transaction: vitest.fn<any>().mockImplementation((fn: any) => fn(databaseTransaction)),
+    $transaction: vitest.fn().mockImplementation((fn: any) => fn(databaseTransaction)),
   });
 
   skinPersister = new SkinPersister(databaseClient);

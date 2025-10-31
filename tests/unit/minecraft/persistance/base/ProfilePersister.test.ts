@@ -11,8 +11,8 @@ let profilePersister: ProfilePersister;
 beforeEach(() => {
   databaseClient = createStrictDeepMock<DatabaseClient>({
     profile: {
-      upsert: vitest.fn<any>().mockResolvedValue(undefined),
-      update: vitest.fn<any>().mockResolvedValue(undefined),
+      upsert: vitest.fn(),
+      update: vitest.fn(),
     },
   });
 
