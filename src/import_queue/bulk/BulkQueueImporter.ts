@@ -3,9 +3,13 @@ import Fs from 'node:fs';
 import Path from 'node:path';
 import { singleton } from 'tsyringe';
 import DatabaseClient from '../../database/DatabaseClient.js';
+import AutoProxiedHttpClient from '../../http/clients/AutoProxiedHttpClient.js';
+import ServerBlocklistService from '../../minecraft/server/blocklist/ServerBlocklistService.js';
 import BulkImporter from './importer/BulkImporter.js';
+import DomainBulkImporter from './importer/DomainBulkImporter.js';
 import ProfileTextureValueBulkImporter from './importer/ProfileTextureValueBulkImporter.js';
 import SkinFileBulkImporter from './importer/SkinFileBulkImporter.js';
+import SkinUrlBulkImporter from './importer/SkinUrlBulkImporter.js';
 import UsernameBulkImporter from './importer/UsernameBulkImporter.js';
 import UuidBulkImporter from './importer/UuidBulkImporter.js';
 
@@ -22,10 +26,12 @@ export type BulkQueueImportResult = {
 export default class BulkQueueImporter {
   constructor(
     private readonly databaseClient: DatabaseClient,
+    private readonly httpClient: AutoProxiedHttpClient,
+    private readonly serverBlocklistService: ServerBlocklistService,
   ) {
   }
 
-  async importEachLine(filePath: string, type: 'uuid' | 'username' | 'profile-texture-value', importingApiKeyId: bigint): Promise<BulkQueueImportResult> {
+  async importEachLine(filePath: string, type: 'uuid' | 'username' | 'profile-texture-value' | 'skin-urls' | 'domains', importingApiKeyId: bigint): Promise<BulkQueueImportResult> {
     const fileHandle = await Fs.promises.open(filePath, 'r');
     const totalFileBytes = (await fileHandle.stat()).size;
 
@@ -39,6 +45,12 @@ export default class BulkQueueImporter {
         break;
       case 'profile-texture-value':
         payloadImporter = new ProfileTextureValueBulkImporter(new UuidBulkImporter());
+        break;
+      case 'skin-urls':
+        payloadImporter = new SkinUrlBulkImporter(this.httpClient);
+        break;
+      case 'domains':
+        payloadImporter = new DomainBulkImporter(this.serverBlocklistService);
         break;
 
       default:
@@ -94,7 +106,7 @@ export default class BulkQueueImporter {
             continue;
           }
 
-          insertBatch.push(...payloadImporter.createTasks(payload, importGroup.id));
+          insertBatch.push(...(await payloadImporter.createTasks(payload, importGroup.id)));
           if (insertBatch.length >= 250) {
             const newlyQueued = await this.writeBatch(transaction, insertBatch);
             result.queued += newlyQueued;

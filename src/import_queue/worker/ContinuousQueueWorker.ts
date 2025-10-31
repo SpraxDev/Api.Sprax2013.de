@@ -78,7 +78,7 @@ export default class ContinuousQueueWorker {
   private async tick(): Promise<void> {
     const task = await this.fetchNextTask();
     if (task == null) {
-      console.debug('No tasks in the queue, waiting for new tasks...');
+//      console.debug('No tasks in the queue, waiting for new tasks...');
       await this.tickForEmptyQueue();
       return;
     }

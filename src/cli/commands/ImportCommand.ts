@@ -5,14 +5,14 @@ import BulkQueueImporter, { type BulkQueueImportResult } from '../../import_queu
 import CliCommand from './CliCommand.js';
 
 type ImportCommandArgs = {
-  type: 'uuid' | 'username' | 'profile-texture-value' | 'dir-with-skin-files',
+  type: 'uuid' | 'username' | 'profile-texture-value' | 'dir-with-skin-files' | 'skin-urls' | 'domains',
   filePath: string,
   apiKeyId: bigint
 };
 
 @injectable({ token: ContainerTokens.CLI_COMMAND })
 export default class ImportCommand implements CliCommand {
-  private readonly VALID_IMPORT_TYPES: string[] = ['uuid', 'username', 'profile-texture-value', 'dir-with-skin-files'] satisfies ImportCommandArgs['type'][];
+  private readonly VALID_IMPORT_TYPES: string[] = ['uuid', 'username', 'profile-texture-value', 'dir-with-skin-files', 'skin-urls', 'domains'] satisfies ImportCommandArgs['type'][];
 
   constructor(
     private readonly bulkQueueImporter: BulkQueueImporter,
