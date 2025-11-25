@@ -54,30 +54,30 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
-    "@questdb/nodejs-client": "^4.0.2",
+    "@questdb/nodejs-client": "^4.2.0",
     "@sentry/node": "^8.55.0",
-    "@spraxdev/node-commons": "github:SpraxDev/Node-Commons#b8adaf3508adced84649c3a019f7e072ac327a4a",
-    "fastify": "^5.6.1",
+    "@spraxdev/node-commons": "github:SpraxDev/Node-Commons#9e15d1631d46e845ec9839b38b09201b659d1475",
+    "fastify": "^5.6.2",
     "gl": "^8.1.6",
     "ipaddr.js": "^2.2.0",
     "mri": "^1.2.0",
     "reflect-metadata": "^0.2.2",
-    "sharp": "^0.34.4",
+    "sharp": "^0.34.5",
     "socks": "^2.8.7",
     "tsyringe": "^4.10.0",
     "undici": "^7.16.0",
     "xxhash-addon": "^2.0.3"
   },
   "devDependencies": {
-    "@tsconfig/node22": "^22.0.2",
+    "@tsconfig/node22": "^22.0.5",
     "@types/gl": "^6.0.5",
-    "@types/node": "^22.18.13",
+    "@types/node": "^22.19.1",
     "@types/webgl-ext": "^0.0.37",
-    "@vitest/coverage-v8": "^4.0.6",
+    "@vitest/coverage-v8": "^4.0.14",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.6",
+    "vitest": "^4.0.14",
     "vitest-mock-extended": "^3.1.0"
   }
 }
