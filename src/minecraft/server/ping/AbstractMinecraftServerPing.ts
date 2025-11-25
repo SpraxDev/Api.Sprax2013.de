@@ -35,6 +35,7 @@ export type PotentialServerStatus = {
   favicon?: string;
 }
 
+// TODO: Handle proxy connection errors and introduce retry mechanism
 export default abstract class AbstractMinecraftServerPing {
   private static readonly socksProxyConnector = new SocksProxyServerConnector();
   private static socksProxyPool: RoundRobinProxyPool<SocksProxyServer> | undefined;
