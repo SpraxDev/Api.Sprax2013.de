@@ -8,24 +8,15 @@ import ThirdPartyMinecraftApiClient from '../../../src/minecraft/ThirdPartyMinec
 import { EXISTING_MC_ID, EXISTING_MC_NAME, EXISTING_MC_PROFILE_RESPONSE } from '../../test-constants.js';
 
 const THIRD_PARTY_RESPONSE_SUCCESS = {
-  ok: true,
-  status: 200,
-  data: { id: EXISTING_MC_ID, name: EXISTING_MC_NAME },
-  meta: { cached: false, fetched: 1757678121995, expires: 1757679021995, expiration: 900 },
+  id: EXISTING_MC_PROFILE_RESPONSE.id,
+  name: EXISTING_MC_PROFILE_RESPONSE.name,
+  properties: EXISTING_MC_PROFILE_RESPONSE.properties,
 };
 const THIRD_PARTY_RESPONSE_NOT_FOUND = {
-  ok: false,
-  status: 404,
-  data: {
-    path: `/minecraft/profile/lookup/name/${EXISTING_MC_NAME}_`,
-    errorMessage: `Couldn't find any profile with name ${EXISTING_MC_NAME}_`,
-  },
-  meta: { cached: false, fetched: 1757678121995, expires: 1757679021995, expiration: 900 },
+  error: 'User does not exist'
 };
 const THIRD_PARTY_RESPONSE_ERROR = {
-  ok: false,
-  data: { error: 'Invalid name' },
-  meta: { cached: false, fetched: 1757678121995, expires: 1757679021995, expiration: 1 },
+  error: 'Some error'
 };
 
 let httpClient: DeepMockProxy<AutoProxiedHttpClient>;
@@ -50,31 +41,31 @@ describe('#fetchUuidForUsername', () => {
       .resolves
       .toEqual(expectedResponse);
 
-    expect(httpClient.get).toHaveBeenCalledWith(`https://mcproxy.dev/uuid/${EXISTING_MC_NAME}`);
+    expect(httpClient.get).toHaveBeenCalledWith(`https://crafthead.net/profile/${EXISTING_MC_NAME}`);
     expect(minecraftProfileService.provideProfileByUuid).toHaveBeenCalledTimes(1);
   });
 
   test.each([null, EXISTING_MC_PROFILE_RESPONSE])(`Throw when the UUID from the third-party API does not match the profile from the first-party API`, async () => {
     const thirdPartyApiResponse: typeof THIRD_PARTY_RESPONSE_SUCCESS = JSON.parse(JSON.stringify(THIRD_PARTY_RESPONSE_SUCCESS));
-    thirdPartyApiResponse.data.name = 'a-different-name';
+    thirdPartyApiResponse.name = 'a-different-name';
 
     httpClient.get.mockResolvedValue(new HttpResponse(200, new Map(), Buffer.from(JSON.stringify(thirdPartyApiResponse))));
     minecraftProfileService.provideProfileByUuid.mockResolvedValue({ profile: EXISTING_MC_PROFILE_RESPONSE, ageInSeconds: 0 });
 
     await expect(thirdPartyMinecraftApiClient.fetchUuidForUsername('a-different-name'))
       .rejects
-      .toThrow(`Failed to get UUID for username 'a-different-name' from mcproxy.dev (Profile for returned uuid (${EXISTING_MC_ID}) does not match the requested username)`);
+      .toThrow(`Failed to get UUID for username 'a-different-name' from crafthead.net (Profile for returned UUID (${EXISTING_MC_ID}) does not match the requested username)`);
 
-    expect(httpClient.get).toHaveBeenCalledWith(`https://mcproxy.dev/uuid/a-different-name`);
+    expect(httpClient.get).toHaveBeenCalledWith(`https://crafthead.net/profile/a-different-name`);
     expect(minecraftProfileService.provideProfileByUuid).toHaveBeenCalledTimes(1);
   });
 
-  test(`Returns null when API response with 'Not Found' status in the body`, async () => {
-    httpClient.get.mockResolvedValue(new HttpResponse(200, new Map(), Buffer.from(JSON.stringify(THIRD_PARTY_RESPONSE_NOT_FOUND))));
+  test(`Returns null when API response with 'Not Found' status`, async () => {
+    httpClient.get.mockResolvedValue(new HttpResponse(404, new Map(), Buffer.from(JSON.stringify(THIRD_PARTY_RESPONSE_NOT_FOUND))));
 
     await expect(thirdPartyMinecraftApiClient.fetchUuidForUsername(`${EXISTING_MC_NAME}_`)).resolves.toBeNull();
 
-    expect(httpClient.get).toHaveBeenCalledWith(`https://mcproxy.dev/uuid/${EXISTING_MC_NAME}_`);
+    expect(httpClient.get).toHaveBeenCalledWith(`https://crafthead.net/profile/${EXISTING_MC_NAME}_`);
   });
 
   test('Throws an exception on error response', async () => {
@@ -82,19 +73,19 @@ describe('#fetchUuidForUsername', () => {
 
     await expect(thirdPartyMinecraftApiClient.fetchUuidForUsername(EXISTING_MC_NAME))
       .rejects
-      .toThrow(`Failed to get UUID for username '${EXISTING_MC_NAME}' from mcproxy.dev (Expected status 200): {status=400, body=${JSON.stringify(THIRD_PARTY_RESPONSE_ERROR)}}`);
+      .toThrow(`Failed to get UUID for username '${EXISTING_MC_NAME}' from crafthead.net (Expected status 200 or 404): {status=400, body=${JSON.stringify(THIRD_PARTY_RESPONSE_ERROR)}}`);
 
-    expect(httpClient.get).toHaveBeenCalledWith(`https://mcproxy.dev/uuid/${EXISTING_MC_NAME}`);
+    expect(httpClient.get).toHaveBeenCalledWith(`https://crafthead.net/profile/${EXISTING_MC_NAME}`);
   });
 
-  test.each([204, 404, 500])('Throws an exception on unexpected response status code of %j', async (statusCode: number) => {
+  test.each([204, 500])('Throws an exception on unexpected response status code of %j', async (statusCode: number) => {
     httpClient.get.mockResolvedValue(new HttpResponse(statusCode, new Map(), Buffer.from('some unexpected response')));
 
     await expect(thirdPartyMinecraftApiClient.fetchUuidForUsername(EXISTING_MC_NAME))
       .rejects
-      .toThrow(`Failed to get UUID for username '${EXISTING_MC_NAME}' from mcproxy.dev (Expected status 200): {status=${statusCode}, body=some unexpected response}`);
+      .toThrow(`Failed to get UUID for username '${EXISTING_MC_NAME}' from crafthead.net (Expected status 200 or 404): {status=${statusCode}, body=some unexpected response}`);
 
     expect(httpClient.get)
-      .toHaveBeenCalledWith(`https://mcproxy.dev/uuid/${EXISTING_MC_NAME}`);
+      .toHaveBeenCalledWith(`https://crafthead.net/profile/${EXISTING_MC_NAME}`);
   });
 });

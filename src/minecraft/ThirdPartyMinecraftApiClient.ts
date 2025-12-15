@@ -21,6 +21,10 @@ export default class ThirdPartyMinecraftApiClient {
   }
 
   async fetchUuidForUsername(username: string): Promise<UsernameToUuidResponse | null> {
+    return this.fetchUuidForUsernameFromCraftHeadNet(username);
+  }
+
+  private async fetchUuidForUsernameFromMcProxyDev(username: string): Promise<UsernameToUuidResponse | null> {
     const response = await this.httpClient.get(`https://mcproxy.dev/uuid/${username}`);
     if (response.statusCode !== 200) {
       throw new Error(`Failed to get UUID for username '${username}' from mcproxy.dev (Expected status 200): {status=${response.statusCode}, body=${response.parseBodyAsText()}}`);
@@ -46,7 +50,32 @@ export default class ThirdPartyMinecraftApiClient {
     const uuid = responseBody.data.id as string;
     const profile = await this.minecraftProfileService.provideProfileByUuid(uuid);
     if (profile == null || profile.profile.name.toLowerCase() !== username.toLowerCase()) {
-      throw new Error(`Failed to get UUID for username '${username}' from mcproxy.dev (Profile for returned uuid (${uuid}) does not match the requested username)`);
+      throw new Error(`Failed to get UUID for username '${username}' from mcproxy.dev (Profile for returned UUID (${uuid}) does not match the requested username)`);
+    }
+
+    return { id: profile.profile.id, name: profile.profile.name };
+  }
+
+  private async fetchUuidForUsernameFromCraftHeadNet(username: string): Promise<UsernameToUuidResponse | null> {
+    const response = await this.httpClient.get(`https://crafthead.net/profile/${username}`);
+    if (response.statusCode === 404) {
+      return null;
+    }
+
+    if (response.statusCode !== 200) {
+      throw new Error(`Failed to get UUID for username '${username}' from crafthead.net (Expected status 200 or 404): {status=${response.statusCode}, body=${response.parseBodyAsText()}}`);
+    }
+
+    const responseBody = response.parseBodyAsJson<any>();
+
+    if (typeof responseBody !== 'object' || typeof responseBody.id !== 'string' || typeof responseBody.name !== 'string') {
+      throw new Error(`Failed to get UUID for username '${username}' from crafthead.net (Expected id and name to be of type string): {body=${response.parseBodyAsText()}}`);
+    }
+
+    const uuid = responseBody.id as string;
+    const profile = await this.minecraftProfileService.provideProfileByUuid(uuid);
+    if (profile == null || profile.profile.name.toLowerCase() !== username.toLowerCase()) {
+      throw new Error(`Failed to get UUID for username '${username}' from crafthead.net (Profile for returned UUID (${uuid}) does not match the requested username)`);
     }
 
     return { id: profile.profile.id, name: profile.profile.name };

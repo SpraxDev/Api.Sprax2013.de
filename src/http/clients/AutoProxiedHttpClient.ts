@@ -20,6 +20,7 @@ export default class AutoProxiedHttpClient extends HttpClient {
     'textures.minecraft.net',
 
     'mcproxy.dev',
+    'crafthead.net',
 
     'dl.labymod.net',
     's.optifine.net',
