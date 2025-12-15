@@ -132,22 +132,22 @@ export default class MinecraftProfileService {
   }
 
   private async executeUsernameToUuidLookup(username: string): Promise<UsernameToUuidResponse | null> {
-    let firstPartyApiFetchError: Error;
+    let thirdPartyApiFetchError: Error;
 
     try {
-      return await this.minecraftApiClient.fetchUuidForUsername(username);
+      return await this.thirdPartyMinecraftApiClient.fetchUuidForUsername(username);
     } catch (err: any) {
       if (!(err instanceof Error)) {
         throw err;
       }
 
-      firstPartyApiFetchError = err;
+      thirdPartyApiFetchError = err;
     }
 
     try {
-      return await this.thirdPartyMinecraftApiClient.fetchUuidForUsername(username);
-    } catch (thirdPartyApiFetchError: any) {
-      throw new Error('Resolving Username to UUID failed', { cause: [firstPartyApiFetchError, thirdPartyApiFetchError] });
+      return await this.minecraftApiClient.fetchUuidForUsername(username);
+    } catch (firstPartyApiFetchError: any) {
+      throw new Error('Resolving Username to UUID failed', { cause: [thirdPartyApiFetchError, firstPartyApiFetchError] });
     }
   }
 }

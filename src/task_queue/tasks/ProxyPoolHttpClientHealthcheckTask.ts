@@ -90,6 +90,9 @@ export default class ProxyPoolHttpClientHealthcheckTask extends Task {
       };
     } catch (err: any) {
       SentrySdk.logAndCaptureWarning(`[ProxyHealthcheck] Proxy '${proxy.displayName}' is unhealthy: ${err.message}`, { err });
+      if (err.message === 'SocksClient internal error (this should not happen)') {
+        console.error(err);
+      }
 
       proxy.health = {
         unhealthy: true,

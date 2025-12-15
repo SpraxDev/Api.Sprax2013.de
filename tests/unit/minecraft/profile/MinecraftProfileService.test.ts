@@ -253,7 +253,7 @@ describe('#provideProfileByUsername', () => {
     expect(minecraftApiClient.fetchUuidForUsername).toHaveBeenCalledTimes(0);
   });
 
-  test('On Mojang API troubles (username->profile) the third-party API is used to determine the UUID', async () => {
+  test('On API troubles (username->profile) the first-party API is used to determine the UUID', async () => {
     const expectedProfile = {
       profile: EXISTING_MC_PROFILE_RESPONSE,
       ageInSeconds: 0,
@@ -273,14 +273,14 @@ describe('#provideProfileByUsername', () => {
     expect(profileCache.findByUsername).toHaveBeenCalledTimes(1);
     expect(profileCache.findByUsername).toHaveBeenCalledWith(EXISTING_MC_NAME);
 
-    expect(minecraftApiClient.fetchUuidForUsername).toHaveBeenCalledTimes(1);
+    expect(minecraftApiClient.fetchUuidForUsername).toHaveBeenCalledTimes(0);
     expect(minecraftApiClient.fetchProfileForUuid).toHaveBeenCalledTimes(1);
     expect(thirdPartyMinecraftApiClient.fetchUuidForUsername).toHaveBeenCalledTimes(1);
   });
 
-  test('On Mojang API troubles (username->profile) an error is thrown', async () => {
+  test('On API troubles (username->profile) an error is thrown', async () => {
     profileCache.findByUsername.mockResolvedValue(null);
-    minecraftApiClient.fetchUuidForUsername.mockImplementation(() => {
+    thirdPartyMinecraftApiClient.fetchUuidForUsername.mockImplementation(() => {
       throw new Error('Connection timed out or something');
     });
 
