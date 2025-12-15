@@ -36,6 +36,13 @@ export default class SkinPersister {
     //noinspection ES6RedundantAwait
     return await this.databaseClient.$transaction(async (transaction): Promise<bigint> => {
       if (skinUrl != null) {
+        const lockIdSkinUrl = Crypto
+          .createHash('sha256')
+          .update(skinUrl)
+          .digest()
+          .readInt32BE();
+        await transaction.$executeRaw`SELECT pg_advisory_xact_lock(${lockIdSkinUrl})`;
+
         const existingSkinByUrl = await transaction.skinUrl.findUnique({
           where: { url: skinUrl },
           select: { skinId: true },
@@ -48,12 +55,12 @@ export default class SkinPersister {
       const originalPixelDataHash = await this.computePixelDataHash(originalSkinPng);
       const normalizedPixelDataHash = await this.computePixelDataHash(normalizedSkinPng);
 
-      const lockId = Crypto
+      const lockIdSkinImage = Crypto
         .createHash('sha256')
         .update(originalSkinPng)
         .digest()
         .readInt32BE();
-      await transaction.$executeRaw`SELECT pg_advisory_xact_lock(${lockId})`;
+      await transaction.$executeRaw`SELECT pg_advisory_xact_lock(${lockIdSkinImage})`;
 
       const existingSkin = await transaction.skin.findUnique({
         select: { id: true },
