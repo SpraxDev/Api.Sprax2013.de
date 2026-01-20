@@ -1,8 +1,8 @@
 export default class MinecraftProfileTextures {
   constructor(
     public readonly profileId: string,
-    public readonly profileName: string,
-    public readonly timestamp: Date,
+    public readonly profileName: string | null,
+    public readonly timestamp: Date | null,
     public readonly skinUrl: string | null,
     public readonly capeUrl: string | null,
     public readonly slimPlayerModel: boolean,
@@ -37,13 +37,18 @@ export default class MinecraftProfileTextures {
   static fromPropertyValue(propertyValue: string): MinecraftProfileTextures {
     const parsedValue = JSON.parse(Buffer.from(propertyValue, 'base64').toString('utf-8'));
 
+    const profileId = parsedValue.profileId ?? parsedValue.textures?.SKIN?.profileId;
+    if (typeof profileId !== 'string') {
+      throw new Error('Invalid Minecraft profile textures property: missing profileId');
+    }
+
     return new MinecraftProfileTextures(
-      parsedValue.profileId,
-      parsedValue.profileName,
-      new Date(parsedValue.timestamp),
-      parsedValue.textures.SKIN?.url ?? null,
-      parsedValue.textures.CAPE?.url ?? null,
-      parsedValue.textures.SKIN?.metadata?.model === 'slim',
+      profileId,
+      parsedValue.profileName ?? null,
+      parsedValue.timestamp != null ? new Date(parsedValue.timestamp) : null,
+      parsedValue.textures?.SKIN?.url ?? null,
+      parsedValue.textures?.CAPE?.url ?? null,
+      parsedValue.textures?.SKIN?.metadata?.model === 'slim',
     );
   }
 

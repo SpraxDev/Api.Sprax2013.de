@@ -36,11 +36,15 @@ export default class ByTexturesPropertyPersister {
   async persist(texturesProperty: { value: string, signature: string }): Promise<void> {
     const parsedTextures = MinecraftProfileTextures.fromPropertyValue(texturesProperty.value);
 
-    await this.ensureProfileIdIsKnown(parsedTextures);
+    if (parsedTextures.timestamp != null) {
+      await this.ensureProfileIdIsKnown(parsedTextures);
+    }
 
     const promises: Promise<void>[] = [];
 
-    promises.push(this.profileSeenNamesPersister.persist(parsedTextures.profileId, parsedTextures.profileName, parsedTextures.timestamp));
+    if (parsedTextures.profileName != null) {
+      promises.push(this.profileSeenNamesPersister.persist(parsedTextures.profileId, parsedTextures.profileName, parsedTextures.timestamp));
+    }
 
     const skinUrl = parsedTextures.getSecureSkinUrl();
     if (skinUrl != null) {
@@ -55,7 +59,9 @@ export default class ByTexturesPropertyPersister {
           skinId = await this.skinPersister.persist(skinImage, await normalizedSkin.toPngBuffer(), texturesProperty);
         }
 
-        await this.profileSeenSkinPersister.persist(parsedTextures.profileId, skinId, parsedTextures.timestamp);
+        if (parsedTextures.timestamp != null) {
+          await this.profileSeenSkinPersister.persist(parsedTextures.profileId, skinId, parsedTextures.timestamp);
+        }
       })());
     }
 
@@ -68,7 +74,9 @@ export default class ByTexturesPropertyPersister {
           capeId = await this.capePersister.persistMojangCape(texturesProperty.value, capeImage);
         }
 
-        await this.profileSeenCapePersister.persist(parsedTextures.profileId, capeId, parsedTextures.timestamp);
+        if (parsedTextures.timestamp != null) {
+          await this.profileSeenCapePersister.persist(parsedTextures.profileId, capeId, parsedTextures.timestamp);
+        }
       })());
     }
 
@@ -84,6 +92,11 @@ export default class ByTexturesPropertyPersister {
   }
 
   private async ensureProfileIdIsKnown(profileTextures: MinecraftProfileTextures): Promise<void> {
+    if (profileTextures.timestamp == null) {
+      await this.minecraftProfileService.provideProfileByUuid(profileTextures.profileId);
+      return;
+    }
+
     const knownProfile = await this.databaseClient.profile.findUnique({
       where: {
         id: profileTextures.profileId,
@@ -91,7 +104,7 @@ export default class ByTexturesPropertyPersister {
     });
 
     if (knownProfile == null) {
-      await this.createEmptyDeletedProfile(profileTextures);
+      await this.createEmptyDeletedProfileIfPossible(profileTextures);
       return;
     }
 
@@ -103,7 +116,7 @@ export default class ByTexturesPropertyPersister {
       await this.databaseClient.profile.update({
         where: { id: profileTextures.profileId },
         data: {
-          nameLowercase: profileTextures.profileName.toLowerCase(),
+          nameLowercase: profileTextures.profileName?.toLowerCase(),
           firstSeen: profileTextures.timestamp,
           updatedAt: profileTextures.timestamp,
         },
@@ -111,7 +124,14 @@ export default class ByTexturesPropertyPersister {
     }
   }
 
-  private async createEmptyDeletedProfile(profileTextures: MinecraftProfileTextures): Promise<void> {
+  private async createEmptyDeletedProfileIfPossible(profileTextures: MinecraftProfileTextures): Promise<void> {
+    if (profileTextures.timestamp == null) {
+      throw new Error('Cannot create empty deleted profile from MinecraftProfileTextures without timestamp');
+    }
+    if (profileTextures.profileName == null) {
+      return;
+    }
+
     await this.databaseClient.profile.createMany({
       data: [{
         id: profileTextures.profileId,

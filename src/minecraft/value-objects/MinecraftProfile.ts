@@ -51,7 +51,7 @@ export default class MinecraftProfile {
     const textures = MinecraftProfileTextures.fromPropertyValue(textureValue);
     return new MinecraftProfile({
       id: textures.profileId,
-      name: textures.profileName,
+      name: textures.profileName ?? '',
       properties: [{
         name: 'textures',
         value: textureValue,

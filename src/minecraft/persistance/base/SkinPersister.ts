@@ -26,7 +26,7 @@ export default class SkinPersister {
       skinUrl = parsedTextures.getSecureSkinUrl();
       textureValue = skinUrlOrTextureProperty.value;
       textureSignature = skinUrlOrTextureProperty.signature;
-      createdAt = parsedTextures.timestamp;
+      createdAt = parsedTextures.timestamp ?? undefined;
     }
 
     if (skinUrl != null && !MinecraftProfileTextures.isOfficialTextureUrl(skinUrl)) {

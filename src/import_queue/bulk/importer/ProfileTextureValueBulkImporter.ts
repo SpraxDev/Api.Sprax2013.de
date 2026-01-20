@@ -38,7 +38,7 @@ export default class ProfileTextureValueBulkImporter implements BulkImporter {
       tasks.push({
         payload: Buffer.from(JSON.stringify({
           value: textureValue,
-          signature: textureSignature.length !== 0 ? textureSignature : undefined,
+          signature: textureSignature != null && textureSignature.length !== 0 ? textureSignature : undefined,
         })),
         payloadType: 'PROFILE_TEXTURE_VALUE',
         importGroupId,
