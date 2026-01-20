@@ -57,7 +57,7 @@
     "@questdb/nodejs-client": "^4.2.0",
     "@sentry/node": "^8.55.0",
     "@spraxdev/node-commons": "github:SpraxDev/Node-Commons#9e15d1631d46e845ec9839b38b09201b659d1475",
-    "fastify": "^5.6.2",
+    "fastify": "^5.7.1",
     "gl": "^8.1.6",
     "ipaddr.js": "^2.3.0",
     "mri": "^1.2.0",
@@ -71,7 +71,7 @@
   "devDependencies": {
     "@tsconfig/node22": "^22.0.5",
     "@types/gl": "^6.0.5",
-    "@types/node": "^22.19.6",
+    "@types/node": "^22.19.7",
     "@types/webgl-ext": "^0.0.37",
     "@vitest/coverage-v8": "^4.0.17",
     "prisma": "^5.22.0",
