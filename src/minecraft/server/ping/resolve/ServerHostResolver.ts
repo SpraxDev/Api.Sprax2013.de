@@ -18,6 +18,9 @@ export default class ServerHostResolver {
     return [parsedHost.toNormalizedString(), resolvedPort];
   }
 
+  // FIXME: also catch 'SERVFAIL' errors and re-throw a nice Error that can be handled in the request-layer
+  //       > occurs when a DNS resolver fails to obtain a valid response from the Authoritative DNS server for a particular domain
+  //       At least provide a good error message to the user - Probably still a 5xx status code?
   private async performResolve(host: string, port: number): Promise<[string, number]> {
     if (Net.isIP(host) !== 0) {
       return [host, port];
@@ -38,11 +41,10 @@ export default class ServerHostResolver {
       }
     }
 
-    // FIXME: causes trouble if the machine does not support IPv6 connections
     try {
-      const ip6 = await Dns.resolve6(hostToResolve);
-      if (ip6.length > 0) {
-        return [ip6[0], resolvedPort];
+      const ip4 = await Dns.resolve4(hostToResolve);
+      if (ip4.length > 0) {
+        return [ip4[0], resolvedPort];
       }
     } catch (err: any) {
       if (err.code !== 'ENODATA' && err.code !== 'ENOTFOUND') {
@@ -50,10 +52,11 @@ export default class ServerHostResolver {
       }
     }
 
+    // FIXME: causes trouble if the machine does not support IPv6 connections
     try {
-      const ip4 = await Dns.resolve4(hostToResolve);
-      if (ip4.length > 0) {
-        return [ip4[0], resolvedPort];
+      const ip6 = await Dns.resolve6(hostToResolve);
+      if (ip6.length > 0) {
+        return [ip6[0], resolvedPort];
       }
     } catch (err: any) {
       if (err.code !== 'ENODATA' && err.code !== 'ENOTFOUND') {
