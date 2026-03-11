@@ -138,15 +138,13 @@ export default class ContinuousQueueWorker {
     let tries = 0;
 
     while (this.bufferedTasks.length === 0 && tries <= 5 && (tries <= 0 || this.nextPayloadTypeIndexToBuffer !== firstNextPayloadTypeIndexToBufferValue)) {
-      const isUsernamePayloadType = ContinuousQueueWorker.PAYLOAD_TYPES_TO_PROCESS[this.nextPayloadTypeIndexToBuffer] === PrismaClient.ImportPayloadType.USERNAME;
-
       this.bufferedTasks = await this.databaseClient.importTask.findMany({
         where: {
           state: 'QUEUED',
           payloadType: ContinuousQueueWorker.PAYLOAD_TYPES_TO_PROCESS[this.nextPayloadTypeIndexToBuffer],
         },
         orderBy: { createdAt: 'asc' },
-        take: isUsernamePayloadType ? 1 : this.taskBufferSize,
+        take: this.taskBufferSize,
       });
 
       this.nextPayloadTypeIndexToBuffer = (this.nextPayloadTypeIndexToBuffer + 1) % ContinuousQueueWorker.PAYLOAD_TYPES_TO_PROCESS.length;
