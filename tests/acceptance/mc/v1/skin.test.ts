@@ -21,7 +21,10 @@ describe('/mc/v1/skin/:user', () => {
       url: `/mc/v1/skin/${user}${urlSuffix}`,
     });
 
-    if (response.statusCode === 200 || response.statusCode === 404) {
+    if (response.statusCode === 200) {
+      expect(response.headers['cache-control']).toBe('public, max-age=60, s-maxage=60, immutable');
+    }
+    if (response.statusCode === 404) {
       expect(response.headers['cache-control']).toBe('public, max-age=60, s-maxage=60');
     }
 
@@ -332,7 +335,7 @@ describe.each([
     });
 
     if (response.statusCode === 200 || response.statusCode === 404) {
-      expect(response.headers['cache-control']).toBe('public, max-age=60, s-maxage=60');
+      expect(response.headers['cache-control']).toBe('public, max-age=60, s-maxage=60, immutable');
     }
 
     return response;

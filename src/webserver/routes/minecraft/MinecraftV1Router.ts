@@ -66,7 +66,7 @@ export default class MinecraftV1Router implements Router {
 
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', this.createCacheControlHeader(60, profile.ageInSeconds))
+            .header('Cache-Control', this.createCacheControlHeaderWithImmutable(60))
             .send({
               id: profile.profile.id,
               name: profile.profile.name,
@@ -96,7 +96,7 @@ export default class MinecraftV1Router implements Router {
 
           reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', this.createCacheControlHeader(60, profile.ageInSeconds));
+            .header('Cache-Control', this.createCacheControlHeaderWithImmutable(60));
 
           if (!sendProcessedProfile) {
             return reply
@@ -197,7 +197,7 @@ export default class MinecraftV1Router implements Router {
 
           return reply
             // .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', this.createCacheControlHeader(60, 0))
+            .header('Cache-Control', this.createCacheControlHeaderWithImmutable(60))
             .send(skinResponse.pngBody);
         },
       });
@@ -258,7 +258,7 @@ export default class MinecraftV1Router implements Router {
 
           return reply
             // .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', this.createCacheControlHeader(60, 0))
+            .header('Cache-Control', this.createCacheControlHeaderWithImmutable(60))
             .send(skinResponse.pngBody);
         },
       });
@@ -289,7 +289,7 @@ export default class MinecraftV1Router implements Router {
 
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', this.createCacheControlHeader(60, profile.ageInSeconds))
+            .header('Cache-Control', this.createCacheControlHeaderWithImmutable(60))
             .send(skinResponse.pngBody);
         },
       });
@@ -320,7 +320,7 @@ export default class MinecraftV1Router implements Router {
 
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', this.createCacheControlHeader(60, profile.ageInSeconds))
+            .header('Cache-Control', this.createCacheControlHeaderWithImmutable(60))
             .send(skinResponse.pngBody);
         },
       });
@@ -649,8 +649,7 @@ export default class MinecraftV1Router implements Router {
     return result;
   }
 
-  private createCacheControlHeader(cacheTimeInSeconds: number, ageInSeconds: number): string {
-    const maxAge = Math.ceil(cacheTimeInSeconds - ageInSeconds);
-    return `public, max-age=${maxAge}, s-maxage=${maxAge}`;
+  private createCacheControlHeaderWithImmutable(cacheTimeInSeconds: number): string {
+    return `public, max-age=${cacheTimeInSeconds}, s-maxage=60, immutable`;
   }
 }

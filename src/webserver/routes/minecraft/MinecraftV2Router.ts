@@ -54,7 +54,7 @@ export default class MinecraftV2Router implements Router {
 
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60, immutable')
             .send({
               id: profile.profile.id,
               name: profile.profile.name,
@@ -73,7 +73,7 @@ export default class MinecraftV2Router implements Router {
           }
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60, immutable')
             .send(profile.profile);
         },
       });
@@ -131,7 +131,7 @@ export default class MinecraftV2Router implements Router {
 
           return reply
             // .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60, immutable')
             .send(skinResponse.pngBody);
         },
       });
@@ -160,7 +160,7 @@ export default class MinecraftV2Router implements Router {
 
           return reply
             .header('Age', Math.floor(profile.ageInSeconds).toString())
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60, immutable')
             .send(skinResponse.pngBody);
         },
       });
@@ -251,7 +251,7 @@ export default class MinecraftV2Router implements Router {
           const serverStatus = await this.minecraftServerStatusService.provideServerStatus(inputHost, port);
 
           reply
-            .header('Cache-Control', `public, max-age=${Math.max(0, 30 - serverStatus.ageInSeconds)}, s-maxage=${Math.max(0, 30 - serverStatus.ageInSeconds)}`)
+            .header('Cache-Control', `public, max-age=30, s-maxage=30`)
             .header('Age', serverStatus.ageInSeconds);
 
           if (serverStatus.serverStatus != null) {
