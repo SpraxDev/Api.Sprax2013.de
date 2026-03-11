@@ -156,11 +156,19 @@ export default class ContinuousQueueWorker {
 
   private async updateTaskStatus(task: PrismaClient.ImportTask, state: 'IMPORTED' | 'NO_CHANGES' | 'ERROR'): Promise<void> {
     await this.databaseClient.$transaction(async (transaction) => {
-      await transaction.importTask.update({
-        where: { id: task.id },
-        data: { state },
-        select: { id: true },
-      });
+      if (task.payloadType === 'UUID_UPDATE_THIRD_PARTY_CAPES') {
+        // Ignore, if the task got deleted in the meantime (this is a hacky workaround for queueThirdPartyCapeUpdate#queueThirdPartyCapeUpdate)
+        await transaction.importTask.updateMany({
+          where: { id: task.id },
+          data: { state },
+        });
+      } else {
+        await transaction.importTask.update({
+          where: { id: task.id },
+          data: { state },
+          select: { id: true },
+        });
+      }
 
       if (task.importGroupId != null) {
         let importGroupUpdateData: PrismaClient.Prisma.ImportGroupUpdateInput = { succeededImports: { increment: 1 } };
