@@ -120,9 +120,7 @@ export default class ContinuousQueueWorker {
   }
 
   private async fetchNextTask(): Promise<PrismaClient.ImportTask | null> {
-    if (this.inflightBufferedTaskUpdate != null) {
-      return await this.inflightBufferedTaskUpdate;
-    }
+    await this.inflightBufferedTaskUpdate;
 
     try {
       const updatePromise = this._fetchNextTask();
