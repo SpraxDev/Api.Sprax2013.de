@@ -22,10 +22,10 @@ describe('/mc/v1/skin/:user', () => {
     });
 
     if (response.statusCode === 200) {
-      expect(response.headers['cache-control']).toBe('public, max-age=60, s-maxage=60, immutable');
+      expect(response.headers['cache-control']).toBe('max-age=60, s-maxage=60, immutable');
     }
     if (response.statusCode === 404) {
-      expect(response.headers['cache-control']).toBe('public, max-age=60, s-maxage=60');
+      expect(response.headers['cache-control']).toBe('max-age=60, s-maxage=60');
     }
 
     return response;
@@ -335,7 +335,7 @@ describe.each([
     });
 
     if (response.statusCode === 200 || response.statusCode === 404) {
-      expect(response.headers['cache-control']).toBe('public, max-age=60, s-maxage=60, immutable');
+      expect(response.headers['cache-control']).toBe('max-age=60, s-maxage=60, immutable');
     }
 
     return response;
@@ -365,7 +365,7 @@ describe.each([
     });
     expect(response.statusCode).toBe(404);
 
-    expect(response.headers['cache-control']).toBe('public, max-age=60, s-maxage=60');
+    expect(response.headers['cache-control']).toBe('max-age=60, s-maxage=60');
   });
 
   test.each([

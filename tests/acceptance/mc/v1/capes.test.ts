@@ -20,7 +20,7 @@ describe('/mc/v1/capes/all', () => {
     });
 
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
-    expect(response.headers['cache-control']).toBe('public, max-age=300, s-maxage=300');
+    expect(response.headers['cache-control']).toBe('max-age=300, s-maxage=300');
 
     expect(response.json()).toEqual({
       error: 'Gone',
@@ -54,7 +54,7 @@ describe('/mc/v1/capes/:capeType/:user?', () => {
     });
 
     if (response.statusCode === 200 || response.statusCode === 404) {
-      expect(response.headers['cache-control']).toBe('public, max-age=60, s-maxage=60');
+      expect(response.headers['cache-control']).toBe('max-age=60, s-maxage=60');
     }
 
     return response;
@@ -204,7 +204,7 @@ describe('/mc/v1/capes/:capeType/:user/render', () => {
     });
 
     if (response.statusCode === 200 || response.statusCode === 404) {
-      expect(response.headers['cache-control']).toMatch(/^public, max-age=(60|300), s-maxage=\1$/);
+      expect(response.headers['cache-control']).toMatch(/^max-age=(60|300), s-maxage=\1$/);
     }
 
     return response;

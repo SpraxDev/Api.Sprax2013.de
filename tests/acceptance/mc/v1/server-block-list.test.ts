@@ -28,7 +28,7 @@ describe('/mc/v1/servers/blocked', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
-    expect(response.headers['cache-control']).toBe('public, max-age=120, s-maxage=120');
+    expect(response.headers['cache-control']).toBe('max-age=120, s-maxage=120');
 
     const responseBody = response.json();
     expect(responseBody).toStrictEqual([
@@ -78,7 +78,7 @@ describe('/mc/v1/servers/blocked/known', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
-    expect(response.headers['cache-control']).toBe('public, max-age=120, s-maxage=120');
+    expect(response.headers['cache-control']).toBe('max-age=120, s-maxage=120');
 
     const responseBody = response.json();
     expect(responseBody).toStrictEqual({
@@ -142,7 +142,7 @@ describe('/mc/v1/servers/blocked/check', () => {
       expect(response.statusCode).toBe(200);
       expect(response.json()).toEqual(expected);
       expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
-      expect(response.headers['cache-control']).toBe('public, max-age=120, s-maxage=120');
+      expect(response.headers['cache-control']).toBe('max-age=120, s-maxage=120');
 
       expect(databaseClient.serverBlocklist.findMany).toHaveBeenCalledTimes(1);
       expect(databaseClient.serverBlocklist.findMany).toHaveBeenCalledWith({ select: { sha1: true } });

@@ -54,13 +54,13 @@ export default class MinecraftV1Router implements Router {
             throw ApiV1BadRequestError.missingOrInvalidUrlParameter('name', 'name.length > 0');
           }
           if (inputUsername.length > 16 || inputUsername.length < 3) {
-            reply.header('Cache-Control', 'public, max-age=300, s-maxage=300');
+            reply.header('Cache-Control', 'max-age=300, s-maxage=300');
             throw ApiV1NotFoundError.uuidForGivenUsernameNotFound();
           }
 
           const profile = await this.minecraftProfileService.provideProfileByUsername(inputUsername);
           if (profile == null) {
-            reply.header('Cache-Control', 'public, max-age=120, s-maxage=120');
+            reply.header('Cache-Control', 'max-age=120, s-maxage=120');
             throw ApiV1NotFoundError.uuidForGivenUsernameNotFound();
           }
 
@@ -80,7 +80,7 @@ export default class MinecraftV1Router implements Router {
         get: async (): Promise<FastifyReply> => {
           const profile = await this.resolveUserToProfile((request.params as any).user);
           if (profile == null) {
-            reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            reply.header('Cache-Control', 'max-age=60, s-maxage=60');
             throw ApiV1NotFoundError.profileForGivenUserNotFound();
           }
 
@@ -133,7 +133,7 @@ export default class MinecraftV1Router implements Router {
         get: async (): Promise<FastifyReply> => {
           return reply
             .status(410)
-            .header('Cache-Control', 'public, max-age=300, s-maxage=300')
+            .header('Cache-Control', 'max-age=300, s-maxage=300')
             .send({
               error: 'Gone',
               message: 'This endpoint has been removed as Mojang removed the username history API ' +
@@ -270,7 +270,7 @@ export default class MinecraftV1Router implements Router {
           const profile = await this.resolveUserToProfile((request.params as any).user);
 
           if (profile == null) {
-            reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            reply.header('Cache-Control', 'max-age=60, s-maxage=60');
             throw ApiV1NotFoundError.profileForGivenUserNotFound();
           }
           const minecraftProfile = new MinecraftProfile(profile.profile);
@@ -300,7 +300,7 @@ export default class MinecraftV1Router implements Router {
         get: async (): Promise<FastifyReply> => {
           const profile = await this.resolveUserToProfile((request.params as any).user);
           if (profile == null) {
-            reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            reply.header('Cache-Control', 'max-age=60, s-maxage=60');
             throw ApiV1NotFoundError.profileForGivenUserNotFound();
           }
           const minecraftProfile = new MinecraftProfile(profile.profile);
@@ -331,7 +331,7 @@ export default class MinecraftV1Router implements Router {
         get: async (): Promise<FastifyReply> => {
           return reply
             .status(410)
-            .header('Cache-Control', 'public, max-age=300, s-maxage=300')
+            .header('Cache-Control', 'max-age=300, s-maxage=300')
             .send({
               error: 'Gone',
               message: 'This endpoint was never intended for the general public and only returned the internal IDs ' +
@@ -352,14 +352,14 @@ export default class MinecraftV1Router implements Router {
 
           const profile = await this.resolveUserToProfile((request.params as any).user);
           if (profile == null) {
-            reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            reply.header('Cache-Control', 'max-age=60, s-maxage=60');
             throw ApiV1NotFoundError.profileForGivenUserNotFound();
           }
 
           const minecraftProfile = new MinecraftProfile(profile.profile);
           const capeResponse = await this.userCapeService.provide(minecraftProfile, capeType);
           if (capeResponse == null) {
-            reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            reply.header('Cache-Control', 'max-age=60, s-maxage=60');
             throw new ApiV1NotFoundError('User does not have a cape for that type');
           }
 
@@ -372,7 +372,7 @@ export default class MinecraftV1Router implements Router {
           }
 
           return reply
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .header('Cache-Control', 'max-age=60, s-maxage=60')
             .send(capeResponse.image);
         },
       });
@@ -400,14 +400,14 @@ export default class MinecraftV1Router implements Router {
 
           const profile = await this.resolveUserToProfile((request.params as any).user);
           if (profile == null) {
-            reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            reply.header('Cache-Control', 'max-age=60, s-maxage=60');
             throw ApiV1NotFoundError.profileForGivenUserNotFound();
           }
 
           const minecraftProfile = new MinecraftProfile(profile.profile);
           const capeResponse = await this.userCapeService.provide(minecraftProfile, capeType);
           if (capeResponse == null) {
-            reply.header('Cache-Control', 'public, max-age=60, s-maxage=60');
+            reply.header('Cache-Control', 'max-age=60, s-maxage=60');
             throw new ApiV1NotFoundError('User does not have a cape for that type');
           }
 
@@ -423,7 +423,7 @@ export default class MinecraftV1Router implements Router {
           }
 
           return reply
-            .header('Cache-Control', 'public, max-age=60, s-maxage=60')
+            .header('Cache-Control', 'max-age=60, s-maxage=60')
             .send(renderCapeImage);
         },
       });
@@ -434,7 +434,7 @@ export default class MinecraftV1Router implements Router {
         get: async (): Promise<FastifyReply> => {
           const blocklist = await this.serverBlocklistService.provideBlocklist();
           return reply
-            .header('Cache-Control', 'public, max-age=120, s-maxage=120')
+            .header('Cache-Control', 'max-age=120, s-maxage=120')
             .send(blocklist);
         },
       });
@@ -452,7 +452,7 @@ export default class MinecraftV1Router implements Router {
           }
 
           return reply
-            .header('Cache-Control', 'public, max-age=120, s-maxage=120')
+            .header('Cache-Control', 'max-age=120, s-maxage=120')
             .send(responseBody);
         },
       });
@@ -480,7 +480,7 @@ export default class MinecraftV1Router implements Router {
             responseBody[host] = isBlocked;
           }
           return reply
-            .header('Cache-Control', 'public, max-age=120, s-maxage=120')
+            .header('Cache-Control', 'max-age=120, s-maxage=120')
             .send(responseBody);
         },
       });
@@ -650,6 +650,6 @@ export default class MinecraftV1Router implements Router {
   }
 
   private createCacheControlHeaderWithImmutable(cacheTimeInSeconds: number): string {
-    return `public, max-age=${cacheTimeInSeconds}, s-maxage=60, immutable`;
+    return `max-age=${cacheTimeInSeconds}, s-maxage=60, immutable`;
   }
 }

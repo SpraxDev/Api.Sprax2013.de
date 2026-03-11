@@ -19,7 +19,7 @@ describe('/mc/v1/history/*', () => {
     });
 
     expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
-    expect(response.headers['cache-control']).toBe('public, max-age=300, s-maxage=300');
+    expect(response.headers['cache-control']).toBe('max-age=300, s-maxage=300');
 
     expect(response.json()).toEqual({
       error: 'Gone',

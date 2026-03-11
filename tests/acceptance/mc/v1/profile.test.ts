@@ -135,10 +135,10 @@ async function executeProfileRequest(user: string, method: 'GET' | 'POST' = 'GET
   expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
 
   if (response.statusCode === 200) {
-    expect(response.headers['cache-control']).toMatch(/^public, max-age=(60|300), s-maxage=\1, immutable$/);
+    expect(response.headers['cache-control']).toMatch(/^max-age=(60|300), s-maxage=\1, immutable$/);
   }
   if (response.statusCode === 404) {
-    expect(response.headers['cache-control']).toMatch(/^public, max-age=(60|300), s-maxage=\1$/);
+    expect(response.headers['cache-control']).toMatch(/^max-age=(60|300), s-maxage=\1$/);
   }
 
   return response;
