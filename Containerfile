@@ -31,7 +31,7 @@ elif [ "${1:-}" = "spraxapi-cli" ]; then
 fi
 
 if [ "${spraxApiMode:-}" != "" ]; then
-  xvfb-run --auto-servernum --server-args '-ac -screen 0 1280x1024x24' node --enable-source-maps --import ./dist/sentry-init.js dist/main.js "$spraxApiMode" "$@"
+  xvfb-run --auto-servernum --server-args '-ac -screen 0 1280x1024x24' node --enable-source-maps dist/main.js "$spraxApiMode" "$@"
   exit $?
 fi
 

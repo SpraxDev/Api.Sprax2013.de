@@ -1,3 +1,4 @@
+import './sentry-init.js';
 import './container-init.js';
 import { container } from 'tsyringe';
 import type App from './boot/App.js';
