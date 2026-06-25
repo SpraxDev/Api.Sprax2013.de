@@ -1,4 +1,4 @@
-import Sharp from 'sharp';
+import Sharp, { type OutputInfo as SharpOutputInfo, type Sharp as SharpInstance } from 'sharp';
 import XXHashAddon from 'xxhash-addon';
 
 export interface Color {
@@ -134,11 +134,11 @@ export default class ImageManipulator {
       .toBuffer();
   }
 
-  async toRaw(): Promise<{ data: Buffer; info: Sharp.OutputInfo }> {
+  async toRaw(): Promise<{ data: Buffer; info: SharpOutputInfo }> {
     return this.toSharp().raw().toBuffer({ resolveWithObject: true });
   }
 
-  toSharp(): Sharp.Sharp {
+  toSharp(): SharpInstance {
     return Sharp(this.pixelData, {
       raw: {
         channels: this.channels,

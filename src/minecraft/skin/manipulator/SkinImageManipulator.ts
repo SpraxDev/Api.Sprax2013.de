@@ -1,8 +1,8 @@
-import Sharp from 'sharp';
+import Sharp, { type OutputInfo as SharpOutputInfo } from 'sharp';
 import ImageManipulator from '../../image/ImageManipulator.js';
 
 export default class SkinImageManipulator extends ImageManipulator {
-  protected constructor(pixelData: Buffer, imageInfo: Sharp.OutputInfo) {
+  protected constructor(pixelData: Buffer, imageInfo: SharpOutputInfo) {
     super(pixelData, imageInfo);
     if (!this.hasValidSkinDimensions()) {
       throw new Error('Image does not have valid skin dimensions');
