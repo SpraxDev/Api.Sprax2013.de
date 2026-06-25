@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/node';
 import Os from 'node:os';
 import { getAppInfo, IS_PRODUCTION } from './constants.js';
+import { HttpError } from './webserver/errors/HttpErrors.js';
 
 (() => {
   const dsn = process.env.SENTRY_DSN ?? '';
@@ -41,12 +42,19 @@ import { getAppInfo, IS_PRODUCTION } from './constants.js';
       Sentry.onUnhandledRejectionIntegration(),
       Sentry.functionToStringIntegration(),
       Sentry.contextLinesIntegration(),
-      Sentry.inboundFiltersIntegration(),
+      Sentry.eventFiltersIntegration(),
       Sentry.linkedErrorsIntegration(),
       Sentry.httpIntegration(),
       Sentry.consoleIntegration(),
       Sentry.prismaIntegration(),
-      Sentry.fastifyIntegration(),
+      Sentry.fastifyIntegration({
+        shouldHandleError(err): boolean {
+          if (err instanceof HttpError) {
+            return err.httpStatusCode >= 500;
+          }
+          return (err as { code?: string }).code !== 'FST_ERR_VALIDATION';
+        },
+      }),
     ],
 
     beforeSend(event) {

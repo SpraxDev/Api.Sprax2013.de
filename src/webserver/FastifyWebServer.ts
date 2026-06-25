@@ -1,9 +1,7 @@
-import * as Sentry from '@sentry/node';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { injectAll, singleton } from 'tsyringe';
 import { ContainerTokens } from '../constants.js';
 import Metrics from '../metrics/Metrics.js';
-import SentrySdk from '../util/SentrySdk.js';
 import { HttpError, NotFoundError } from './errors/HttpErrors.js';
 import Router from './routes/Router.js';
 
@@ -23,7 +21,6 @@ export default class FastifyWebServer {
 
       trustProxy: false, // TODO
     });
-    Sentry.setupFastifyErrorHandler(this.fastify);
 
     this.fastify.setNotFoundHandler((): void => {
       throw new NotFoundError('Requested resource not found');
@@ -35,7 +32,7 @@ export default class FastifyWebServer {
           .send(err.createResponseBody());
       }
 
-      SentrySdk.logAndCaptureError(err);
+      console.error(err);
       return reply
         .code(500)
         .send({ error: 'Internal Server Error' });

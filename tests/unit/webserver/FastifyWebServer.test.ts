@@ -1,7 +1,6 @@
 import { FastifyInstance, type FastifyReply } from 'fastify';
 import { vitest } from 'vitest';
 import Metrics from '../../../src/metrics/Metrics.js';
-import SentrySdk from '../../../src/util/SentrySdk.js';
 import FastifyWebServer from '../../../src/webserver/FastifyWebServer.js';
 import Router from '../../../src/webserver/routes/Router.js';
 
@@ -27,10 +26,6 @@ class TestRouter implements Router {
 const fastifyWebServer = new FastifyWebServer([new TestRouter()], new Metrics());
 const fastify = (fastifyWebServer as any).fastify as FastifyInstance;
 
-beforeEach(() => {
-  vitest.spyOn(SentrySdk, 'logAndCaptureError').mockReturnValue(undefined);
-});
-
 describe('FastifyWebServer', () => {
   test('Requesting an unknown endpoint should return 404', async () => {
     const response = await fastify.inject({
@@ -50,7 +45,6 @@ describe('FastifyWebServer', () => {
 
     expect(response.statusCode).toBe(500);
     expect(response.json()).toEqual({ error: 'Internal Server Error' });
-    expect(SentrySdk.logAndCaptureError).toHaveBeenCalledTimes(1);
   });
 
   test('#listen should call the Fastify server', async () => {

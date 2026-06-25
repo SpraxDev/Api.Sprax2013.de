@@ -55,7 +55,7 @@
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "@questdb/nodejs-client": "^4.2.0",
-    "@sentry/node": "^8.55.2",
+    "@sentry/node": "^10.61.0",
     "@spraxdev/node-commons": "github:SpraxDev/Node-Commons#289946a8cd347174ac008c21012c155a2a69081c",
     "fastify": "^5.8.5",
     "gl": "^8.1.6",
