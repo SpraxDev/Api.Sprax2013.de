@@ -56,7 +56,7 @@
     "@prisma/client": "^5.22.0",
     "@questdb/nodejs-client": "^4.2.0",
     "@sentry/node": "^10.61.0",
-    "@spraxdev/node-commons": "github:SpraxDev/Node-Commons#289946a8cd347174ac008c21012c155a2a69081c",
+    "@spraxdev/node-commons": "github:SpraxDev/Node-Commons#5bf26778e78a8dcc14129a8042dbc7d2b9d288a3",
     "fastify": "^5.8.5",
     "gl": "^8.1.6",
     "ipaddr.js": "^2.4.0",
@@ -65,19 +65,19 @@
     "sharp": "^0.34.5",
     "socks": "^2.8.9",
     "tsyringe": "^4.10.0",
-    "undici": "^8.2.0",
+    "undici": "^8.5.0",
     "xxhash-addon": "^2.1.0"
   },
   "devDependencies": {
     "@swc-node/register": "^1.11.1",
     "@tsconfig/node22": "^22.0.5",
     "@types/gl": "^6.0.5",
-    "@types/node": "^22.19.19",
+    "@types/node": "^22.20.0",
     "@types/webgl-ext": "^0.0.37",
-    "@vitest/coverage-v8": "^4.1.6",
+    "@vitest/coverage-v8": "^4.1.9",
     "prisma": "^5.22.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.6",
+    "vitest": "^4.1.9",
     "vitest-mock-extended": "^4.0.0"
   }
 }
