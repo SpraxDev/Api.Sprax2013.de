@@ -76,7 +76,7 @@
     "@types/webgl-ext": "^0.0.37",
     "@vitest/coverage-v8": "^4.1.9",
     "prisma": "^5.22.0",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.9",
     "vitest-mock-extended": "^4.0.0"
   }

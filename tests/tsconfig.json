@@ -1,11 +1,10 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
+    "rootDir": "..",
     "noEmit": true,
-    "types": [
-      "@types/webgl-ext",
-      "vitest/globals"
-    ]
+
+    "types": ["@types/webgl-ext", "vitest/globals"],
   },
   "include": [
     "./**/*.ts"
